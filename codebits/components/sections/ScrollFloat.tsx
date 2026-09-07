@@ -73,8 +73,8 @@ export default function ScrollFloat({
   }, [animationDuration, ease, scrollStart, scrollEnd, stagger])
 
   return (
-    <h2 ref={containerRef} className={`scroll-float ${containerClassName}`}>
-      <span className={`scroll-float-text ${textClassName}`}>{splitText}</span>
+    <h2 ref={containerRef} className={`overflow-hidden ${containerClassName}`}>
+      <span className={`inline-block font-black text-center ${textClassName}`}>{splitText}</span>
     </h2>
   )
 }

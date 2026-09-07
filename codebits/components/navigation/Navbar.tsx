@@ -92,3 +92,6 @@ export function Navbar({ onOpenSearch }: NavbarProps) {
     </>
   );
 }
+
+export default Navbar;
+

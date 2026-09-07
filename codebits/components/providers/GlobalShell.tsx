@@ -9,7 +9,7 @@ import { CbAiDrawer } from "@/components/ai/CbAiDrawer";
 export function GlobalShell({ children }: { children: React.ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const pathname = usePathname();
-  const isLanding = pathname === "/";
+  const isCustomLayout = pathname === "/" || pathname === "/about";
 
   // Global Ctrl + K / Cmd + K listener
   useEffect(() => {
@@ -26,9 +26,9 @@ export function GlobalShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex flex-col min-h-screen bg-[#0B0F0E] text-[#F8FAFC]">
-      {!isLanding && <Navbar onOpenSearch={() => setSearchOpen(true)} />}
+      {!isCustomLayout && <Navbar onOpenSearch={() => setSearchOpen(true)} />}
       <main className="flex-1 flex flex-col">{children}</main>
-      {!isLanding && <Footer />}
+      {!isCustomLayout && <Footer />}
       <CbAiDrawer isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
   );

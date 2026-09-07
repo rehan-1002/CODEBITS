@@ -1,52 +1,90 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, ArrowUpRight, BookOpen, Users, Upload, ShieldCheck } from 'lucide-react'
 
 const navDeck = [
-  { title: 'MU Academic Vault', desc: 'Syllabus, PYQs, and verified notes', href: '/vault', icon: BookOpen },
-  { title: 'Faculty & Centers', desc: 'Centres, mentors, placement records & metrics', href: '/about', icon: Users },
-  { title: 'Community Upload', desc: 'Contribute exam solutions or notes for review', href: '/upload', icon: Upload },
-  { title: 'Protected Canvas DRM', desc: 'Zero-scraping document virtualizer and session locks', href: '/vault', icon: ShieldCheck },
+  {
+    title: 'MU Academic Vault',
+    desc: 'Syllabus, PYQs, and verified lecture notes',
+    href: '/vault',
+    icon: BookOpen,
+  },
+  {
+    title: 'Faculty & Centers',
+    desc: 'Centres, mentors, placement records & metrics',
+    href: '/about',
+    icon: Users,
+  },
+  {
+    title: 'Community Upload',
+    desc: 'Contribute exam solutions or notes for review',
+    href: '/upload',
+    icon: Upload,
+  },
+  {
+    title: 'Protected Canvas DRM',
+    desc: 'Zero-scraping document virtualizer and session locks',
+    href: '/vault',
+    icon: ShieldCheck,
+  },
 ]
 
 export default function ScrollStackNav() {
   const [isOpen, setIsOpen] = useState(false)
 
+  // Prevent background scrolling ONLY when drawer is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [isOpen])
+
   return (
     <>
+      {/* Minimal Icon Trigger */}
       <button
+        type="button"
         onClick={() => setIsOpen(true)}
-        className="p-2.5 bg-[#131917] border border-[#1F2925] hover:border-[#00C269] rounded-xl text-[#00C269] transition-all cursor-pointer"
-        aria-label="Open Navigation"
+        className="p-2.5 bg-[#131917] border border-[#1F2925] hover:border-[#00C269] rounded-xl text-[#00C269] transition-all cursor-pointer inline-flex items-center justify-center shadow-[0_0_12px_rgba(0,194,105,0.15)]"
+        aria-label="Open Navigation Deck"
       >
         <Menu className="w-5 h-5" />
       </button>
 
+      {/* Conditional Fullscreen Drawer */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-[#0B0F0E]/95 backdrop-blur-xl flex flex-col p-6 sm:p-12 overflow-y-auto"
+            key="nav-deck-overlay"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[100] bg-[#0B0F0E]/95 backdrop-blur-2xl flex flex-col p-6 sm:p-12 overflow-y-auto"
           >
             <div className="flex justify-between items-center max-w-4xl w-full mx-auto mb-8 border-b border-[#1F2925] pb-6">
               <span className="font-mono text-xs text-[#00C269] uppercase tracking-widest">
-                CodeBits Navigation Deck
+                CODEBITS NAVIGATION DECK
               </span>
               <button
+                type="button"
                 onClick={() => setIsOpen(false)}
                 className="p-2 rounded-full border border-[#1F2925] hover:border-[#00C269] text-slate-400 hover:text-white transition-all cursor-pointer"
-                aria-label="Close navigation"
+                aria-label="Close Navigation Deck"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
 
-            <div className="max-w-4xl w-full mx-auto grid gap-4">
+            <div className="max-w-4xl w-full mx-auto grid gap-4 flex-1">
               {navDeck.map((item, idx) => {
                 const Icon = item.icon
                 return (
@@ -54,7 +92,7 @@ export default function ScrollStackNav() {
                     key={item.title}
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: idx * 0.08 }}
+                    transition={{ delay: idx * 0.06 }}
                   >
                     <Link
                       href={item.href}
@@ -85,4 +123,4 @@ export default function ScrollStackNav() {
   )
 }
 
-export { ScrollStackNav };
+export { ScrollStackNav }

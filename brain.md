@@ -1011,4 +1011,19 @@ Execute Master UI Refac-Directive: CodeBits Kinetic Design System. Integrate the
 - Character-split GSAP timeline scrub established for climax brand title.
 
 #### Next Recommended Action
-- Verify in browser and push latest commits to GitHub.
+- Connect Supabase and Gemini backend services.
+
+### Iteration 4
+**Date**: September 7, 2026
+**Focus**: Master Architectural Refac — Fix Broken Overlays, Viewport Collision & Learning Centers
+
+#### What Was Built / Modified
+- **`ScrollStackNav.tsx` Overlay Mounting**: Conditioned modal rendering strictly on `isOpen === true` using Framer Motion `AnimatePresence`. Initial page load now has the modal completely unmounted, preventing any viewport interception or header blocking. Added body scroll lock (`overflow: hidden`) during drawer presentation.
+- **`Skiper19.tsx` Safe Viewport Container**: Added header offset bounds (`top-20`, `h-[calc(100vh-5rem)]`) and calibrated the normalized SVG trace viewBox (`viewBox="0 0 1000 1200"`). Text pockets "The Friction" (`scattered resources?`) and "The Resolution" (`we got you.`) are properly contained without clipping or colliding with the navbar.
+- **`ScrollFloat.tsx` Scrub Title**: Verified clean character splitting with GSAP ScrollTrigger timeline animation and transforms (`scaleY: 2.3 -> 1`, `yPercent: 120 -> 0`, `scrub: true`).
+- **`app/about/page.tsx` Directory & Learning Centers**: Resolved layout collapse with responsive expanding faculty accordion utilizing authentic WebP assets from `/faculty/`. Displayed NumberFlow metrics (`250+`, `15+`, `8 LPA`), animated marquee, and physical training centers strictly anchored to Kalyan West (Chandulal Joshi Complex) and Ulhasnagar (Hari Narayan Complex) with direct WhatsApp desk actions.
+- **Unified Design Tokens**: Enforced Obsidian Charcoal (`#0B0F0E`), Deep Emerald Slate (`#131917`), CodeBits Emerald (`#00C269`), Neon Mint (`#34EE99`), and Subtle Borders (`#1F2925`).
+
+#### Verification
+- Next.js 16 (Turbopack) production build passed cleanly (`npm run build` exited with code 0).
+- HTTP 200 responses verified on both `/` and `/about`.
