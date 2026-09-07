@@ -1,161 +1,157 @@
-import React from "react";
-import Link from "next/link";
-import { ArrowRight, ShieldCheck, Database, Layers, Search, Cpu } from "lucide-react";
-import { Skiper19Scroll } from "@/components/sections/Skiper19Scroll";
-import { TextAnimate } from "@/components/sections/TextAnimate";
-import { ScrollFloatTitle } from "@/components/sections/ScrollFloatTitle";
+'use client'
 
-export default function LandingPage() {
-  const branches = [
-    { code: "COMPS", name: "Computer Engineering" },
-    { code: "IT", name: "Information Technology" },
-    { code: "AI-DS", name: "Artificial Intelligence & Data Science" },
-    { code: "EXTC", name: "Electronics & Telecommunication" },
-    { code: "MECH", name: "Mechanical Engineering" },
-    { code: "CIVIL", name: "Civil Engineering" },
-  ];
+import React from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
+import { ArrowRight, BookOpen, ShieldCheck, Cpu } from 'lucide-react'
+import { Skiper19 } from '@/components/sections/Skiper19'
+import ScrollFloat from '@/components/sections/ScrollFloat'
+import ScrollStackNav from '@/components/navigation/ScrollStackNav'
+import Footer from '@/components/ui/footer-section'
 
+export default function HomePage() {
   return (
-    <div className="flex flex-col w-full">
-      {/* 1. Hero Section */}
-      <section className="relative pt-16 pb-20 md:pt-28 md:pb-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
-        <div className="space-y-8 max-w-4xl">
-          {/* Institutional Badge */}
-          <div className="inline-flex items-center space-x-2 px-3 py-1.5 rounded border border-[var(--border-subtle)] bg-[var(--surface-base)] text-xs font-mono">
-            <span className="w-2 h-2 rounded-full bg-[var(--brand-primary)] animate-pulse" />
-            <span className="text-[var(--brand-primary)] font-semibold">CODEBITS</span>
-            <span className="text-[var(--text-muted)]">/</span>
-            <span className="text-[var(--text-secondary)]">MUMBAI UNIVERSITY REV-2019 'C' SCHEME</span>
-          </div>
+    <div className="bg-[#0B0F0E] text-[#F8FAFC] min-h-screen">
+      
+      {/* HEADER */}
+      <header className="sticky top-0 z-40 w-full border-b border-[#1F2925] bg-[#0B0F0E]/80 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3">
+            <div className="relative w-8 h-8">
+              <Image src="/LOGO CB.png" alt="CodeBits" fill className="object-contain" priority />
+            </div>
+            <div className="flex flex-col">
+              <span className="font-bold text-sm text-white tracking-tight leading-none">CodeBits</span>
+              <span className="text-[10px] font-mono text-[#00C269] tracking-wider">BY PROF. MRF</span>
+            </div>
+          </Link>
 
-          {/* Primary Mission Statement */}
-          <div className="space-y-4">
-            <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-[var(--text-primary)] leading-[1.08]">
-              Let us build the bridge between your career and dream.
-            </h1>
-            <p className="text-base sm:text-lg text-[var(--text-secondary)] max-w-2xl leading-relaxed font-sans">
-              Centralized, controlled academic repository providing authenticated access to Mumbai University question papers, faculty-vetted lecture notes, and verified examination solutions.
+          <div className="flex items-center gap-3">
+            <Link
+              href="/vault"
+              className="bg-[#00C269] hover:bg-[#009E52] text-[#0B0F0E] font-bold text-xs px-4 py-2 rounded-lg transition-all"
+            >
+              ACCESS VAULT
+            </Link>
+            <ScrollStackNav />
+          </div>
+        </div>
+      </header>
+
+      {/* HERO SECTION */}
+      <section className="relative pt-28 pb-16 px-4 max-w-5xl mx-auto flex flex-col items-center text-center">
+        <div className="inline-flex items-center gap-2 border border-[#1F2925] bg-[#131917] px-4 py-1.5 rounded-full text-xs font-mono text-[#00C269] mb-8">
+          <span className="w-2 h-2 rounded-full bg-[#00C269] animate-pulse" />
+          MUMBAI UNIVERSITY REV-2019 'C' SCHEME
+        </div>
+
+        <h1 className="text-4xl sm:text-7xl font-black tracking-tight leading-[1.08] max-w-4xl">
+          Let us build the bridge between your{' '}
+          <span className="bg-gradient-to-r from-white via-slate-200 to-[#00C269] bg-clip-text text-transparent">
+            career and dream.
+          </span>
+        </h1>
+
+        <p className="mt-6 text-slate-400 max-w-2xl text-base sm:text-lg leading-relaxed">
+          Centralized, controlled academic repository providing authenticated access to Mumbai University question papers, faculty-vetted lecture notes, and verified examination solutions.
+        </p>
+
+        <div className="mt-10 flex flex-wrap gap-4 justify-center">
+          <Link
+            href="/vault"
+            className="flex items-center gap-2 bg-[#00C269] hover:bg-[#009E52] text-[#0B0F0E] font-bold px-8 py-3.5 rounded-xl text-sm transition-all shadow-[0_0_20px_rgba(0,194,105,0.25)] hover:shadow-[0_0_30px_rgba(0,194,105,0.4)]"
+          >
+            Access Academic Vault
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+          <Link
+            href="/about"
+            className="border border-[#1F2925] hover:border-[#00C269]/60 bg-[#131917] text-slate-200 px-8 py-3.5 rounded-xl text-sm transition-all"
+          >
+            About &amp; Faculty
+          </Link>
+        </div>
+      </section>
+
+      {/* KINETIC SVG SCROLL ENGINE */}
+      <Skiper19 />
+
+      {/* PIPELINE GRID */}
+      <section className="py-24 px-4 max-w-5xl mx-auto">
+        <div className="text-center mb-16">
+          <span className="font-mono text-xs text-[#00C269] uppercase tracking-widest block mb-2">
+            The CodeBits Standard
+          </span>
+          <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight">
+            Engineered for Academic Rigor
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-[#131917] border border-[#1F2925] hover:border-[#00C269]/40 p-8 rounded-2xl transition-all">
+            <BookOpen className="w-8 h-8 text-[#00C269] mb-6" />
+            <span className="font-mono text-xs text-slate-500 block mb-2">01 / VALIDATION</span>
+            <h3 className="text-xl font-bold mb-3 text-white">Syllabus Verification</h3>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Every paper and note is indexed strictly under the active Rev-2019 'C' Scheme, eliminating curriculum mismatch.
             </p>
           </div>
 
-          {/* Primary CTAs */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
-            <Link
-              href="/vault"
-              className="inline-flex items-center justify-center space-x-2 px-6 py-3.5 rounded-md bg-[var(--brand-primary)] text-black text-sm font-semibold hover:bg-[var(--brand-dark)] transition-colors cursor-pointer"
-            >
-              <span>ACCESS ACADEMIC VAULT</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-
-            <Link
-              href="/upload"
-              className="inline-flex items-center justify-center space-x-2 px-5 py-3.5 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-base)] text-sm font-mono text-[var(--text-primary)] hover:border-[var(--brand-primary)] transition-colors cursor-pointer"
-            >
-              <span>CONTRIBUTE RESOURCE</span>
-            </Link>
+          <div className="bg-[#131917] border border-[#1F2925] hover:border-[#00C269]/40 p-8 rounded-2xl transition-all">
+            <ShieldCheck className="w-8 h-8 text-[#00C269] mb-6" />
+            <span className="font-mono text-xs text-slate-500 block mb-2">02 / PROTECTION</span>
+            <h3 className="text-xl font-bold mb-3 text-white">Protected Canvas DRM</h3>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Documents are rendered via HTML5 canvas with forensic user watermarking and single-device session locking.
+            </p>
           </div>
 
-          {/* Supported Branches Quick Index */}
-          <div className="pt-8 border-t border-[var(--border-subtle)] space-y-3">
-            <div className="flex items-center justify-between text-xs font-mono text-[var(--text-muted)]">
-              <span>SUPPORTED ACADEMIC DISCIPLINES</span>
-              <span>SEMESTERS 1–8</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {branches.map((b) => (
-                <Link
-                  key={b.code}
-                  href={`/vault?branch=${b.code}`}
-                  className="px-3 py-1.5 rounded border border-[var(--border-subtle)] bg-[var(--surface-base)] hover:border-[var(--brand-primary)] text-xs font-mono text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-                >
-                  <span className="text-[var(--brand-primary)] font-bold mr-1.5">
-                    {b.code}
-                  </span>
-                  <span className="hidden sm:inline text-[var(--text-muted)]">
-                    {b.name}
-                  </span>
-                </Link>
-              ))}
-            </div>
+          <div className="bg-[#131917] border border-[#1F2925] hover:border-[#00C269]/40 p-8 rounded-2xl transition-all">
+            <Cpu className="w-8 h-8 text-[#00C269] mb-6" />
+            <span className="font-mono text-xs text-slate-500 block mb-2">03 / RETRIEVAL</span>
+            <h3 className="text-xl font-bold mb-3 text-white">cbAI Discovery</h3>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Natural language search parsed by Gemini Flash into instant database filters with zero hallucination fallback.
+            </p>
           </div>
         </div>
       </section>
 
-      {/* 2. Interstitial Statement */}
-      <section className="py-16 md:py-24 border-y border-[var(--border-subtle)] bg-[var(--surface-base)]">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
-          <span className="font-mono text-xs text-[var(--brand-primary)] uppercase tracking-wider font-semibold">
-            CENTRALIZED CURATION
-          </span>
-          <TextAnimate
-            text="scattered resources? we got you"
-            className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[var(--text-primary)] justify-center"
-            highlightWords={["got", "you"]}
+      {/* CLIMAX: GSAP SCROLLFLOAT + MONOGRAM */}
+      <section className="py-32 px-4 flex flex-col items-center justify-center text-center bg-[#0B0F0E]">
+        <div className="relative w-24 h-24 mb-6">
+          <Image
+            src="/LOGO CB.png"
+            alt="CodeBits Monogram"
+            fill
+            className="object-contain drop-shadow-[0_0_30px_rgba(0,194,105,0.45)]"
           />
-          <p className="text-xs sm:text-sm text-[var(--text-secondary)] max-w-xl mx-auto font-sans leading-relaxed">
-            No more hunting through expired links or conflicting syllabi. CodeBits indexes resources strictly against Mumbai University course curriculum.
-          </p>
         </div>
+
+        <ScrollFloat
+          animationDuration={1}
+          ease="back.inOut(2)"
+          scrollStart="top bottom-=20%"
+          scrollEnd="bottom center"
+          containerClassName="my-4"
+          textClassName="text-white tracking-[0.25em] font-black uppercase text-[12vw] sm:text-[9vw]"
+        >
+          CODEBITS
+        </ScrollFloat>
+
+        <p className="mt-4 text-slate-400 text-sm sm:text-base max-w-xl mb-8">
+          Curated specifically for Mumbai University engineering departments under Rev-2019 'C' Scheme.
+        </p>
+
+        <Link
+          href="/vault"
+          className="bg-[#00C269] hover:bg-[#009E52] text-[#0B0F0E] font-bold px-10 py-4 rounded-xl text-sm transition-all shadow-[0_0_25px_rgba(0,194,105,0.3)] hover:scale-105"
+        >
+          CONTINUE TO RESOURCES
+        </Link>
       </section>
 
-      {/* 3. The Kinetic SVG Narrative Path */}
-      <Skiper19Scroll />
-
-      {/* 4. Technical Architectural Columns */}
-      <section className="py-20 md:py-28 border-t border-[var(--border-subtle)] bg-[var(--bg-base)]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-12 space-y-2">
-            <span className="font-mono text-xs text-[var(--brand-primary)] uppercase tracking-wider font-semibold">
-              INSTITUTIONAL INTEGRITY
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
-              Engineered for Academic Rigor
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-base)] space-y-3">
-              <div className="w-8 h-8 rounded border border-[var(--border-subtle)] bg-[var(--surface-elevated)] flex items-center justify-center text-[var(--brand-primary)]">
-                <Layers className="w-4 h-4" />
-              </div>
-              <h3 className="text-base font-bold text-[var(--text-primary)]">
-                Syllabus Verification
-              </h3>
-              <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-                Every question paper and note is indexed strictly under the active Rev-2019 'C' Scheme, eliminating confusion between outdated university curricula.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-base)] space-y-3">
-              <div className="w-8 h-8 rounded border border-[var(--border-subtle)] bg-[var(--surface-elevated)] flex items-center justify-center text-[var(--brand-primary)]">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-              <h3 className="text-base font-bold text-[var(--text-primary)]">
-                Protected Canvas Delivery
-              </h3>
-              <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-                Documents are deconstructed onto HTML5 canvas with forensic user watermarking and single-device session locking to protect academic intellectual property.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-base)] space-y-3">
-              <div className="w-8 h-8 rounded border border-[var(--border-subtle)] bg-[var(--surface-elevated)] flex items-center justify-center text-[var(--brand-primary)]">
-                <Cpu className="w-4 h-4" />
-              </div>
-              <h3 className="text-base font-bold text-[var(--text-primary)]">
-                cbAI Intelligent Discovery
-              </h3>
-              <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-                Natural-language command palette parses requests into structured academic database queries with zero hallucination fallback.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 5. Climax Title Reveal */}
-      <ScrollFloatTitle />
+      <Footer />
     </div>
-  );
+  )
 }

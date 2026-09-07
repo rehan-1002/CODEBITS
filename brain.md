@@ -965,3 +965,50 @@ Execute the Frontend Engineering & Design Execution Protocol. Build the complete
 
 #### Next Recommended Action
 - Present completed frontend to the user and await instructions for backend initialization.
+
+---
+
+### Iteration 3
+
+#### Date
+2026-09-07
+
+#### Objective
+Execute Master UI Refac-Directive: CodeBits Kinetic Design System. Integrate the exact foreign component implementations for Skiper19, ScrollFloat, ScrollStackNav, Skiper37Stats, and FacultyAccordion into the active application.
+
+#### Implemented
+- Created `codebits/components/sections/Skiper19.tsx`: Pinned kinetic SVG scroll path engine with multi-screen pinning across `320vh`, active emerald `#00C269` stroke tracing, and two pocket text reveals with character-level opacity and translate transforms.
+- Created `codebits/components/sections/ScrollFloat.tsx`: GSAP ScrollTrigger kinetic character split & scale reveal on `CODEBITS` climactic section (`scaleY: 2.3 -> 1`, `yPercent: 120 -> 0`, stagger: 0.03).
+- Refactored `codebits/components/navigation/ScrollStackNav.tsx`: Clean trigger icon `<Menu className="w-5 h-5 text-[#00C269]"/>` opening a fullscreen staggered card-deck navigation overlay with Framer Motion.
+- Refactored `codebits/components/sections/Skiper37Stats.tsx`: Midnight slate card surfaces (`#131917`), 1px borders (`#1F2925`), and emerald `@number-flow/react` animated digit counters (`250+`, `15+`, `8 LPA`).
+- Refactored `codebits/components/sections/FacultyAccordion.tsx`: Responsive expanding photo columns with emerald active borders (`#00C269`), connecting authentic portraits from `/faculty/`.
+- Re-architected `codebits/app/page.tsx`: Integrated the full kinetic homepage flow including the hero section, pinned `Skiper19` engine, 3-column CodeBits standard grid, and GSAP `ScrollFloat` climax with centered `LOGO CB.png` monogram.
+- Created `codebits/components/ui/footer-section.tsx` re-export.
+- Verified Next.js 16 Turbopack production build (`next build`) and HTTP 200 responses.
+
+#### Files Changed
+- `codebits/components/sections/Skiper19.tsx`
+- `codebits/components/sections/ScrollFloat.tsx`
+- `codebits/components/navigation/ScrollStackNav.tsx`
+- `codebits/components/sections/Skiper37Stats.tsx`
+- `codebits/components/sections/FacultyAccordion.tsx`
+- `codebits/app/page.tsx`
+- `codebits/components/navigation/Navbar.tsx`
+- `codebits/components/providers/GlobalShell.tsx`
+- `codebits/components/ui/footer-section.tsx`
+- `brain.md`
+
+#### Components Added/Changed
+- `Skiper19.tsx` (Added)
+- `ScrollFloat.tsx` (Added)
+- `ScrollStackNav.tsx` (Refactored to Card Deck)
+- `Skiper37Stats.tsx` (Refactored)
+- `FacultyAccordion.tsx` (Refactored)
+- `app/page.tsx` (Integrated)
+
+#### Architecture Changes
+- Pinned multi-screen viewport scrolling established for Skiper19 SVG path engine.
+- Character-split GSAP timeline scrub established for climax brand title.
+
+#### Next Recommended Action
+- Verify in browser and push latest commits to GitHub.

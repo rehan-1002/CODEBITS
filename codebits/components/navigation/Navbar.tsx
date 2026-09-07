@@ -84,22 +84,11 @@ export function Navbar({ onOpenSearch }: NavbarProps) {
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
 
-            {/* Menu Trigger */}
-            <button
-              onClick={() => setNavOpen(true)}
-              type="button"
-              aria-label="Open menu"
-              className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-base)] text-xs font-mono font-medium text-[var(--text-primary)] hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)] transition-colors cursor-pointer"
-            >
-              <Menu className="w-4 h-4" />
-              <span className="hidden sm:inline">MENU</span>
-            </button>
+            {/* ScrollStack Navigation Deck */}
+            <ScrollStackNav />
           </div>
         </div>
       </header>
-
-      {/* Full-Screen ScrollStack Navigation Drawer */}
-      <ScrollStackNav isOpen={navOpen} onClose={() => setNavOpen(false)} />
     </>
   );
 }

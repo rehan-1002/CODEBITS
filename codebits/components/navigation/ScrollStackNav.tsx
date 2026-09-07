@@ -1,152 +1,88 @@
-"use client";
+'use client'
 
-import React, { useEffect } from "react";
-import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
-import { X, ArrowUpRight } from "lucide-react";
+import React, { useState } from 'react'
+import Link from 'next/link'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Menu, X, ArrowUpRight, BookOpen, Users, Upload, ShieldCheck } from 'lucide-react'
 
-interface ScrollStackNavProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
+const navDeck = [
+  { title: 'MU Academic Vault', desc: 'Syllabus, PYQs, and verified notes', href: '/vault', icon: BookOpen },
+  { title: 'Faculty & Centers', desc: 'Centres, mentors, placement records & metrics', href: '/about', icon: Users },
+  { title: 'Community Upload', desc: 'Contribute exam solutions or notes for review', href: '/upload', icon: Upload },
+  { title: 'Protected Canvas DRM', desc: 'Zero-scraping document virtualizer and session locks', href: '/vault', icon: ShieldCheck },
+]
 
-interface NavItem {
-  number: string;
-  title: string;
-  description: string;
-  href: string;
-  badge: string;
-}
-
-const NAV_ITEMS: NavItem[] = [
-  {
-    number: "01",
-    title: "MU Academic Vault",
-    description: "Curated question papers, faculty notes, solutions, and Rev-2019 syllabus repository.",
-    href: "/vault",
-    badge: "SEM 1–8",
-  },
-  {
-    number: "02",
-    title: "About & Centers",
-    description: "Institutional mentorship by Prof. Rohit Falake (M.R.F), faculty directory, and training centers.",
-    href: "/about",
-    badge: "FACULTY",
-  },
-  {
-    number: "03",
-    title: "Community Upload",
-    description: "Submit university question papers and academic notes for faculty peer moderation.",
-    href: "/upload",
-    badge: "MODERATED",
-  },
-  {
-    number: "04",
-    title: "Access Portal",
-    description: "Dual-identifier authentication for protected canvas document study and active sessions.",
-    href: "/login",
-    badge: "AUTH",
-  },
-];
-
-export function ScrollStackNav({ isOpen, onClose }: ScrollStackNavProps) {
-  // Lock body scroll and handle Escape key
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = "";
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen, onClose]);
+export default function ScrollStackNav() {
+  const [isOpen, setIsOpen] = useState(false)
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-50 flex flex-col bg-[var(--bg-base)]/95 backdrop-blur-md"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Navigation Drawer"
-        >
-          {/* Header Bar */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-subtle)]">
-            <div className="flex items-center space-x-3">
-              <span className="font-mono text-xs text-[var(--brand-primary)] uppercase tracking-wider font-semibold">
-                SYSTEM NAVIGATION
-              </span>
-              <span className="text-[var(--border-strong)]">/</span>
-              <span className="font-mono text-xs text-[var(--text-muted)]">
-                SELECT DESTINATION
-              </span>
-            </div>
-            <button
-              onClick={onClose}
-              type="button"
-              className="inline-flex items-center justify-center w-9 h-9 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-base)] text-[var(--text-secondary)] hover:text-[var(--brand-primary)] hover:border-[var(--brand-primary)] transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)] cursor-pointer"
-              aria-label="Close navigation"
-            >
-              <X className="w-4 h-4" strokeWidth={2} />
-            </button>
-          </div>
+    <>
+      <button
+        onClick={() => setIsOpen(true)}
+        className="p-2.5 bg-[#131917] border border-[#1F2925] hover:border-[#00C269] rounded-xl text-[#00C269] transition-all cursor-pointer"
+        aria-label="Open Navigation"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
 
-          {/* Stacked Panels */}
-          <div className="flex-1 overflow-y-auto px-6 py-8 md:py-12 max-w-5xl w-full mx-auto flex flex-col justify-center">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-              {NAV_ITEMS.map((item, idx) => (
-                <motion.div
-                  key={item.href}
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.05 * idx, duration: 0.25 }}
-                >
-                  <Link
-                    href={item.href}
-                    onClick={onClose}
-                    className="group block p-6 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-base)] hover:border-[var(--brand-primary)] transition-all relative overflow-hidden"
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-[#0B0F0E]/95 backdrop-blur-xl flex flex-col p-6 sm:p-12 overflow-y-auto"
+          >
+            <div className="flex justify-between items-center max-w-4xl w-full mx-auto mb-8 border-b border-[#1F2925] pb-6">
+              <span className="font-mono text-xs text-[#00C269] uppercase tracking-widest">
+                CodeBits Navigation Deck
+              </span>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="p-2 rounded-full border border-[#1F2925] hover:border-[#00C269] text-slate-400 hover:text-white transition-all cursor-pointer"
+                aria-label="Close navigation"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="max-w-4xl w-full mx-auto grid gap-4">
+              {navDeck.map((item, idx) => {
+                const Icon = item.icon
+                return (
+                  <motion.div
+                    key={item.title}
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: idx * 0.08 }}
                   >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center space-x-3">
-                        <span className="font-mono text-xs font-semibold text-[var(--brand-primary)] bg-[var(--surface-elevated)] px-2 py-0.5 rounded border border-[var(--border-subtle)]">
-                          {item.number}
-                        </span>
-                        <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-widest border border-[var(--border-subtle)] px-2 py-0.5 rounded">
-                          {item.badge}
-                        </span>
+                    <Link
+                      href={item.href}
+                      onClick={() => setIsOpen(false)}
+                      className="group flex items-center justify-between p-6 rounded-2xl bg-[#131917] border border-[#1F2925] hover:border-[#00C269]/60 hover:bg-[#18201D] transition-all"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-xl bg-[#0B0F0E] border border-[#1F2925] text-[#00C269]">
+                          <Icon className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-bold text-white group-hover:text-[#00C269] transition-colors">
+                            {item.title}
+                          </h3>
+                          <p className="text-sm text-slate-400 mt-1">{item.desc}</p>
+                        </div>
                       </div>
-                      <ArrowUpRight className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--brand-primary)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                    </div>
-
-                    <h3 className="text-xl font-bold text-[var(--text-primary)] group-hover:text-[var(--brand-primary)] transition-colors mb-2">
-                      {item.title}
-                    </h3>
-                    <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
-                      {item.description}
-                    </p>
-                  </Link>
-                </motion.div>
-              ))}
+                      <ArrowUpRight className="w-5 h-5 text-slate-500 group-hover:text-[#00C269] group-hover:translate-x-1 group-hover:-translate-y-1 transition-all" />
+                    </Link>
+                  </motion.div>
+                )
+              })}
             </div>
-
-            {/* Bottom Meta Bar */}
-            <div className="mt-12 pt-6 border-t border-[var(--border-subtle)] flex flex-col sm:flex-row items-center justify-between text-xs text-[var(--text-muted)] font-mono">
-              <div>REV-2019 'C' SCHEME ACADEMIC REPOSITORY</div>
-              <div className="mt-2 sm:mt-0">PRESS [ESC] TO DISMISS</div>
-            </div>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  )
 }
+
+export { ScrollStackNav };
