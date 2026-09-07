@@ -1,0 +1,129 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   CODEBITS DESIGN SYSTEM TOKENS
+   Strict Anti-AI-Slop Rules: No gradients, no glows, no fake shadows.
+   Dark mode (Obsidian / Emerald) is primary; Light mode is clean institutional.
+   ========================================================================== */
+
+:root {
+  /* Dark Mode Defaults (Primary Institutional Theme) */
+  --bg-base: #0B0F0E;
+  --surface-base: #131917;
+  --surface-elevated: #19221F;
+  --border-subtle: #1F2925;
+  --border-strong: #2D3C36;
+  --brand-primary: #00C269;
+  --brand-dark: #009E52;
+  --brand-ambient: #34EE99;
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  --badge-bg: #14231E;
+  --badge-border: #1F382E;
+}
+
+[data-theme="light"],
+.light {
+  /* Light Mode (Structured Institutional Editorial) */
+  --bg-base: #F8FAFC;
+  --surface-base: #FFFFFF;
+  --surface-elevated: #F1F5F9;
+  --border-subtle: #E2E8F0;
+  --border-strong: #CBD5E1;
+  --brand-primary: #009E52;
+  --brand-dark: #007A3E;
+  --brand-ambient: #00C269;
+  --text-primary: #0B0F0E;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
+  --badge-bg: #ECFDF5;
+  --badge-border: #A7F3D0;
+}
+
+@theme {
+  --color-bg-base: var(--bg-base);
+  --color-surface-base: var(--surface-base);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-dark: var(--brand-dark);
+  --color-brand-ambient: var(--brand-ambient);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-badge-bg: var(--badge-bg);
+  --color-badge-border: var(--badge-border);
+  --font-sans: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Base resets & typography */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+}
+
+html[data-theme="light"],
+html.light {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Reduced motion support across all systems */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Minimalist institutional scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-base);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--brand-dark);
+}
+
+/* Monospace technical styling */
+.font-mono-meta {
+  font-family: var(--font-mono);
+  letter-spacing: -0.02em;
+}
+
+/* Strict Anti-AI-slop helper: ensures no linear gradients are injected accidentally */
+.no-gradient {
+  background-image: none !important;
+}
