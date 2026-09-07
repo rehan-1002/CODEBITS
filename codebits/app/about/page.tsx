@@ -44,12 +44,12 @@ export default function AboutPage() {
   const [activeAccordion, setActiveAccordion] = useState(0)
 
   return (
-    <div className="bg-[#0B0F0E] text-[#F8FAFC] min-h-screen pb-24">
+    <div className="bg-[var(--bg-base)] text-[var(--text-primary)] min-h-screen pb-24 transition-colors duration-200">
       <Navbar />
 
       {/* HERO */}
       <section className="pt-28 pb-16 px-4 max-w-5xl mx-auto text-center">
-        <span className="inline-flex items-center gap-2 border border-[#1F2925] bg-[#131917] px-3.5 py-1.5 rounded-full text-xs font-mono text-[#00C269] mb-6">
+        <span className="inline-flex items-center gap-2 border border-[var(--border-subtle)] bg-[var(--surface-base)] px-3.5 py-1.5 rounded-full text-xs font-mono text-[var(--brand-primary)] mb-6">
           <Sparkles className="w-3.5 h-3.5" />
           ABOUT CODEBITS / FOUNDATIONAL PEDAGOGY
         </span>
@@ -69,7 +69,7 @@ export default function AboutPage() {
       {/* STATS SECTION */}
       <section className="px-4 max-w-5xl mx-auto mb-20">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <div className="p-8 rounded-2xl bg-[#131917] border border-[#1F2925] text-center shadow-lg">
+          <div className="p-8 rounded-2xl bg-[var(--surface-base)] border border-[var(--border-subtle)] text-center shadow-lg">
             <div className="text-5xl font-black text-[#00C269] font-mono mb-2 flex justify-center items-center">
               <NumberFlow value={250} />
               <span>+</span>
@@ -79,7 +79,7 @@ export default function AboutPage() {
             </p>
           </div>
 
-          <div className="p-8 rounded-2xl bg-[#131917] border border-[#1F2925] text-center shadow-lg">
+          <div className="p-8 rounded-2xl bg-[var(--surface-base)] border border-[var(--border-subtle)] text-center shadow-lg">
             <div className="text-5xl font-black text-[#00C269] font-mono mb-2 flex justify-center items-center">
               <NumberFlow value={15} />
               <span>+</span>
@@ -89,7 +89,7 @@ export default function AboutPage() {
             </p>
           </div>
 
-          <div className="p-8 rounded-2xl bg-[#131917] border border-[#1F2925] text-center shadow-lg">
+          <div className="p-8 rounded-2xl bg-[var(--surface-base)] border border-[var(--border-subtle)] text-center shadow-lg">
             <div className="text-5xl font-black text-[#00C269] font-mono mb-2 flex justify-center items-center">
               <NumberFlow value={8} />
               <span className="text-3xl ml-1 text-[#34EE99]">LPA</span>

@@ -25,7 +25,7 @@ export function GlobalShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#0B0F0E] text-[#F8FAFC]">
+    <div className="flex flex-col min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] transition-colors duration-200">
       {!isCustomLayout && <Navbar onOpenSearch={() => setSearchOpen(true)} />}
       <main className="flex-1 flex flex-col">{children}</main>
       {!isCustomLayout && <Footer />}

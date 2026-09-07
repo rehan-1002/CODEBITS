@@ -1027,3 +1027,58 @@ Execute Master UI Refac-Directive: CodeBits Kinetic Design System. Integrate the
 #### Verification
 - Next.js 16 (Turbopack) production build passed cleanly (`npm run build` exited with code 0).
 - HTTP 200 responses verified on both `/` and `/about`.
+
+---
+
+### Iteration 5: Finalised the landing page
+
+#### Date
+2026-09-08
+
+#### Objective
+Finalize the CodeBits landing page and kinetic navigation architecture with the true React Bits `ScrollStack` Lenis engine, `VerticalCutRevealChars` centered hero headline animation, custom triple-dashed stacked menu trigger, dual-theme responsiveness, and removal of all extraneous header tabs and HUD buttons.
+
+#### Implemented
+1. **Vertical Cut Reveal Headline Engine (`codebits/components/ui/m-vertical-cut-reveal-2.tsx`)**:
+   - Implemented center-outward staggered vertical cut reveals with smooth upward slide (`y: 110% -> 0%`) and CodeBits emerald `#00C269` micro-accent cut wipe lines.
+   - Centered both vertically and horizontally in the initial hero viewport (`min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center text-center`) with pure character indexing and line-wrap balancing.
+2. **Kinetic SVG Scroll Engine (`codebits/components/sections/Skiper19.tsx`)**:
+   - Continuous multi-screen scroll path engine with `#00C269` dynamic animated stroke following scroll progress.
+   - Clean storytelling text pockets: *"scattered resources?"* and *"we got you."* (no HUD boxes or unneeded clutter).
+   - Climax `ScrollFloat` with GSAP character scrub and isometric monogram `/LOGO CB.png`.
+   - Theme-adaptive background path stroke adapting automatically between light and dark modes.
+3. **React Bits Lenis ScrollStack Engine (`codebits/components/ui/ScrollStack.tsx`)**:
+   - Created the complete Lenis smooth-scroll card stacking engine with `ScrollStackItem` and `transform-gpu`.
+   - Physics-driven card transforms: `translate3d`, `scale`, rotation, and depth-based progressive card blur (`blur(blurAmount * depth)`).
+   - Pinned card stack mechanics (`isPinned = scrollTop >= pinStart && scrollTop <= pinEnd`) with transform caching.
+4. **Stacked Navigation System & Triple-Dashed Icon (`codebits/components/navigation/ScrollStackNav.tsx`)**:
+   - Implemented dedicated SVG `TripleDashedIcon` (three horizontal dashed bars: `strokeDasharray="3.5 2.5"`) on the trigger button.
+   - Fullscreen drawer mounts the Lenis `ScrollStack` containing all platform destination cards (*MU Academic Vault*, *Faculty & Centers*, *Community Upload*, *Protected Canvas DRM*).
+5. **Minimal Navigation Header (`codebits/components/navigation/Navbar.tsx`)**:
+   - Removed the standalone "Access Vault" button and extra navigation tabs from the top bar.
+   - Standardized `AnimatedThemeToggler` directly adjacent to the triple-dashed `ScrollStackNav` menu trigger.
+6. **Dual-Theme Responsiveness**:
+   - Connected CSS design tokens (`var(--bg-base)`, `var(--surface-base)`, `var(--border-subtle)`, `var(--text-primary)`, `var(--brand-primary)`) across `page.tsx`, `Skiper19.tsx`, `Navbar.tsx`, `ScrollStackNav.tsx`, `GlobalShell.tsx`, and `about/page.tsx`.
+   - Seamlessly toggles between Obsidian/Emerald Dark (`#0B0F0E`) and Crisp Institutional Light (`#F8FAFC`).
+
+#### Files Changed
+- `codebits/components/ui/m-vertical-cut-reveal-2.tsx` (Created)
+- `codebits/components/ui/ScrollStack.tsx` (Created)
+- `codebits/components/ui/text-animate.tsx` (Created)
+- `codebits/components/ui/HeroShutterText.tsx` (Created)
+- `codebits/registry/magicui/animated-theme-toggler.tsx` (Created)
+- `codebits/lib/utils.ts` (Created)
+- `codebits/components/navigation/Navbar.tsx` (Updated)
+- `codebits/components/navigation/ScrollStackNav.tsx` (Updated)
+- `codebits/components/sections/Skiper19.tsx` (Updated)
+- `codebits/components/sections/ScrollFloat.tsx` (Updated)
+- `codebits/components/providers/GlobalShell.tsx` (Updated)
+- `codebits/app/page.tsx` (Updated)
+- `codebits/app/about/page.tsx` (Updated)
+- `brain.md` (Updated)
+
+#### Verification
+- Next.js 16 (Turbopack) production build passed cleanly (`npm run build` exited with code 0).
+- HTTP 200 responses verified on `http://localhost:3000/`.
+- Verified smooth Lenis card stacking physics and dual-theme responsiveness.
+
