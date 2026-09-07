@@ -1082,3 +1082,42 @@ Finalize the CodeBits landing page and kinetic navigation architecture with the 
 - HTTP 200 responses verified on `http://localhost:3000/`.
 - Verified smooth Lenis card stacking physics and dual-theme responsiveness.
 
+---
+
+### Iteration 6: Navigation System Display & Stacking Physics Fix
+
+#### Date
+2026-09-08
+
+#### Objective
+Resolve the issue where the stacked navigation system was blank/not displaying page cards upon clicking the triple-dashed menu icon, establish flawless React Bits card stacking & popping physics, prevent global scroll hijacking, and ensure all 6 platform pages alternate smoothly with dual-theme responsiveness.
+
+#### Root Causes Identified & Resolved
+1. **Off-Screen Negative Translation on Mount**:
+   - Initial layout measurement in `ScrollStack.tsx` evaluated `endElementTop` before paint, resulting in a negative `pinEnd` value (`-350px`).
+   - At `scrollTop = 0`, the calculation `scrollTop > pinEnd` triggered, pushing all card positions into negative Y values (`-350px`, `-600px`, `-1000px`), rendering them invisible above the viewport.
+   - *Fix*: Replaced dynamic `pinEnd` calculation with cached initial un-transformed offsets (`initialTopsRef`). Guaranteed that cards before their pinning threshold (`scrollTop < pinStart`) have `translateY = 0`, and when pinned have `translateY = scrollTop - pinStart >= 0`, entirely eliminating negative coordinates.
+2. **Global Lenis Event Interception (Scroll Lockout)**:
+   - The global `SmoothScroll` instance running on `window` was intercepting `wheel` events over the drawer modal and calling `e.preventDefault()`, preventing inner scrolling.
+   - *Fix*: Placed `data-lenis-prevent="true"` on the fullscreen modal overlay `<motion.div>`, the deck wrapper, and the `scrollerRef` container, isolating inner scroll events and enabling instant, smooth scrolling.
+3. **Flexbox Child Height Collapse**:
+   - The deck wrapper inside `motion.div` had `flex-1 overflow-hidden` without `min-h-0`, causing potential container height collapse in flex layout.
+   - *Fix*: Added `min-h-0 h-full relative` to ensure the scroll container has exact, non-zero dimensions.
+4. **Card Stacking & Un-Stacking Physics**:
+   - Implemented progressive scale down (`Math.max(0.75, 1 - stackedAbove * itemScale)`) and backdrop blur (`Math.min(12, stackedAbove * blurAmount)`) calculated dynamically as cards stack on top.
+   - When scrolling down, cards lock into place at the stack threshold. When scrolling up, cards smoothly pop off in reverse.
+5. **Theme Color Harmony & Conflicting Classes**:
+   - Cleaned up conflicting CSS classes in `ScrollStackNav.tsx`. Alternating primary (`#00C269` / `#10241B` dark / `#ECFDF5` light) and secondary (`#131917` dark / `#FFFFFF` light) styles now render cleanly across dark and light themes without conflicting cascade rules.
+   - All 6 platform destinations (*MU Academic Vault*, *Faculty & Centers*, *Community Upload*, *Student Portal Login*, *Protected Canvas DRM*, *CodeBits Home Gateway*) are present in the deck.
+
+#### Files Changed
+- `codebits/components/ui/ScrollStack.tsx` (Updated)
+- `codebits/components/navigation/ScrollStackNav.tsx` (Updated)
+- `brain.md` (Updated)
+
+#### Verification
+- Next.js 16 (Turbopack) production build passed with 0 errors (`npm run build`).
+- HTTP 200 responses verified on `/`, `/vault`, `/about`, `/upload`, `/login`.
+- Dev server responding with HTTP 200 on `http://localhost:3000/`.
+
+
