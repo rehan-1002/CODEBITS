@@ -1,7 +1,7 @@
 # CODEBITS BRAIN
 
 Living Engineering Memory & Architectural Source of Truth for CodeBits.
-*Last Updated: 2026-09-07 | Status: Verified & Persistent*
+*Last Updated: 2026-09-08 | Status: Verified & Persistent*
 
 ---
 
@@ -1338,5 +1338,38 @@ Ensure each card fills virtually the entire vertical viewport (`h-[72vh] min-h-[
 - Hot reload compiled cleanly with zero errors.
 - Verified SVG stroke connects directly into the solid primary green footer.
 
+---
 
+### Iteration 13: Landing Page Finalization, Kinetic Boundary Confinement & Dev Indicator Removal
 
+#### Date
+2026-09-08
+
+#### Objective
+1. Confine the kinetic SVG scroll animation (`Skiper19`) strictly to the landing section, ensuring the path finishes cleanly just at the footer threshold rather than overlapping or cutting across footer content.
+2. Establish an explicit stacking context for the global footer to guarantee complete visual isolation from upper animated elements.
+3. Remove the Next.js development indicator overlay icon from local dev views.
+4. **Finalize and lock the Landing Page (Home Page `/`)**: Marked as fully complete and frozen ("DO NOT TOUCH").
+
+#### Enhancements Implemented
+1. **Kinetic SVG Boundary Confinement**:
+   - Updated `section` in `codebits/components/sections/Skiper19.tsx` from `overflow-x-clip` to `overflow-hidden`, strictly confining all SVG paths, glows, and kinetic elements within the hero/content section.
+   - Refined `LinePath` dynamic endpoint calculation: adjusted `targetY` to terminate cleanly right before the footer boundary (`Math.max(startY, distanceToBottom * scale - 12)`), accounting for stroke thickness and rounded line caps without overshooting into the footer.
+   - Removed the `defaultConnector` fallback which previously forced an extra 160px tail down into the footer whenever `extraD` was empty.
+2. **Elevated Footer Stacking**:
+   - Added `relative z-20` to `codebits/components/navigation/Footer.tsx`, ensuring the footer establishes its own explicit stacking context over the underlying body and canvas backgrounds.
+3. **Next.js Dev Indicator Clean-up**:
+   - Configured `devIndicators: false` in `codebits/next.config.ts` to suppress the floating Next.js development badge in the bottom-left corner during local development.
+4. **Landing Page Locked & Finalized**:
+   - The landing page composition (`Navbar`, `Skiper19`, `Footer`) and all associated landing visuals have been thoroughly tested, verified, and locked. No further modifications should be made to this page.
+
+#### Files Changed
+- `codebits/components/sections/Skiper19.tsx` (Updated: section overflow set to hidden, path ending bounded)
+- `codebits/components/navigation/Footer.tsx` (Updated: relative z-20 added)
+- `codebits/next.config.ts` (Updated: devIndicators disabled)
+- `brain.md` (Updated: Iteration 13 logged, landing page frozen)
+
+#### Verification
+- Dev server running with Turbopack on `http://localhost:3000/`.
+- TypeScript validation (`npx tsc --noEmit`) passed with 0 errors.
+- Verified that the kinetic scroll trail stops right before the footer and no longer cuts across footer text.

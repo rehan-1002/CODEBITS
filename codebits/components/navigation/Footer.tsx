@@ -4,7 +4,7 @@ import Image from "next/image";
 
 export function Footer() {
   return (
-    <footer className="bg-[var(--brand-primary)] text-black selection:bg-black selection:text-[var(--brand-primary)] transition-colors">
+    <footer className="relative z-20 bg-[var(--brand-primary)] text-black selection:bg-black selection:text-[var(--brand-primary)] transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 lg:gap-12">
           {/* Brand & Purpose Column */}

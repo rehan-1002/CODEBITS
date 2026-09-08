@@ -17,7 +17,7 @@ export function Skiper19() {
   return (
     <section
       ref={ref}
-      className="relative mx-auto flex min-h-[320vh] w-full flex-col items-center overflow-x-clip bg-[var(--bg-base)] px-4 text-[var(--text-primary)] transition-colors duration-200"
+      className="relative mx-auto flex min-h-[320vh] w-full flex-col items-center overflow-hidden bg-[var(--bg-base)] px-4 text-[var(--text-primary)] transition-colors duration-200"
     >
       {/* Ambient Radial Background Glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-[radial-gradient(ellipse_at_center,rgba(0,194,105,0.12)_0%,transparent_70%)] pointer-events-none z-0" />
@@ -112,11 +112,11 @@ const LinePath = ({
       const scale = 1278 / svgRect.width
       // Distance from SVG top to the bottom of container (where Footer begins)
       const distanceToBottom = containerRect.bottom - svgRect.top
-      // Target Y in SVG viewBox coordinate space, adding 24px so the stroke safely submerges into the primary footer
-      const targetY = distanceToBottom * scale + 24
-
       const startX = 303.794
       const startY = 2668.89
+
+      // Target Y in SVG viewBox coordinate space, stopping cleanly before the footer
+      const targetY = Math.max(startY, distanceToBottom * scale - 12)
       const deltaY = targetY - startY
 
       if (deltaY <= 0) {
@@ -151,8 +151,7 @@ const LinePath = ({
   // Starts with the scribble already visible (0.35), then traces down as you scroll the page (to 1.0)
   const pathLength = useTransform(scrollYProgress, [0, 1], [0.35, 1])
 
-  const defaultConnector = ' C 316.160 2717.890, 339.130 2773.890, 339.130 2828.890'
-  const fullPath = BASE_PATH + (extraD || defaultConnector)
+  const fullPath = extraD ? BASE_PATH + extraD : BASE_PATH
 
   return (
     <svg
