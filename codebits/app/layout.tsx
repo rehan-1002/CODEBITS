@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono, Geist } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { SmoothScroll } from "@/components/providers/SmoothScroll";
 import { GlobalShell } from "@/components/providers/GlobalShell";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const inter = Inter({
   variable: "--font-inter",
@@ -45,7 +48,7 @@ export default function RootLayout({
     <html
       lang="en"
       data-theme="dark"
-      className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={cn("h-full", "antialiased", inter.variable, jetbrainsMono.variable, "font-sans", geist.variable)}
       suppressHydrationWarning
     >
       <head>

@@ -54,9 +54,9 @@ export function ResourceGrid({ resources, onResetFilters }: ResourceGridProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-      {resources.map((resource) => (
-        <ResourceCard key={resource.id} resource={resource} />
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 pt-2 pb-8 px-2">
+      {resources.map((resource, index) => (
+        <ResourceCard key={resource.id} resource={resource} index={index} />
       ))}
     </div>
   );

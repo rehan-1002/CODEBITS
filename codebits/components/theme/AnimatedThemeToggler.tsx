@@ -15,7 +15,7 @@ export function AnimatedThemeToggler({ className = "" }: AnimatedThemeTogglerPro
 
   return (
     <button
-      onClick={toggleTheme}
+      onClick={(e) => toggleTheme(e)}
       type="button"
       aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
       title={`Switch to ${isDark ? "light" : "dark"} mode`}

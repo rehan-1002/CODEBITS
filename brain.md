@@ -50,7 +50,7 @@ CodeBits solves this by replacing ad-hoc distribution with an authoritative, cur
 ### 4.1 Landing Experience (`/`)
 - **Purpose**: Articulate the CodeBits mission, establish brand credibility, convey Mumbai University academic focus, and direct students seamlessly into the Vault.
 - **Key Sections**:
-  - Global Sticky Navigation (Monogram, title, drawer trigger, Access Vault CTA).
+  - Global Sticky Navigation (Monogram, title, Circular Ripple View Transition theme toggler, and Triple-Dashed Stacked Navigation Drawer trigger revealing 5 animated deck cards: `01 Home Page`, `02 Academic Vault`, `03 About Us & Faculty`, `04 Community Upload`, `05 Login`).
   - Kinetic SVG Hero Sequence (`Skiper19` scroll-scrubbed path conveying Problem → Discovery → Connection → CodeBits → Resources).
   - Interstitial contextual editorial statements (`TextAnimate` with `blurInUp` revealing statements like "scattered resources? we got you").
   - Title Climax (`ScrollFloat` character reveal of `CODEBITS` with GSAP scrub and scale transforms).
@@ -68,14 +68,14 @@ CodeBits solves this by replacing ad-hoc distribution with an authoritative, cur
 
 ### 4.3 Academic Vault (`/vault`)
 - **Purpose**: Core functional repository for Mumbai University academic assets.
-- **Key Capabilities**:
-  - Filter by Branch (COMPS, IT, EXTC, MECH, CIVIL, AIDS, etc.).
-  - Filter by Semester (Sem 1 through Sem 8).
-  - Filter by Category (`PYQ`, `Notes`, `Syllabus`, `Solution`).
-  - Search by Subject / Course Name.
-  - Catalog Cards displaying title, subject, branch, semester, scheme (Rev-2019 'C'), and verified uploader attribution.
-  - Public visibility strictly constrained to records where `status = 'approved'`.
-  - Realistic empty states guiding students to contribute missing assets.
+- **Key Capabilities & Modern Component Architecture**:
+  - **Aceternity GooeyInput Search**: Smooth organic liquid morph input (`@aceternity/gooey-input-demo` / `components/ui/gooey-input.tsx`) providing unified subject and course title search dock.
+  - **Animated Filter Dropdown (`DropdownMenu04`)**: Physics-spring animated hierarchical selector with instant filtering, keyboard navigation, and syllabus descriptions for Semesters 1 through 8 (`components/ui/animated-filter-dropdown.tsx`).
+  - **Hover Button System (`hover-button-1` by @erikvalencia1)**: High-interaction animated kinetic pill buttons (`components/ui/hover-button.tsx`) implemented across all Branch filters (`ALL`, `COMPS`, `IT`, `AI-DS`, `EXTC`, `MECH`, `CIVIL`), Category filters (`All Types`, `Question Papers (PYQ)`, `Lecture Notes`, `Syllabus`, `Verified Solutions`), and Reset controls. Features sliding text transitions, dynamic arrow reveals (`ArrowRight`), and expanding radial kinetic ripple fills tailored to CodeBits' obsidian-emerald aesthetic.
+  - **Anti-Metal CTA Button (`anti-metal-button` by @smammar100)**: Premium industrial metal button (`components/ui/anti-metal-button.tsx`) for "SUBMIT A PAPER" CTA leading to `/upload`. Fully theme-adaptive across light mode (crisp silver-white metallic with dark label) and dark mode (deep obsidian metallic gradient with light label), featuring cascading dot-wave chevron animations (`bd-dot-wave`), and an emerald accent slab that smoothly slides across the button on hover.
+  - **SkewCards Kinetic Document Cards**: Dynamic interactive cards (`components/resources/ResourceCard.tsx`) featuring 15° skewed multi-tier gradient panels (crisp + diffuse glow) that straighten (`skew-x-0`) on hover, floating glassmorphic blurred blobs with continuous floating physics (`animate-blob`), and a smooth glass card body shifting left with fully theme-adaptive light and dark surfaces, high-contrast typography, branch badges, and a crisp "STUDY" CTA button.
+  - **Public Visibility**: Strictly constrained to records where `status = 'approved'`.
+  - **Realistic Empty States**: Guiding students to contribute missing assets without friction.
 
 ### 4.4 Authentication (`/login`, registration flow)
 - **Purpose**: Identity verification and single-device session establishment.
@@ -1373,3 +1373,79 @@ Ensure each card fills virtually the entire vertical viewport (`h-[72vh] min-h-[
 - Dev server running with Turbopack on `http://localhost:3000/`.
 - TypeScript validation (`npx tsc --noEmit`) passed with 0 errors.
 - Verified that the kinetic scroll trail stops right before the footer and no longer cuts across footer text.
+
+---
+
+### Iteration 14: Academic Vault Page Finalization, SkewCards & Kinetic UI Upgrades
+
+#### Date
+2026-09-08
+
+#### Objective
+1. Finalize the Mumbai University Academic Vault page (`/vault`) with state-of-the-art interactive UI components.
+2. Replace static inputs and buttons with Aceternity GooeyInput, Erik Valencia's `hover-button-1`, and Muhammad Ammar's `anti-metal-button`.
+3. Apply SkewCards kinetic 3D hover physics to all catalog document cards.
+4. Ensure 100% theme-adaptive fidelity across Light and Dark modes.
+5. Implement circular View Transitions ripple animation for the global theme toggler.
+6. Integrate the missing About Us page (`/about`) into the stacked navigation deck (`ScrollStackNav`).
+7. Clean up redundant badges, overemphasized text, and the verification compliance footer banner.
+8. Strictly preserve the locked Landing Page (`/`).
+
+#### Enhancements Implemented
+1. **Gooey Search Dock (`GooeyInput`)**:
+   - Integrated `@aceternity/gooey-input-demo` into `codebits/components/ui/gooey-input.tsx` and placed it into the Vault top search dock.
+   - Cleaned redundant copy: removed `"ACADEMIC VAULT / REV-2019 'C' SCHEME REPOSITORY"` and `"KINETIC RETRIEVAL ENGINE"`.
+2. **Animated Semester Dropdown (`DropdownMenu04` / `AnimatedFilterDropdown`)**:
+   - Built spring-animated hierarchical dropdown in `codebits/components/ui/animated-filter-dropdown.tsx`.
+   - Removed secondary subheadings on user instruction, retaining clean main headings (`ALL SEMESTERS`, `SEMESTER 1` through `SEMESTER 8`).
+3. **HoverButton System (`hover-button-1`)**:
+   - Created `codebits/components/ui/hover-button.tsx` inspired by Erik Valencia's `hover-button-1`.
+   - Features kinetic label slide-out (`group-hover:translate-x-12`), dynamic incoming label with `ArrowRight` icon, and expanding emerald ripple bloom.
+   - Removed visible resting black dots (`scale-0 opacity-0` at rest), blooming cleanly on hover.
+   - Applied across all Branch buttons (`ALL`, `COMPS`, `IT`, `AI-DS`, `EXTC`, `MECH`, `CIVIL`), Category buttons (`All Types`, `Question Papers`, `Lecture Notes`, `Syllabus`, `Verified Solutions`), and Reset button.
+4. **Anti-Metal CTA Button (`anti-metal-button`)**:
+   - Created `codebits/components/ui/anti-metal-button.tsx` inspired by Muhammad Ammar's `anti-metal-button`.
+   - Features industrial metallic body, cascading dot-wave chevron animations (`bd-dot-wave`), and an emerald sliding slab on hover.
+   - Fully theme-adaptive: silver-white metallic in light mode, deep obsidian in dark mode.
+   - Wired to "SUBMIT A PAPER" CTA linking to `/upload`.
+5. **SkewCards Kinetic Document Cards**:
+   - Upgraded `codebits/components/resources/ResourceCard.tsx` with 15° skewed multi-tier gradient panels (sharp backdrop + radiant glow) that straighten (`skew-x-0`) on hover.
+   - Added floating glassmorphic blurred blobs with continuous bobbing animation (`animate-blob`).
+   - Content container shifts leftward on hover (`group-hover:left-[-14px]`) creating rich parallax depth.
+   - Assigned dynamic, discipline-tailored gradient themes (COMPS, IT, AI-DS, EXTC, MECH, CIVIL).
+6. **Full Theme-Adaptive Polish**:
+   - Transformed `ResourceCard` into a light-frosted glass panel in light mode (`bg-white/90`) and deep glass in dark mode (`bg-[rgba(14,16,15,0.88)]`).
+   - Adaptive typography, badges, and high-contrast "STUDY" action buttons.
+7. **Compliance Banner Clean-up**:
+   - Removed the redundant footer verification banner from `codebits/app/vault/page.tsx`.
+8. **Stacked Navigation Deck Update (`ScrollStackNav`)**:
+   - Added `03 About Us` (`/about`) with `GraduationCap` icon to the 3D stacked deck in `codebits/components/navigation/ScrollStackNav.tsx`.
+9. **Circular View Transition Theme Wipe**:
+   - Upgraded `codebits/components/theme/ThemeProvider.tsx` and `AnimatedThemeToggler.tsx` with native View Transitions API (`document.startViewTransition`) creating a circular wave expansion from the click coordinates.
+   - Added `::view-transition-old(root)` and `::view-transition-new(root)` rules to `globals.css`.
+
+#### Files Changed
+- `codebits/components/ui/gooey-input.tsx` (New: Aceternity GooeyInput)
+- `codebits/components/ui/dropdown-menu-04.tsx` (New: Dropdown Menu primitive)
+- `codebits/components/ui/animated-filter-dropdown.tsx` (New: Spring filter dropdown)
+- `codebits/components/ui/hover-button.tsx` (New: Erik Valencia hover button)
+- `codebits/components/ui/anti-metal-button.tsx` (New: Anti-metal button)
+- `codebits/components/ui/button.tsx` (New: UI Button primitive)
+- `codebits/components/ui/input.tsx` (New: UI Input primitive)
+- `codebits/components/ui/separator.tsx` (New: UI Separator primitive)
+- `codebits/components/resources/ResourceCard.tsx` (Updated: SkewCards animation & theme adaptivity)
+- `codebits/components/resources/ResourceFilters.tsx` (Updated: HoverButton integration, semester labels simplified)
+- `codebits/components/resources/ResourceGrid.tsx` (Updated: Grid spacing & index propagation)
+- `codebits/components/navigation/ScrollStackNav.tsx` (Updated: Added About Us to nav deck)
+- `codebits/components/theme/ThemeProvider.tsx` (Updated: Circular View Transition engine)
+- `codebits/components/theme/AnimatedThemeToggler.tsx` (Updated: Mouse event propagation)
+- `codebits/app/vault/page.tsx` (Updated: GooeyInput search, AntiMetalButton CTA, removed compliance banner)
+- `codebits/app/globals.css` (Updated: View Transition CSS rules)
+- `brain.md` (Updated: Iteration 14 logged, Vault page finalized)
+
+#### Verification
+- Dev server running on `http://localhost:3000/`.
+- TypeScript validation (`npx tsc --noEmit`) passed with 0 errors.
+- SSR HTTP 200 validated across `/` and `/vault`.
+- Confirmed Landing Page remains strictly untouched.
+

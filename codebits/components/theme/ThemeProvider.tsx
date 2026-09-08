@@ -6,8 +6,8 @@ type Theme = "dark" | "light";
 
 interface ThemeContextType {
   theme: Theme;
-  toggleTheme: () => void;
-  setTheme: (t: Theme) => void;
+  toggleTheme: (event?: React.MouseEvent<HTMLElement> | MouseEvent) => void;
+  setTheme: (t: Theme, event?: React.MouseEvent<HTMLElement> | MouseEvent) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType>({
@@ -41,15 +41,79 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const setTheme = (t: Theme) => {
-    setThemeState(t);
-    localStorage.setItem("codebits-theme", t);
-    applyTheme(t);
+  const setThemeWithTransition = (
+    next: Theme,
+    event?: React.MouseEvent<HTMLElement> | MouseEvent
+  ) => {
+    // Document with View Transitions API support
+    const doc = typeof document !== "undefined" ? (document as Document & {
+      startViewTransition?: (callback: () => void | Promise<void>) => {
+        ready: Promise<void>;
+      };
+    }) : null;
+
+    if (
+      !doc?.startViewTransition ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      setThemeState(next);
+      localStorage.setItem("codebits-theme", next);
+      applyTheme(next);
+      return;
+    }
+
+    // Determine circular expansion coordinates from event or target
+    let x: number;
+    let y: number;
+
+    if (event && "clientX" in event && (event.clientX !== 0 || event.clientY !== 0)) {
+      x = event.clientX;
+      y = event.clientY;
+    } else if (event?.currentTarget && "getBoundingClientRect" in event.currentTarget) {
+      const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+      x = rect.left + rect.width / 2;
+      y = rect.top + rect.height / 2;
+    } else {
+      x = window.innerWidth - 80;
+      y = 32;
+    }
+
+    // Radius needed to reach the farthest viewport corner from (x, y)
+    const endRadius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    );
+
+    const transition = doc.startViewTransition(() => {
+      setThemeState(next);
+      localStorage.setItem("codebits-theme", next);
+      applyTheme(next);
+    });
+
+    transition.ready.then(() => {
+      document.documentElement.animate(
+        {
+          clipPath: [
+            `circle(0px at ${x}px ${y}px)`,
+            `circle(${endRadius}px at ${x}px ${y}px)`,
+          ],
+        },
+        {
+          duration: 520,
+          easing: "ease-in-out",
+          pseudoElement: "::view-transition-new(root)",
+        }
+      );
+    });
   };
 
-  const toggleTheme = () => {
+  const setTheme = (t: Theme, event?: React.MouseEvent<HTMLElement> | MouseEvent) => {
+    setThemeWithTransition(t, event);
+  };
+
+  const toggleTheme = (event?: React.MouseEvent<HTMLElement> | MouseEvent) => {
     const next = theme === "dark" ? "light" : "dark";
-    setTheme(next);
+    setThemeWithTransition(next, event);
   };
 
   return (
