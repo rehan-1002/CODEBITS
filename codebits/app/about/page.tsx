@@ -61,7 +61,7 @@ export default function AboutPage() {
           </span>
         </h1>
 
-        <p className="mt-6 text-slate-400 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
+        <p className="mt-6 text-[var(--text-secondary)] max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
           CodeBits bridges the gap between raw university syllabus requirements and real engineering mastery. Curated under the pedagogical guidance of Prof. Rohit Falake (M.R.F).
         </p>
       </section>
@@ -70,31 +70,31 @@ export default function AboutPage() {
       <section className="px-4 max-w-5xl mx-auto mb-20">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div className="p-8 rounded-2xl bg-[var(--surface-base)] border border-[var(--border-subtle)] text-center shadow-lg">
-            <div className="text-5xl font-black text-[#00C269] font-mono mb-2 flex justify-center items-center">
+            <div className="text-5xl font-black text-[var(--brand-primary)] font-mono mb-2 flex justify-center items-center">
               <NumberFlow value={250} />
               <span>+</span>
             </div>
-            <p className="text-slate-400 text-xs uppercase tracking-widest font-mono">
+            <p className="text-[var(--text-secondary)] text-xs uppercase tracking-widest font-mono">
               Candidates Placed
             </p>
           </div>
 
           <div className="p-8 rounded-2xl bg-[var(--surface-base)] border border-[var(--border-subtle)] text-center shadow-lg">
-            <div className="text-5xl font-black text-[#00C269] font-mono mb-2 flex justify-center items-center">
+            <div className="text-5xl font-black text-[var(--brand-primary)] font-mono mb-2 flex justify-center items-center">
               <NumberFlow value={15} />
               <span>+</span>
             </div>
-            <p className="text-slate-400 text-xs uppercase tracking-widest font-mono">
+            <p className="text-[var(--text-secondary)] text-xs uppercase tracking-widest font-mono">
               Hiring Partners
             </p>
           </div>
 
           <div className="p-8 rounded-2xl bg-[var(--surface-base)] border border-[var(--border-subtle)] text-center shadow-lg">
-            <div className="text-5xl font-black text-[#00C269] font-mono mb-2 flex justify-center items-center">
+            <div className="text-5xl font-black text-[var(--brand-primary)] font-mono mb-2 flex justify-center items-center">
               <NumberFlow value={8} />
-              <span className="text-3xl ml-1 text-[#34EE99]">LPA</span>
+              <span className="text-3xl ml-1 text-[var(--brand-ambient)]">LPA</span>
             </div>
-            <p className="text-slate-400 text-xs uppercase tracking-widest font-mono">
+            <p className="text-[var(--text-secondary)] text-xs uppercase tracking-widest font-mono">
               Average Package
             </p>
           </div>
@@ -102,8 +102,8 @@ export default function AboutPage() {
       </section>
 
       {/* MARQUEE */}
-      <div className="py-4 border-y border-[#1F2925] bg-[#131917]/50 overflow-hidden whitespace-nowrap mb-20">
-        <div className="flex items-center gap-10 text-xs sm:text-sm font-mono text-[#00C269] tracking-widest uppercase animate-pulse">
+      <div className="py-4 border-y border-[var(--border-subtle)] bg-[var(--surface-base)]/50 overflow-hidden whitespace-nowrap mb-20">
+        <div className="flex items-center gap-10 text-xs sm:text-sm font-mono text-[var(--brand-primary)] tracking-widest uppercase animate-pulse">
           <span>MEET THE TEAM</span>
           <span>•</span>
           <span>PILLARS OF CODEBITS</span>
@@ -121,10 +121,10 @@ export default function AboutPage() {
       {/* FACULTY ACCORDION */}
       <section className="px-4 max-w-6xl mx-auto mb-28">
         <div className="text-center mb-12">
-          <span className="font-mono text-xs text-[#00C269] uppercase tracking-widest block mb-2">
+          <span className="font-mono text-xs text-[var(--brand-primary)] uppercase tracking-widest block mb-2">
             Pillars of CodeBits
           </span>
-          <h2 className="text-3xl sm:text-4xl font-black text-white">
+          <h2 className="text-3xl sm:text-4xl font-black text-[var(--text-primary)]">
             Faculty &amp; Mentorship Directory
           </h2>
         </div>
@@ -139,12 +139,12 @@ export default function AboutPage() {
                 onMouseEnter={() => setActiveAccordion(idx)}
                 className={`relative rounded-2xl overflow-hidden cursor-pointer border transition-all duration-500 min-h-[320px] md:min-h-0 ${
                   isActive
-                    ? 'md:flex-[3] border-[#00C269] shadow-[0_0_30px_rgba(0,194,105,0.2)] bg-[#18201D]'
-                    : 'md:flex-1 border-[#1F2925] bg-[#131917] opacity-75 hover:opacity-100'
+                    ? 'md:flex-[3] border-[var(--brand-primary)] shadow-[0_0_30px_rgba(0,194,105,0.2)] bg-[var(--surface-elevated)]'
+                    : 'md:flex-1 border-[var(--border-subtle)] bg-[var(--surface-base)] opacity-75 hover:opacity-100'
                 }`}
               >
                 {/* Fallback pattern */}
-                <div className="absolute inset-0 bg-[#131917]">
+                <div className="absolute inset-0 bg-[var(--surface-base)]">
                   <Image
                     src={fac.image}
                     alt={fac.name}
@@ -152,18 +152,18 @@ export default function AboutPage() {
                     sizes="(max-width: 1200px) 50vw, 33vw"
                     className="object-cover object-top"
                   />
-                  <div className="w-full h-full opacity-40 bg-[radial-gradient(#1F2925_1px,transparent_1px)] [background-size:16px_16px]" />
+                  <div className="w-full h-full opacity-30 bg-[radial-gradient(var(--border-subtle)_1px,transparent_1px)] [background-size:16px_16px]" />
                 </div>
 
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F0E] via-[#0B0F0E]/60 to-transparent flex flex-col justify-end p-6 z-10">
-                  <span className="font-mono text-[10px] sm:text-xs text-[#34EE99] tracking-wider mb-1">
+                <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-base)] via-[var(--bg-base)]/70 to-transparent flex flex-col justify-end p-6 z-10">
+                  <span className="font-mono text-[10px] sm:text-xs text-[var(--brand-ambient)] tracking-wider mb-1">
                     {fac.role}
                   </span>
-                  <h3 className="text-xl sm:text-2xl font-bold text-white leading-tight">
+                  <h3 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] leading-tight">
                     {fac.name}
                   </h3>
                   {isActive && (
-                    <p className="text-xs sm:text-sm text-slate-300 mt-2 font-normal line-clamp-2">
+                    <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-2 font-normal line-clamp-2">
                       {fac.specialty}
                     </p>
                   )}
@@ -175,27 +175,27 @@ export default function AboutPage() {
       </section>
 
       {/* TRAINING CENTERS */}
-      <section className="px-4 max-w-5xl mx-auto border-t border-[#1F2925] pt-20">
+      <section className="px-4 max-w-5xl mx-auto border-t border-[var(--border-subtle)] pt-20">
         <div className="text-center mb-12">
-          <span className="font-mono text-xs text-[#00C269] uppercase tracking-widest block mb-2">
+          <span className="font-mono text-xs text-[var(--brand-primary)] uppercase tracking-widest block mb-2">
             OFFLINE FOOTPRINT
           </span>
-          <h2 className="text-3xl font-extrabold text-white">Academic Training Centers</h2>
-          <p className="text-sm text-slate-400 mt-2">
+          <h2 className="text-3xl font-extrabold text-[var(--text-primary)]">Academic Training Centers</h2>
+          <p className="text-sm text-[var(--text-secondary)] mt-2">
             Classroom coaching and examination prep centers in the Central Suburbs.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* KALYAN WEST */}
-          <div className="p-8 rounded-2xl bg-[#131917] border border-[#1F2925] flex flex-col justify-between hover:border-[#00C269]/40 transition-all">
+          <div className="p-8 rounded-2xl bg-[var(--surface-base)] border border-[var(--border-subtle)] flex flex-col justify-between hover:border-[var(--brand-primary)]/40 transition-all shadow-md">
             <div>
-              <div className="flex items-center gap-2 text-[#00C269] font-mono text-xs mb-3">
+              <div className="flex items-center gap-2 text-[var(--brand-primary)] font-mono text-xs mb-3">
                 <MapPin className="w-4 h-4" />
                 KALYAN WEST CENTER
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">Chandulal Joshi Complex</h3>
-              <p className="text-slate-400 text-sm leading-relaxed">
+              <h3 className="text-xl font-bold text-[var(--text-primary)] mb-2">Chandulal Joshi Complex</h3>
+              <p className="text-[var(--text-secondary)] text-sm leading-relaxed">
                 Opposite Kalyan Railway Station, Above Hotel Ramdev, Kalyan West, Maharashtra 421301.
               </p>
             </div>
@@ -204,7 +204,7 @@ export default function AboutPage() {
               href="https://wa.me/919372768854?text=Hi%20CodeBits%2C%20I%20want%20to%20inquire%20about%20Kalyan%20batches"
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-6 inline-flex items-center justify-center gap-2 bg-[#00C269] hover:bg-[#009E52] text-[#0B0F0E] font-bold py-3 px-6 rounded-xl text-xs transition-all"
+              className="mt-6 inline-flex items-center justify-center gap-2 bg-[#00C269] hover:bg-[#009E52] text-[#0B0F0E] font-bold py-3 px-6 rounded-xl text-xs transition-all shadow-md hover:scale-[1.02]"
             >
               <MessageSquare className="w-4 h-4" />
               WhatsApp Kalyan Desk
@@ -212,14 +212,14 @@ export default function AboutPage() {
           </div>
 
           {/* ULHASNAGAR */}
-          <div className="p-8 rounded-2xl bg-[#131917] border border-[#1F2925] flex flex-col justify-between hover:border-[#00C269]/40 transition-all">
+          <div className="p-8 rounded-2xl bg-[var(--surface-base)] border border-[var(--border-subtle)] flex flex-col justify-between hover:border-[var(--brand-primary)]/40 transition-all shadow-md">
             <div>
-              <div className="flex items-center gap-2 text-[#00C269] font-mono text-xs mb-3">
+              <div className="flex items-center gap-2 text-[var(--brand-primary)] font-mono text-xs mb-3">
                 <MapPin className="w-4 h-4" />
                 ULHASNAGAR CENTER
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">Hari Narayan Complex</h3>
-              <p className="text-slate-400 text-sm leading-relaxed">
+              <h3 className="text-xl font-bold text-[var(--text-primary)] mb-2">Hari Narayan Complex</h3>
+              <p className="text-[var(--text-secondary)] text-sm leading-relaxed">
                 Shivaji Chowk, Near Central Hospital Road, Ulhasnagar, Maharashtra 421003.
               </p>
             </div>
@@ -228,7 +228,7 @@ export default function AboutPage() {
               href="https://wa.me/919372768854?text=Hi%20CodeBits%2C%20I%20want%20to%20inquire%20about%20Ulhasnagar%20batches"
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-6 inline-flex items-center justify-center gap-2 bg-[#00C269] hover:bg-[#009E52] text-[#0B0F0E] font-bold py-3 px-6 rounded-xl text-xs transition-all"
+              className="mt-6 inline-flex items-center justify-center gap-2 bg-[#00C269] hover:bg-[#009E52] text-[#0B0F0E] font-bold py-3 px-6 rounded-xl text-xs transition-all shadow-md hover:scale-[1.02]"
             >
               <MessageSquare className="w-4 h-4" />
               WhatsApp Ulhasnagar Desk

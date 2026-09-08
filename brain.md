@@ -264,7 +264,7 @@ CURRENT PHASE: FRONTEND PLANNING / FRONTEND NOT YET IMPLEMENTED
 | Feature / Artifact | Status | Notes & Verification |
 |---|---|---|
 | Project Architecture Docs | `VERIFIED` | 5 Markdown documents verified in `public/CodeBits_Documentation/`. |
-| Project Living Memory (`brain.md`) | `VERIFIED` | Persistent project memory maintained; Iteration 2 logged. |
+| Project Living Memory (`brain.md`) | `VERIFIED` | Persistent project memory maintained; Iteration 11 logged. |
 | Brand Asset (`LOGO CB.png`) | `VERIFIED` | Present at `codebits/public/LOGO CB.png` & root `public/`. |
 | Faculty Portraits (`public/FACULTY/`) | `VERIFIED` | 8 WebP images present in `codebits/public/FACULTY/` and `faculty/`. |
 | Partner Assets (`public/partners/`) | `PLANNED` | Directory and assets not yet present on disk. |
@@ -1119,5 +1119,190 @@ Resolve the issue where the stacked navigation system was blank/not displaying p
 - Next.js 16 (Turbopack) production build passed with 0 errors (`npm run build`).
 - HTTP 200 responses verified on `/`, `/vault`, `/about`, `/upload`, `/login`.
 - Dev server responding with HTTP 200 on `http://localhost:3000/`.
+
+---
+
+### Iteration 7: Cinematic Stacked Navigation Animation & 3D Physics Upgrade
+
+#### Date
+2026-09-08
+
+#### Objective
+Elevate the CodeBits Stacked Navigation System (`ScrollStackNav.tsx` and `ScrollStack.tsx`) into a high-end cinematic experience with physics-driven 3D card stacking, dynamic depth shadows and dimming, staggered entrance cascade, active deck tracking, floating quick-jump rail, and keyboard accessibility.
+
+#### Enhancements Implemented
+1. **Kinetic Triple-Dashed Trigger**:
+   - `TripleDashedIcon` equipped with micro-animated horizontal lines that subtly shift on hover.
+   - Added subtle emerald halo and click scale response (`active:scale-95`).
+2. **Staggered Card Deck Entrance**:
+   - Integrated Framer Motion staggered entrance cascade (`initial={{ opacity: 0, y: 55, scale: 0.94 }}`, `animate={{ opacity: 1, y: 0, scale: 1 }}`) with custom ease curve (`[0.16, 1, 0.3, 1]`) and 50ms stagger delays across all 6 deck cards.
+3. **Enhanced 3D Stacking Physics & Depth Lighting**:
+   - Dynamic perspective tilting (`perspective(1200px) rotateX(...)`) as cards enter and rest in the stack.
+   - Dynamic depth dimming (`brightness` down to 0.65) and elevation shadow (`box-shadow: 0 ${shadowY}px ${shadowBlur}px rgba(0,0,0, ${shadowOpacity})`) dynamically scaled with the number of cards stacked on top.
+   - Ultra-smooth progressive scale decay (`Math.max(0.76, 1 - stackedAbove * 0.04)`) and progressive backdrop blur (`Math.min(8, stackedAbove * 2.8)`).
+4. **Active Deck Tracking & Floating Quick Jump Rail**:
+   - Live pinned card calculation feeding `onActiveCardChange` to display real-time deck position (`CARD 01 OF 06`).
+   - Floating navigation rail on larger viewports with interactive numbered pills and hover tooltips for direct jumping to any card in the deck.
+5. **Keyboard & Accessibility Controls**:
+   - Added native `ArrowUp` / `ArrowDown`, `PageUp` / `PageDown`, and `Home` smooth glide navigation between cards.
+   - Global `Escape` key shortcut to smoothly close the drawer.
+6. **Cinematic Backdrop & Visual Polish**:
+   - Ambient emerald radial glows and subtle vignette (`blur-[140px]`).
+   - Glassmorphic top bar with keyboard shortcut guide badges.
+7. **Document.body Portal Mounting (`createPortal`)**:
+   - Mounted the fullscreen modal overlay directly to `document.body` via `createPortal`. This resolved the issue where `<header className="... backdrop-blur-md h-16">` created a CSS containing block for `position: fixed`, which previously trapped the modal inside the 64px header and clipped the scroll deck.
+
+#### Files Changed
+- `codebits/components/ui/ScrollStack.tsx` (Updated)
+- `codebits/components/navigation/ScrollStackNav.tsx` (Updated)
+- `brain.md` (Updated)
+
+#### Verification
+- Next.js 16 (Turbopack) production build passed with 0 errors (`npm run build`).
+- HTTP 200 verified on `http://localhost:3000/`.
+
+---
+
+### Iteration 8: Full-Stage Hero Card Deck & Complete Cross-Page Theme Synchronization
+
+#### Date
+2026-09-08
+
+#### Objective
+Transform the stacked navigation cards into expansive, full-stage hero cards that sequentially stack and replace one another upon scrolling (`min-h-[580px]`), ensure 100% theme consistency across all pages (`/`, `/about`, `/vault`, `/upload`, `/login`) and inside the navigation deck, and eliminate flash of incorrect theme on initial page loads.
+
+#### Root Causes Identified & Resolved
+1. **Tailwind CSS v4 Dark Variant Disconnect**:
+   - In Tailwind v4, the `dark:` selector by default evaluates `@media (prefers-color-scheme: dark)` rather than class or data attributes unless declared explicitly.
+   - *Fix*: Added `@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *, .dark, .dark *));` to `globals.css`, ensuring `dark:` classes respond to `data-theme="light"` and `data-theme="dark"`.
+2. **Flash of Default Dark Theme on Navigation**:
+   - Next.js server-rendered HTML had hardcoded `data-theme="dark"` in `layout.tsx`, causing pages to flash dark or stay dark before client-side hydration.
+   - *Fix*: Injected an inline theme script in `<head>` inside `layout.tsx` that reads `localStorage.getItem('codebits-theme')` synchronously before paint and sets `data-theme` and `.light` / `.dark` classes immediately.
+3. **Hardcoded Dark Styles in Secondary Pages**:
+   - `/about/page.tsx` contained hardcoded `text-white` and `bg-[#131917]` values that remained dark in light mode.
+   - *Fix*: Refactored all text and surface classes in `about/page.tsx` to use design tokens (`var(--surface-base)`, `var(--text-primary)`, `var(--border-subtle)`, `var(--text-secondary)`, `var(--brand-primary)`).
+4. **Small Card Presentation in Navigation Deck**:
+   - Cards were previously restricted to `min-h-[280px]`, causing multiple cards to appear crammed into the viewport at once.
+   - *Fix*: Expanded each card to a full-stage hero card (`min-h-[480px] sm:min-h-[540px] md:min-h-[580px]`), with large category tags, giant typography (`text-5xl md:text-6xl`), detailed descriptions, feature badge rows, and prominent destination action buttons (`ctaText`). Configured `itemDistance=90` so that only one big card dominates the viewport, with successive cards smoothly gliding up and locking into the stack one at a time.
+5. **Drawer Theme Synchronization (`useTheme`)**:
+   - Connected `ScrollStackNav.tsx` directly to `useTheme()`. In light mode, the deck renders crisp white surfaces with emerald accents (`#009E52`), subtle borders, and soft shadows; in dark mode, it renders obsidian-emerald glass surfaces with glowing highlights.
+
+#### Files Changed
+- `codebits/app/globals.css` (Updated)
+- `codebits/app/layout.tsx` (Updated)
+- `codebits/app/about/page.tsx` (Updated)
+- `codebits/components/navigation/ScrollStackNav.tsx` (Updated)
+- `brain.md` (Updated)
+
+#### Verification
+- Next.js 16 (Turbopack) production build passed with 0 errors (`npm run build`).
+- Prerendered 8/8 routes cleanly.
+- HTTP 200 verified on `http://localhost:3000/`.
+
+---
+
+### Iteration 9: Translucent Frosted Glass Overlay & 4 Core Destination Cards
+
+#### Date
+2026-09-08
+
+#### Objective
+Ensure clicking the navigation trigger keeps the user on their current page while softly blurring the background with a translucent frosted glass backdrop (`backdrop-blur-2xl`), animates the deck upward over the blurred page, allows clicking outside to dismiss, and restricts the deck exclusively to the 4 requested platform destinations: **HOME PAGE**, **ACADEMIC VAULT**, **COMMUNITY UPLOAD**, and **LOGIN**.
+
+#### Enhancements Implemented
+1. **Translucent Frosted Backdrop Overlay**:
+   - Replaced opaque `/98` solid backgrounds with translucent glass overlay (`bg-slate-950/40` in light mode, `bg-black/75` in dark mode) paired with `backdrop-blur-2xl`.
+   - The user clearly sees their current page softly blurred in the background rather than feeling like they were navigated away to a separate page.
+   - Added clickable backdrop area allowing the user to click anywhere outside the cards to immediately dismiss the deck.
+2. **Upward Deck Slide Animation**:
+   - The card deck container now smoothly slides upward over the blurred page upon trigger (`initial={{ opacity: 0, y: 70 }}`, `animate={{ opacity: 1, y: 0 }}`) with custom cubic-bezier easing (`[0.16, 1, 0.3, 1]`).
+3. **4-Card Core Navigation Deck**:
+   - Pruned extraneous cards and curated the exact 4 destinations requested:
+     1. **`01` HOME PAGE**: CodeBits Home Gateway (`/`)
+     2. **`02` ACADEMIC VAULT**: MU Academic Vault (`/vault`)
+     3. **`03` COMMUNITY UPLOAD**: Community Upload Pipeline (`/upload`)
+     4. **`04` LOGIN**: Student Portal Login (`/login`)
+4. **Synchronized Quick-Jump Rail & Counter**:
+   - Active deck counter updated to `CARD 01 / 04`.
+   - Floating quick-jump rail updated with 4 interactive numbered pills (`01` through `04`) with hover tooltips and instant smooth scrolling.
+
+#### Files Changed
+- `codebits/components/navigation/ScrollStackNav.tsx` (Updated)
+- `brain.md` (Updated)
+
+#### Verification
+- Next.js 16 (Turbopack) production build passed with 0 errors (`npm run build`).
+- Prerendered 8/8 routes cleanly.
+- HTTP 200 verified on `http://localhost:3000/`.
+
+---
+
+### Iteration 10: Minimalist Close Cross Alignment & Clean Typography Cards
+
+#### Date
+2026-09-08
+
+#### Objective
+Remove the top header bar entirely, position the close cross `[X]` button at the identical coordinates as the navbar menu trigger for instant closing without cursor movement, remove all extraneous badges/chips/tags from cards, and present purely the bold main heading and a concise 1-line description per card.
+
+#### Enhancements Implemented
+1. **Identical Close Button Placement**:
+   - Removed the top header bar containing the title pill, deck counter, and keyboard badges.
+   - Positioned the `[X]` cross button inside a top container matching the navbar layout (`h-16 flex items-center justify-end max-w-7xl mx-auto px-4 sm:px-6 lg:px-8`).
+   - When the user clicks the menu button to open the deck, the `[X]` close button appears at the exact same location under the cursor, enabling immediate one-click closing.
+2. **Minimalist Card Redesign**:
+   - Removed all category tags, feature badge chips, and bottom metadata banners from the cards.
+   - Kept purely:
+     - Prominent icon box (`w-14 h-14 sm:w-16 sm:h-16`)
+     - Monospace card index number (`01` through `04`)
+     - Bold main heading (`text-3xl sm:text-5xl md:text-6xl font-black`)
+     - Clean 1-lined info text (`text-base sm:text-xl md:text-2xl`)
+     - Circular directional arrow (`w-11 h-11`)
+3. **Card Content Refinement**:
+   - `01 Home Page`: *Curriculum roadmap, faculty milestones, and Mumbai University portal gateway.*
+   - `02 Academic Vault`: *Official question papers, marking schemes, and vetted faculty solutions.*
+   - `03 Community Upload`: *Contribute exam papers, solutions, and module notes for peer moderation.*
+   - `04 Login`: *Secure student portal with active session protection and submission tracking.*
+
+#### Files Changed
+- `codebits/components/navigation/ScrollStackNav.tsx` (Updated)
+- `brain.md` (Updated)
+
+#### Verification
+- Next.js 16 (Turbopack) production build passed with 0 errors (`npm run build`).
+- Prerendered 8/8 routes cleanly.
+- Dev server active and responding with HTTP 200 on `http://localhost:3000/`.
+
+---
+
+### Iteration 11: Viewport-Filling Hero Card Stacking
+
+#### Date
+2026-09-08
+
+#### Objective
+Ensure each card fills virtually the entire vertical viewport (`h-[72vh] min-h-[520px] max-h-[720px]`) so that only a single card is visible on screen upon opening, with subsequent cards hidden below the fold until scrolled.
+
+#### Enhancements Implemented
+1. **Full Viewport Card Height**:
+   - Replaced fixed ~400px card heights with responsive viewport sizing: `h-[72vh] min-h-[520px] max-h-[720px]`.
+   - Card 01 now spans from the top bar down to the bottom of the visible area as a single, commanding hero card.
+2. **Spacing & Stacking Dynamics**:
+   - Configured `itemDistance={120}` so Card 02 begins well below the bottom of the viewport and does not peek into view prematurely.
+   - Pinned offset extended (`pinEnd = Math.max(pinStart + 2500, ...)`) and inner track padding enlarged (`pb-[70rem]`) for smooth, unhurried stacking where each card glides up and takes over the stage one by one.
+3. **Typography & Proportions Scaled**:
+   - Scaled icons to `w-16 h-16 sm:w-20 sm:h-20`.
+   - Scaled card index numbers to `text-5xl sm:text-7xl md:text-8xl`.
+   - Headings enlarged to `text-4xl sm:text-6xl md:text-7xl font-black`.
+   - 1-lined info text sized to `text-lg sm:text-2xl md:text-3xl`.
+
+#### Files Changed
+- `codebits/components/navigation/ScrollStackNav.tsx` (Updated)
+- `codebits/components/ui/ScrollStack.tsx` (Updated)
+- `brain.md` (Updated)
+
+#### Verification
+- Dev server active and responding with HTTP 200 on `http://localhost:3000/`.
+- Verified single card display with one-by-one scroll stacking.
 
 

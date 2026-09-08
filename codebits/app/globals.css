@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *, .dark, .dark *));
+
 /* ==========================================================================
    CODEBITS DESIGN SYSTEM TOKENS
    Strict Anti-AI-Slop Rules: No gradients, no glows, no fake shadows.
