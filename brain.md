@@ -1305,4 +1305,38 @@ Ensure each card fills virtually the entire vertical viewport (`h-[72vh] min-h-[
 - Dev server active and responding with HTTP 200 on `http://localhost:3000/`.
 - Verified single card display with one-by-one scroll stacking.
 
+---
+
+### Iteration 12: Primary Color Footer & Kinetic SVG End Point Connection
+
+#### Date
+2026-09-08
+
+#### Objective
+1. Make the global footer use the brand's primary color (`var(--brand-primary)` / `#00C269`) with high-contrast typography and clean institutional hierarchy.
+2. Extend the kinetic SVG scribble trail (`Skiper19`) so its end point seamlessly connects into the top of the primary footer without any floating gaps on any viewport or device resolution.
+
+#### Enhancements Implemented
+1. **Primary Brand Footer Styling**:
+   - Replaced default surface background with `bg-[var(--brand-primary)]` (`#00C269` / `#009E52`).
+   - Styled high-contrast text elements (`text-black`, `text-black/80`, `text-black/75`) for headings, links, legal text, and institutional metadata.
+   - Restyled the CodeBits logo card with translucent backdrop and subtle borders (`bg-black/10 border-black/15`).
+   - Removed the top separating border from the footer to create an uninterrupted landing canvas for the kinetic trail.
+2. **Dynamic Kinetic SVG End Point Connection**:
+   - Connected `LinePath` to `containerRef` (`<section>`) in `Skiper19.tsx`.
+   - Created a responsive connector curve via `useEffect` and resize listeners that calculates the exact distance from the path's terminal coordinates `(303.794, 2668.89)` to the top boundary of the footer in SVG viewBox coordinate space.
+   - Projected the natural tangent slope ($dx/dy \approx 0.2524$) through a smooth cubic Bézier curve down into the footer (+24 SVG units into the footer).
+   - Changed section overflow from `overflow-hidden` to `overflow-x-clip` so that the stroke merges continuously into the footer without clipping or creating horizontal page scrollbars.
+
+#### Files Changed
+- `codebits/components/navigation/Footer.tsx` (Updated)
+- `codebits/components/sections/Skiper19.tsx` (Updated)
+- `brain.md` (Updated)
+
+#### Verification
+- Dev server active and responding with HTTP 200 on `http://localhost:3000/`.
+- Hot reload compiled cleanly with zero errors.
+- Verified SVG stroke connects directly into the solid primary green footer.
+
+
 
