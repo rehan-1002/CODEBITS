@@ -1687,3 +1687,27 @@ Ensure each card fills virtually the entire vertical viewport (`h-[72vh] min-h-[
 #### Verification
 - Next.js dev server responding with HTTP 200 on both `http://localhost:3000/upload` and `http://localhost:3000/vault`.
 - Validated spring animations on dropdowns and metallic dot-wave button animations.
+
+---
+
+### Iteration 21: Dropdown Stacking Glitch Fix & 21st.dev Flow Hover Button Integration (/upload) (2026-09-10)
+
+#### Changes Implemented
+1. **Resolved Dropdown Stacking Context Glitch**:
+   - Fixed the issue where Document Category buttons and PDF Dropzone with backdrop-blur rendered over the open Semester/Branch dropdown menu.
+   - Enforced hierarchical stacking order: elevated the Branch & Semester grid to `relative z-40`, set Document Category to `relative z-20`, and PDF dropzone to `relative z-10`.
+   - The spring-animated dropdown menu now renders cleanly on top of all subsequent form controls without any clipping or overlap.
+2. **21st.dev Flow Hover Button Integration**:
+   - Built `FlowHoverButton` component (`@/components/ui/flow-hover-button`) based on [21st.dev/@vaib215/components/flow-hover-button](https://21st.dev/@vaib215/components/flow-hover-button).
+   - Features the signature circular fluid flow animation (`before:scale-[2.5] before:rounded-[100%] before:transition-transform before:duration-1000`) that sweeps across the button on hover.
+   - Replaced the submit CTA ("TRANSMIT TO FACULTY REVIEW") and reset CTA ("SUBMIT ANOTHER DOCUMENT") with `FlowHoverButton`.
+
+#### Files Changed
+- `codebits/components/ui/flow-hover-button.tsx` (New: 21st.dev FlowHoverButton implementation)
+- `codebits/components/upload/ResourceUploadForm.tsx` (Updated: fixed stacking contexts, integrated FlowHoverButton)
+- `brain.md` (Updated: logged Iteration 21)
+
+#### Verification
+- Next.js dev server active and responding with HTTP 200 on `http://localhost:3000/upload`.
+- Verified dropdown floats above all form elements cleanly.
+- Verified fluid circular hover sweep animation on the submit button.

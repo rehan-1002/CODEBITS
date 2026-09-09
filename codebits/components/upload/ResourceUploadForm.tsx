@@ -11,10 +11,11 @@ import {
   CheckCircle2,
   GraduationCap,
   BookOpen,
+  ArrowRight,
 } from "lucide-react";
 import { AcademicBranch, AcademicSemester, DocumentCategory } from "@/types/resources";
 import { AnimatedFilterDropdown, FilterDropdownOption } from "@/components/ui/animated-filter-dropdown";
-import { AntiMetalButton } from "@/components/ui/anti-metal-button";
+import { FlowHoverButton } from "@/components/ui/flow-hover-button";
 import { HoverButton } from "@/components/ui/hover-button";
 
 const BRANCH_OPTIONS: FilterDropdownOption[] = [
@@ -154,25 +155,27 @@ export function ResourceUploadForm() {
             <div><span className="text-[var(--text-muted)]">FILE:</span> <span className="text-[var(--text-primary)] font-semibold">{file?.name} ({(file?.size ? file.size / 1024 : 0).toFixed(1)} KB)</span></div>
           </div>
 
-          {/* Vault-style AntiMetalButton for Reset */}
+          {/* 21st.dev FlowHoverButton for Reset Action */}
           <div className="pt-2 relative z-10 flex justify-center">
-            <AntiMetalButton
+            <FlowHoverButton
               onClick={() => {
                 setSubmitted(false);
                 setSubject("");
                 setTitle("");
                 setFile(null);
               }}
-              label="SUBMIT ANOTHER DOCUMENT"
+              icon={<ArrowRight className="w-4 h-4" />}
               className="h-12 min-w-[260px]"
-            />
+            >
+              SUBMIT ANOTHER DOCUMENT
+            </FlowHoverButton>
           </div>
         </div>
       ) : (
         /* Authentic Liquid Glass HUD Form */
         <form
           onSubmit={handleSubmit}
-          className="relative z-10 backdrop-blur-2xl bg-white/40 dark:bg-[#0B120E]/40 border border-white/60 dark:border-white/15 shadow-[0_8px_32px_0_rgba(0,0,0,0.08)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-3xl p-6 sm:p-10 space-y-7 overflow-hidden"
+          className="relative z-10 backdrop-blur-2xl bg-white/40 dark:bg-[#0B120E]/40 border border-white/60 dark:border-white/15 shadow-[0_8px_32px_0_rgba(0,0,0,0.08)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-3xl p-6 sm:p-10 space-y-7"
         >
           {/* Top Specular Glass Reflection Sheen */}
           <div className="absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-white/35 dark:from-white/15 via-white/5 to-transparent rounded-t-3xl pointer-events-none" />
@@ -220,8 +223,12 @@ export function ResourceUploadForm() {
             />
           </div>
 
-          {/* Branch & Semester Grid with Animated Spring Dropdowns */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-10">
+          {/* 
+            Branch & Semester Grid:
+            Elevated to z-40 so the spring-animated dropdown menu floats on top of
+            subsequent form rows (Document Category and PDF Dropzone) with zero clipping or overlap!
+          */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-40">
             <div className="space-y-2">
               <label className="block text-[11px] font-mono text-[var(--text-secondary)] tracking-wider">
                 ACADEMIC BRANCH <span className="text-[var(--brand-primary)]">*</span>
@@ -253,8 +260,8 @@ export function ResourceUploadForm() {
             </div>
           </div>
 
-          {/* Document Category Liquid Glass Selector with Academic Vault HoverButtons */}
-          <div className="space-y-2 relative z-10">
+          {/* Document Category Liquid Glass Selector with Academic Vault HoverButtons (z-20) */}
+          <div className="space-y-2 relative z-20">
             <label className="block text-[11px] font-mono text-[var(--text-secondary)] tracking-wider">
               DOCUMENT CATEGORY <span className="text-[var(--brand-primary)]">*</span>
             </label>
@@ -272,7 +279,7 @@ export function ResourceUploadForm() {
             </div>
           </div>
 
-          {/* PDF File Dropzone */}
+          {/* PDF File Dropzone (z-10) */}
           <div className="space-y-2 relative z-10">
             <label className="block text-[11px] font-mono text-[var(--text-secondary)] tracking-wider">
               ATTACH PDF PAYLOAD <span className="text-[var(--brand-primary)]">*</span>
@@ -308,14 +315,16 @@ export function ResourceUploadForm() {
             </div>
           </div>
 
-          {/* Submit Action with Academic Vault AntiMetalButton */}
+          {/* Submit Action with 21st.dev FlowHoverButton (z-10) */}
           <div className="pt-2 relative z-10 flex justify-start">
-            <AntiMetalButton
+            <FlowHoverButton
               type="submit"
               disabled={loading}
-              label={loading ? "TRANSMITTING TO MODERATION..." : "TRANSMIT TO FACULTY REVIEW"}
+              icon={<ArrowRight className="w-4 h-4" />}
               className="w-full sm:w-auto h-12 min-w-[280px]"
-            />
+            >
+              {loading ? "TRANSMITTING TO MODERATION..." : "TRANSMIT TO FACULTY REVIEW"}
+            </FlowHoverButton>
           </div>
         </form>
       )}
