@@ -8,7 +8,6 @@ import {
   AlertCircle,
   Clock,
   ShieldAlert,
-  Sparkles,
   ArrowRight,
   CheckCircle2,
 } from "lucide-react";
@@ -54,8 +53,6 @@ export function ResourceUploadForm() {
 
     setLoading(true);
 
-    // Backend-ready boundary:
-    // Simulated submission lifecycle for frontend verification
     setTimeout(() => {
       setLoading(false);
       setSubmitted(true);
@@ -63,30 +60,37 @@ export function ResourceUploadForm() {
   };
 
   return (
-    <div className="relative w-full space-y-8">
-      {/* Background CodeBits Logo - Refracted and Blurred Behind the Glass Form */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none -z-10 overflow-hidden">
-        {/* Smokey Ethereal Backdrop Blooms */}
-        <div className="absolute w-[500px] sm:w-[700px] h-[500px] sm:h-[700px] rounded-full bg-gradient-to-tr from-[var(--brand-primary,#00C269)]/15 via-emerald-500/10 to-teal-400/5 blur-[100px] transform -translate-y-6" />
-        <div className="absolute w-[350px] sm:w-[500px] h-[350px] sm:h-[500px] rounded-full bg-[var(--brand-ambient,#34EE99)]/10 dark:bg-[var(--brand-primary,#00C269)]/20 blur-[80px] transform translate-y-12 translate-x-8" />
+    <div className="relative isolate w-full space-y-8">
+      {/* 
+        ========================================================================
+        CODEBITS LOGO IN THE BACK OF THE FORM:
+        Placed at z-0 inside an isolated stacking context.
+        The liquid glass form sits at z-10 directly refracting and blurring this logo.
+        ========================================================================
+      */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0 overflow-visible">
+        {/* Ambient Emerald Glow Bloom */}
+        <div className="absolute w-[440px] sm:w-[580px] h-[440px] sm:h-[580px] rounded-full bg-[radial-gradient(circle,rgba(0,194,105,0.35)_0%,rgba(52,238,153,0.15)_40%,transparent_70%)] blur-[60px]" />
+        <div className="absolute w-[300px] sm:w-[420px] h-[300px] sm:h-[420px] rounded-full bg-emerald-500/15 dark:bg-emerald-500/25 blur-[70px] -translate-y-8" />
 
-        <div className="relative w-[320px] sm:w-[460px] md:w-[540px] aspect-square flex items-center justify-center animate-pulse duration-[8000ms]">
+        {/* CodeBits Emblem - Positioned directly behind the form */}
+        <div className="relative w-[320px] sm:w-[460px] md:w-[520px] aspect-square flex items-center justify-center animate-pulse duration-[6000ms]">
           <Image
             src="/LOGO CB.png"
-            alt="CodeBits Logo Backdrop"
-            width={540}
-            height={540}
+            alt="CodeBits Logo"
+            width={520}
+            height={520}
             priority
-            className="w-full h-full object-contain opacity-55 dark:opacity-45 drop-shadow-[0_0_50px_rgba(0,194,105,0.4)] pointer-events-none filter"
+            className="w-full h-full object-contain opacity-75 dark:opacity-85 drop-shadow-[0_0_45px_rgba(0,194,105,0.5)] pointer-events-none"
           />
         </div>
       </div>
 
       {submitted ? (
         /* Submitted Liquid Glass HUD Card */
-        <div className="relative z-10 backdrop-blur-3xl bg-white/20 dark:bg-black/30 border border-white/40 dark:border-white/15 shadow-[0_8px_32px_0_rgba(0,0,0,0.12)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.6)] rounded-3xl p-8 sm:p-12 text-center space-y-6 overflow-hidden">
+        <div className="relative z-10 backdrop-blur-2xl bg-white/40 dark:bg-[#0B120E]/40 border border-white/60 dark:border-white/15 shadow-[0_8px_32px_0_rgba(0,0,0,0.08)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-3xl p-8 sm:p-12 text-center space-y-6 overflow-hidden">
           {/* Top Specular Glare */}
-          <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-white/40 dark:from-white/15 via-white/5 to-transparent rounded-t-3xl pointer-events-none" />
+          <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-white/30 dark:from-white/15 via-white/5 to-transparent rounded-t-3xl pointer-events-none" />
 
           {/* HUD Corner Accents */}
           <div className="absolute top-3.5 left-3.5 w-3.5 h-3.5 border-t-2 border-l-2 border-[var(--brand-primary)]/80 pointer-events-none" />
@@ -94,7 +98,7 @@ export function ResourceUploadForm() {
           <div className="absolute bottom-3.5 left-3.5 w-3.5 h-3.5 border-b-2 border-l-2 border-[var(--brand-primary)]/80 pointer-events-none" />
           <div className="absolute bottom-3.5 right-3.5 w-3.5 h-3.5 border-b-2 border-r-2 border-[var(--brand-primary)]/80 pointer-events-none" />
 
-          <div className="w-16 h-16 rounded-2xl border border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/15 text-[var(--brand-primary)] flex items-center justify-center mx-auto shadow-[0_0_28px_rgba(0,194,105,0.25)]">
+          <div className="w-16 h-16 rounded-2xl border border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/15 text-[var(--brand-primary)] flex items-center justify-center mx-auto shadow-[0_0_28px_rgba(0,194,105,0.3)]">
             <CheckCircle2 className="w-8 h-8" />
           </div>
 
@@ -112,8 +116,8 @@ export function ResourceUploadForm() {
           </div>
 
           {/* Payload Summary HUD Panel */}
-          <div className="p-5 rounded-2xl border border-white/30 dark:border-white/10 bg-white/20 dark:bg-white/[0.04] backdrop-blur-md max-w-md mx-auto text-left text-xs font-mono space-y-2 relative z-10 shadow-inner">
-            <div className="flex justify-between items-center pb-2 border-b border-white/20 dark:border-white/10 text-[10px] text-[var(--text-muted)]">
+          <div className="p-5 rounded-2xl border border-black/10 dark:border-white/10 bg-white/30 dark:bg-white/[0.04] backdrop-blur-md max-w-md mx-auto text-left text-xs font-mono space-y-2 relative z-10 shadow-inner">
+            <div className="flex justify-between items-center pb-2 border-b border-black/10 dark:border-white/10 text-[10px] text-[var(--text-muted)]">
               <span>PAYLOAD_RECEIPT</span>
               <span className="text-[var(--brand-primary)] font-semibold">VERIFIED_HASH</span>
             </div>
@@ -131,20 +135,20 @@ export function ResourceUploadForm() {
               setTitle("");
               setFile(null);
             }}
-            className="relative z-10 inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-ambient,#34EE99)] text-[#0B0F0E] text-xs font-bold font-mono tracking-wider transition-all duration-300 shadow-[0_0_24px_rgba(0,194,105,0.35)] hover:shadow-[0_0_36px_rgba(0,194,105,0.65)] hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+            className="relative z-10 inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-ambient,#34EE99)] text-[#05130D] text-xs font-bold font-mono tracking-wider transition-all duration-300 shadow-[0_0_24px_rgba(0,194,105,0.35)] hover:shadow-[0_0_36px_rgba(0,194,105,0.65)] hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
           >
             <span>SUBMIT ANOTHER DOCUMENT</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
       ) : (
-        /* Clear Smokey Glassmorphic HUD Form */
+        /* Authentic Liquid Glass HUD Form */
         <form
           onSubmit={handleSubmit}
-          className="relative z-10 backdrop-blur-3xl bg-white/25 dark:bg-black/35 border border-white/40 dark:border-white/15 shadow-[0_8px_32px_0_rgba(0,0,0,0.12)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.6)] rounded-3xl p-6 sm:p-10 space-y-7 overflow-hidden"
+          className="relative z-10 backdrop-blur-2xl bg-white/40 dark:bg-[#0B120E]/40 border border-white/60 dark:border-white/15 shadow-[0_8px_32px_0_rgba(0,0,0,0.08)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-3xl p-6 sm:p-10 space-y-7 overflow-hidden"
         >
-          {/* Top Specular Glass Reflection */}
-          <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-white/40 dark:from-white/15 via-white/5 to-transparent rounded-t-3xl pointer-events-none" />
+          {/* Top Specular Glass Reflection Sheen */}
+          <div className="absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-white/35 dark:from-white/15 via-white/5 to-transparent rounded-t-3xl pointer-events-none" />
 
           {/* HUD Corner Accents */}
           <div className="absolute top-3.5 left-3.5 w-3.5 h-3.5 border-t-2 border-l-2 border-[var(--brand-primary)]/80 pointer-events-none" />
@@ -153,9 +157,9 @@ export function ResourceUploadForm() {
           <div className="absolute bottom-3.5 right-3.5 w-3.5 h-3.5 border-b-2 border-r-2 border-[var(--brand-primary)]/80 pointer-events-none" />
 
           {/* HUD Header Strip */}
-          <div className="relative z-10 flex items-center justify-between pb-4 border-b border-white/20 dark:border-white/10">
+          <div className="relative z-10 flex items-center justify-between pb-4 border-b border-black/10 dark:border-white/10">
             <div className="flex items-center gap-2 font-mono text-xs text-[var(--brand-primary)] font-semibold tracking-wider">
-              <span className="inline-block w-2 h-2 rounded-full bg-[var(--brand-primary)] animate-pulse" />
+              <span className="inline-block w-2 h-2 rounded-full bg-[var(--brand-primary)] animate-pulse shadow-[0_0_10px_var(--brand-primary)]" />
               SYS_NODE // ACADEMIC_INGESTION
             </div>
             <div className="font-mono text-[10px] text-[var(--text-muted)] tracking-widest hidden sm:block">
@@ -164,7 +168,7 @@ export function ResourceUploadForm() {
           </div>
 
           {error && (
-            <div className="relative z-10 p-3.5 rounded-xl border border-red-500/40 bg-red-500/10 backdrop-blur-md text-red-400 text-xs flex items-center gap-2.5">
+            <div className="relative z-10 p-3.5 rounded-xl border border-red-500/40 bg-red-500/10 backdrop-blur-md text-red-500 dark:text-red-300 text-xs flex items-center gap-2.5">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{error}</span>
             </div>
@@ -181,7 +185,7 @@ export function ResourceUploadForm() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. May 2024 University Question Paper with Full Solutions"
-              className="w-full px-4 py-3 rounded-xl border border-white/40 dark:border-white/15 bg-white/30 dark:bg-white/[0.05] backdrop-blur-xl text-xs sm:text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]/40 transition-all shadow-inner"
+              className="w-full px-4 py-3.5 rounded-xl border border-black/10 dark:border-white/15 bg-white/50 dark:bg-white/[0.04] backdrop-blur-xl text-xs sm:text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] focus:bg-white/80 dark:focus:bg-white/[0.08] focus:ring-1 focus:ring-[var(--brand-primary)]/50 transition-all shadow-inner"
             />
           </div>
 
@@ -196,7 +200,7 @@ export function ResourceUploadForm() {
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="e.g. Applied Mathematics IV / Data Structures"
-              className="w-full px-4 py-3 rounded-xl border border-white/40 dark:border-white/15 bg-white/30 dark:bg-white/[0.05] backdrop-blur-xl text-xs sm:text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]/40 transition-all shadow-inner"
+              className="w-full px-4 py-3.5 rounded-xl border border-black/10 dark:border-white/15 bg-white/50 dark:bg-white/[0.04] backdrop-blur-xl text-xs sm:text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] focus:bg-white/80 dark:focus:bg-white/[0.08] focus:ring-1 focus:ring-[var(--brand-primary)]/50 transition-all shadow-inner"
             />
           </div>
 
@@ -209,7 +213,7 @@ export function ResourceUploadForm() {
               <select
                 value={branch}
                 onChange={(e) => setBranch(e.target.value as AcademicBranch)}
-                className="w-full px-4 py-3 rounded-xl border border-white/40 dark:border-white/15 bg-white/40 dark:bg-[#121A16]/90 backdrop-blur-xl text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]/40 transition-all cursor-pointer shadow-inner"
+                className="w-full px-4 py-3.5 rounded-xl border border-black/10 dark:border-white/15 bg-white/70 dark:bg-[#0E1612] backdrop-blur-xl text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]/50 transition-all cursor-pointer shadow-inner"
               >
                 <option value="COMPS">Computer Engineering (COMPS)</option>
                 <option value="IT">Information Technology (IT)</option>
@@ -227,7 +231,7 @@ export function ResourceUploadForm() {
               <select
                 value={semester}
                 onChange={(e) => setSemester(Number(e.target.value) as AcademicSemester)}
-                className="w-full px-4 py-3 rounded-xl border border-white/40 dark:border-white/15 bg-white/40 dark:bg-[#121A16]/90 backdrop-blur-xl text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]/40 transition-all cursor-pointer shadow-inner"
+                className="w-full px-4 py-3.5 rounded-xl border border-black/10 dark:border-white/15 bg-white/70 dark:bg-[#0E1612] backdrop-blur-xl text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]/50 transition-all cursor-pointer shadow-inner"
               >
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
                   <option key={s} value={s}>
@@ -238,7 +242,7 @@ export function ResourceUploadForm() {
             </div>
           </div>
 
-          {/* Document Category HUD Selector */}
+          {/* Document Category Liquid Glass Selector */}
           <div className="space-y-2 relative z-10">
             <label className="block text-[11px] font-mono text-[var(--text-secondary)] tracking-wider">
               DOCUMENT CATEGORY <span className="text-[var(--brand-primary)]">*</span>
@@ -256,8 +260,8 @@ export function ResourceUploadForm() {
                   onClick={() => setCategory(c.id as DocumentCategory)}
                   className={`py-2.5 px-3 rounded-xl text-xs font-mono border backdrop-blur-xl transition-all cursor-pointer text-center ${
                     category === c.id
-                      ? "bg-[var(--brand-primary)]/20 text-[var(--brand-primary)] border-[var(--brand-primary)]/80 font-semibold shadow-[0_0_20px_rgba(0,194,105,0.3)]"
-                      : "bg-white/25 dark:bg-white/[0.04] text-[var(--text-secondary)] border-white/40 dark:border-white/10 hover:border-[var(--brand-primary)]/50 hover:text-[var(--text-primary)]"
+                      ? "bg-[var(--brand-primary)]/20 text-[var(--brand-primary)] border-[var(--brand-primary)] font-semibold shadow-[0_0_20px_rgba(0,194,105,0.3)]"
+                      : "bg-white/30 dark:bg-white/[0.04] text-[var(--text-secondary)] border-black/10 dark:border-white/10 hover:border-[var(--brand-primary)]/50 hover:text-[var(--text-primary)]"
                   }`}
                 >
                   {c.label}
@@ -271,7 +275,7 @@ export function ResourceUploadForm() {
             <label className="block text-[11px] font-mono text-[var(--text-secondary)] tracking-wider">
               ATTACH PDF PAYLOAD <span className="text-[var(--brand-primary)]">*</span>
             </label>
-            <div className="relative border-2 border-dashed border-white/40 dark:border-white/20 hover:border-[var(--brand-primary)] rounded-2xl p-7 text-center bg-white/25 dark:bg-white/[0.03] backdrop-blur-xl transition-all group cursor-pointer hover:shadow-[0_0_30px_rgba(0,194,105,0.2)]">
+            <div className="relative border-2 border-dashed border-black/15 dark:border-white/20 hover:border-[var(--brand-primary)] rounded-2xl p-7 text-center bg-white/30 dark:bg-white/[0.03] backdrop-blur-xl transition-all group cursor-pointer hover:shadow-[0_0_30px_rgba(0,194,105,0.2)]">
               <input
                 type="file"
                 accept=".pdf,application/pdf"
@@ -307,7 +311,7 @@ export function ResourceUploadForm() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-ambient,#34EE99)] text-[#0B0F0E] text-xs font-bold font-mono uppercase tracking-wider transition-all duration-300 disabled:opacity-50 shadow-[0_0_24px_rgba(0,194,105,0.35)] hover:shadow-[0_0_36px_rgba(0,194,105,0.65)] hover:scale-[1.01] active:scale-[0.98] cursor-pointer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-ambient,#34EE99)] text-[#05130D] text-xs font-bold font-mono uppercase tracking-wider transition-all duration-300 disabled:opacity-50 shadow-[0_0_24px_rgba(0,194,105,0.35)] hover:shadow-[0_0_36px_rgba(0,194,105,0.65)] hover:scale-[1.01] active:scale-[0.98] cursor-pointer"
             >
               <span>{loading ? "TRANSMITTING TO MODERATION..." : "TRANSMIT TO FACULTY REVIEW"}</span>
               <ArrowRight className="w-4 h-4" />
@@ -316,9 +320,9 @@ export function ResourceUploadForm() {
         </form>
       )}
 
-      {/* Moderation Protocol Guide - Clear Glass HUD Block */}
-      <div className="relative rounded-2xl backdrop-blur-3xl bg-white/20 dark:bg-black/25 border border-white/40 dark:border-white/10 p-6 sm:p-7 space-y-4 shadow-[0_8px_32px_0_rgba(0,0,0,0.08)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden">
-        {/* Subtle Specular Glare */}
+      {/* Moderation Protocol Guide - Liquid Glass HUD Block */}
+      <div className="relative z-10 rounded-2xl backdrop-blur-2xl bg-white/30 dark:bg-white/[0.04] border border-white/50 dark:border-white/10 p-6 sm:p-7 space-y-4 shadow-[0_8px_32px_0_rgba(0,0,0,0.06)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden">
+        {/* Specular Glare */}
         <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-white/30 dark:from-white/10 to-transparent pointer-events-none" />
 
         <div className="flex items-center gap-2 relative z-10">
@@ -329,7 +333,7 @@ export function ResourceUploadForm() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 text-xs relative z-10">
-          <div className="p-3.5 rounded-xl border border-white/30 dark:border-white/10 bg-white/25 dark:bg-white/[0.03] backdrop-blur-xl space-y-1">
+          <div className="p-3.5 rounded-xl border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/[0.03] backdrop-blur-xl space-y-1">
             <span className="font-mono text-[10px] text-[var(--brand-primary)] font-bold">STAGE 01</span>
             <div className="font-semibold text-[var(--text-primary)]">Student Submission</div>
             <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed font-sans">
@@ -337,7 +341,7 @@ export function ResourceUploadForm() {
             </p>
           </div>
 
-          <div className="p-3.5 rounded-xl border border-white/30 dark:border-white/10 bg-white/25 dark:bg-white/[0.03] backdrop-blur-xl space-y-1">
+          <div className="p-3.5 rounded-xl border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/[0.03] backdrop-blur-xl space-y-1">
             <span className="font-mono text-[10px] text-[var(--brand-primary)] font-bold">STAGE 02</span>
             <div className="font-semibold text-[var(--text-primary)]">Faculty Verification</div>
             <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed font-sans">
@@ -345,7 +349,7 @@ export function ResourceUploadForm() {
             </p>
           </div>
 
-          <div className="p-3.5 rounded-xl border border-white/30 dark:border-white/10 bg-white/25 dark:bg-white/[0.03] backdrop-blur-xl space-y-1">
+          <div className="p-3.5 rounded-xl border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/[0.03] backdrop-blur-xl space-y-1">
             <span className="font-mono text-[10px] text-[var(--brand-primary)] font-bold">STAGE 03</span>
             <div className="font-semibold text-[var(--text-primary)]">Vault Publication</div>
             <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed font-sans">

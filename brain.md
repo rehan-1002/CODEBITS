@@ -1636,7 +1636,32 @@ Ensure each card fills virtually the entire vertical viewport (`h-[72vh] min-h-[
 - Verified Next.js dev server returns HTTP 200 on `/upload`.
 - Verified liquid glass refraction, theme compatibility, and mobile responsiveness.
 
+---
 
+### Iteration 19: Authentic 21st.dev Liquid Glass HUD & Blurred CodeBits Logo (/upload) (2026-09-10)
 
+#### Changes Implemented
+1. **Isolated Stacking Context & Blurred CodeBits Logo Placement**:
+   - Enforced `isolate` on the outer form wrapper (`relative isolate`) and positioned the CodeBits logo (`/LOGO CB.png`) at `z-0` directly behind the form.
+   - Fixed the previous `-z-10` issue where negative z-index was rendered behind the page background in light mode.
+   - Enhanced logo visibility with emerald ambient glow bloom (`bg-[radial-gradient(circle,rgba(0,194,105,0.35)_0%,transparent_70%)]`, `drop-shadow-[0_0_45px_rgba(0,194,105,0.5)]`).
+2. **Authentic Liquid Glass HUD Chassis**:
+   - Upgraded the form card at `z-10` with real liquid frosted glass based on 21st.dev's liquid glass design:
+     - `backdrop-blur-2xl`
+     - Light mode: `bg-white/40 border border-white/60 shadow-[0_8px_32px_0_rgba(0,0,0,0.08)]`
+     - Dark mode: `dark:bg-[#0B120E]/40 dark:border-white/15 dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)]`
+     - Specular top glare reflection (`bg-gradient-to-b from-white/35 dark:from-white/15 via-white/5 to-transparent`)
+     - Emerald HUD corner brackets (`border-[#00C269]`) and status strip (`SYS_NODE // ACADEMIC_INGESTION`)
+   - The CodeBits logo is now distinctly visible through the translucent form body, refracted and blurred by the liquid glass.
+3. **Clean Natural Page Canvas**:
+   - Preserved the clean natural page background on `/upload` with the minimal bold headline **"Contribute"**.
 
+#### Files Changed
+- `codebits/app/upload/page.tsx` (Updated: clean Contribute page layout)
+- `codebits/components/upload/ResourceUploadForm.tsx` (Updated: isolated stacking context with CodeBits logo at z-0, authentic liquid glass HUD at z-10)
+- `brain.md` (Updated: logged Iteration 19)
+
+#### Verification
+- Dev server verified active and responding on `http://localhost:3000/upload` (HTTP 200).
+- Type checking passes and HMR updates cleanly.
 

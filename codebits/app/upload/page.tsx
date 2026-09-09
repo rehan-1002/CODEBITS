@@ -1,10 +1,9 @@
 import React from "react";
 import { Metadata } from "next";
-import { UploadCloud, ShieldCheck } from "lucide-react";
 import { ResourceUploadForm } from "@/components/upload/ResourceUploadForm";
 
 export const metadata: Metadata = {
-  title: "Community Upload | CodeBits Academic Vault",
+  title: "Contribute | CodeBits Academic Vault",
   description:
     "Contribute verified Mumbai University engineering question papers, lecture notes, and solutions for faculty review and public vault indexing.",
 };
