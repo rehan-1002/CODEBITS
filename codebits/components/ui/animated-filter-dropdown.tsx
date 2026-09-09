@@ -16,7 +16,7 @@ export interface FilterDropdownOption {
 }
 
 export interface AnimatedFilterDropdownProps {
-  label: string;
+  label?: string;
   selectedId: string | number;
   options: FilterDropdownOption[];
   onSelect: (id: string | number) => void;
@@ -24,6 +24,9 @@ export interface AnimatedFilterDropdownProps {
   searchPlaceholder?: string;
   align?: "left" | "right" | "center";
   className?: string;
+  fullWidth?: boolean;
+  triggerClassName?: string;
+  panelClassName?: string;
 }
 
 const SPRING = { type: "spring", bounce: 0.1, duration: 0.38 } as const;
@@ -33,7 +36,7 @@ const panelVariants = {
     opacity: 0,
     y: -6,
     scale: 0.97,
-    filter: "blur(20px)",
+    filter: "blur(12px)",
   },
   center: {
     opacity: 1,
@@ -45,7 +48,7 @@ const panelVariants = {
     opacity: 0,
     y: -6,
     scale: 0.97,
-    filter: "blur(20px)",
+    filter: "blur(12px)",
   },
 };
 
@@ -58,6 +61,9 @@ export function AnimatedFilterDropdown({
   searchPlaceholder = "Search...",
   align = "right",
   className,
+  fullWidth = false,
+  triggerClassName,
+  panelClassName,
 }: AnimatedFilterDropdownProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -95,33 +101,43 @@ export function AnimatedFilterDropdown({
       (opt.sublabel && opt.sublabel.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const alignClass =
-    align === "right"
-      ? "right-0"
-      : align === "left"
-      ? "left-0"
-      : "left-1/2 -translate-x-1/2";
+  const alignClass = fullWidth
+    ? "left-0 right-0 w-full"
+    : align === "right"
+    ? "right-0"
+    : align === "left"
+    ? "left-0"
+    : "left-1/2 -translate-x-1/2";
 
   return (
-    <div ref={containerRef} className={cn("relative inline-block text-left", className)}>
+    <div
+      ref={containerRef}
+      className={cn("relative text-left", fullWidth ? "w-full block" : "inline-block", className)}
+    >
       <Button
         type="button"
         variant="outline"
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
           "h-9 px-3.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-base)] text-xs font-mono text-[var(--text-primary)] hover:border-[var(--brand-primary)] hover:bg-[var(--surface-elevated)] transition-all flex items-center gap-2 cursor-pointer",
-          open && "border-[var(--brand-primary)] ring-1 ring-[var(--brand-primary)]/30"
+          fullWidth && "w-full h-11 justify-between px-4",
+          open && "border-[var(--brand-primary)] ring-1 ring-[var(--brand-primary)]/30",
+          triggerClassName
         )}
       >
-        <span className="text-[var(--text-muted)] uppercase text-[11px] font-semibold tracking-wider">
-          {label}:
-        </span>
-        <span className="font-bold text-[var(--brand-primary)]">
-          {selectedOption ? selectedOption.label : "Select"}
-        </span>
+        <div className="flex items-center gap-2 truncate">
+          {label && (
+            <span className="text-[var(--text-muted)] uppercase text-[11px] font-semibold tracking-wider">
+              {label}:
+            </span>
+          )}
+          <span className={cn("truncate", label ? "font-bold text-[var(--brand-primary)]" : "font-medium text-[var(--text-primary)]")}>
+            {selectedOption ? selectedOption.label : "Select"}
+          </span>
+        </div>
         <ChevronDown
           className={cn(
-            "w-3.5 h-3.5 text-[var(--text-muted)] transition-transform duration-200 ml-1",
+            "w-3.5 h-3.5 text-[var(--text-muted)] transition-transform duration-200 ml-1 shrink-0",
             open && "rotate-180 text-[var(--brand-primary)]"
           )}
         />
@@ -136,8 +152,10 @@ export function AnimatedFilterDropdown({
             exit="exit"
             transition={SPRING}
             className={cn(
-              "absolute top-full mt-2 z-50 w-72 max-w-[calc(100vw-32px)] bg-[var(--surface-base)] border border-[var(--border-subtle)] rounded-2xl shadow-2xl shadow-black/40 overflow-hidden backdrop-blur-xl",
-              alignClass
+              "absolute top-full mt-2 z-50 rounded-2xl shadow-2xl shadow-black/40 overflow-hidden backdrop-blur-2xl border border-[var(--border-subtle)] bg-[var(--surface-base)]",
+              fullWidth ? "w-full min-w-full" : "w-72 max-w-[calc(100vw-32px)]",
+              alignClass,
+              panelClassName
             )}
           >
             {/* Optional search header */}

@@ -1665,3 +1665,25 @@ Ensure each card fills virtually the entire vertical viewport (`h-[72vh] min-h-[
 - Dev server verified active and responding on `http://localhost:3000/upload` (HTTP 200).
 - Type checking passes and HMR updates cleanly.
 
+---
+
+### Iteration 20: Clean Header, Spring-Animated Dropdowns & Academic Vault Buttons (/upload) (2026-09-10)
+
+#### Changes Implemented
+1. **HUD Header Texts Removed**:
+   - Removed `SYS_NODE // ACADEMIC_INGESTION` and `REV-2019 'C' SCHEME • VERIFIED VAULT` strip from the top of the form, delivering a cleaner, streamlined layout.
+2. **Spring-Animated Dropdowns**:
+   - Replaced native `<select>` tags for Academic Branch and Semester with `AnimatedFilterDropdown` (`@/components/ui/animated-filter-dropdown`).
+   - Extended `AnimatedFilterDropdown` with `fullWidth` support, spring physics (`motion/react`), blur animations, and liquid glass styling.
+3. **Academic Vault Button Animations**:
+   - Replaced the submit and reset buttons with `AntiMetalButton` (`@/components/ui/anti-metal-button`) featuring the expanding metallic accent slab and cascading animated dot chevrons from the Academic Vault.
+   - Powered Document Category options with `HoverButton` (`@/components/ui/hover-button`) featuring ArrowRight slide-ins and kinetic ripple blooms.
+
+#### Files Changed
+- `codebits/components/ui/animated-filter-dropdown.tsx` (Updated: added fullWidth support and trigger/panel class customization)
+- `codebits/components/upload/ResourceUploadForm.tsx` (Updated: removed header text, integrated AnimatedFilterDropdown and AntiMetalButton/HoverButton)
+- `brain.md` (Updated: logged Iteration 20)
+
+#### Verification
+- Next.js dev server responding with HTTP 200 on both `http://localhost:3000/upload` and `http://localhost:3000/vault`.
+- Validated spring animations on dropdowns and metallic dot-wave button animations.

@@ -8,10 +8,37 @@ import {
   AlertCircle,
   Clock,
   ShieldAlert,
-  ArrowRight,
   CheckCircle2,
+  GraduationCap,
+  BookOpen,
 } from "lucide-react";
 import { AcademicBranch, AcademicSemester, DocumentCategory } from "@/types/resources";
+import { AnimatedFilterDropdown, FilterDropdownOption } from "@/components/ui/animated-filter-dropdown";
+import { AntiMetalButton } from "@/components/ui/anti-metal-button";
+import { HoverButton } from "@/components/ui/hover-button";
+
+const BRANCH_OPTIONS: FilterDropdownOption[] = [
+  { id: "COMPS", label: "Computer Engineering (COMPS)", sublabel: "Department of Computer Engg", icon: GraduationCap },
+  { id: "IT", label: "Information Technology (IT)", sublabel: "Department of Info Tech", icon: GraduationCap },
+  { id: "AI-DS", label: "Artificial Intelligence & Data Science (AI-DS)", sublabel: "Department of AI & DS", icon: GraduationCap },
+  { id: "EXTC", label: "Electronics & Telecommunication (EXTC)", sublabel: "Department of EXTC", icon: GraduationCap },
+  { id: "MECH", label: "Mechanical Engineering (MECH)", sublabel: "Department of Mechanical", icon: GraduationCap },
+  { id: "CIVIL", label: "Civil Engineering (CIVIL)", sublabel: "Department of Civil", icon: GraduationCap },
+];
+
+const SEMESTER_OPTIONS: FilterDropdownOption[] = [1, 2, 3, 4, 5, 6, 7, 8].map((s) => ({
+  id: s,
+  label: `Semester ${s}`,
+  sublabel: `Mumbai University Rev-2019 'C' Scheme (Term ${s})`,
+  icon: BookOpen,
+}));
+
+const CATEGORY_OPTIONS: { id: DocumentCategory; label: string }[] = [
+  { id: "pyq", label: "Question Paper" },
+  { id: "notes", label: "Lecture Notes" },
+  { id: "syllabus", label: "Syllabus" },
+  { id: "solution", label: "Solution" },
+];
 
 export function ResourceUploadForm() {
   const [subject, setSubject] = useState("");
@@ -127,19 +154,19 @@ export function ResourceUploadForm() {
             <div><span className="text-[var(--text-muted)]">FILE:</span> <span className="text-[var(--text-primary)] font-semibold">{file?.name} ({(file?.size ? file.size / 1024 : 0).toFixed(1)} KB)</span></div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              setSubmitted(false);
-              setSubject("");
-              setTitle("");
-              setFile(null);
-            }}
-            className="relative z-10 inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-ambient,#34EE99)] text-[#05130D] text-xs font-bold font-mono tracking-wider transition-all duration-300 shadow-[0_0_24px_rgba(0,194,105,0.35)] hover:shadow-[0_0_36px_rgba(0,194,105,0.65)] hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-          >
-            <span>SUBMIT ANOTHER DOCUMENT</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
+          {/* Vault-style AntiMetalButton for Reset */}
+          <div className="pt-2 relative z-10 flex justify-center">
+            <AntiMetalButton
+              onClick={() => {
+                setSubmitted(false);
+                setSubject("");
+                setTitle("");
+                setFile(null);
+              }}
+              label="SUBMIT ANOTHER DOCUMENT"
+              className="h-12 min-w-[260px]"
+            />
+          </div>
         </div>
       ) : (
         /* Authentic Liquid Glass HUD Form */
@@ -155,17 +182,6 @@ export function ResourceUploadForm() {
           <div className="absolute top-3.5 right-3.5 w-3.5 h-3.5 border-t-2 border-r-2 border-[var(--brand-primary)]/80 pointer-events-none" />
           <div className="absolute bottom-3.5 left-3.5 w-3.5 h-3.5 border-b-2 border-l-2 border-[var(--brand-primary)]/80 pointer-events-none" />
           <div className="absolute bottom-3.5 right-3.5 w-3.5 h-3.5 border-b-2 border-r-2 border-[var(--brand-primary)]/80 pointer-events-none" />
-
-          {/* HUD Header Strip */}
-          <div className="relative z-10 flex items-center justify-between pb-4 border-b border-black/10 dark:border-white/10">
-            <div className="flex items-center gap-2 font-mono text-xs text-[var(--brand-primary)] font-semibold tracking-wider">
-              <span className="inline-block w-2 h-2 rounded-full bg-[var(--brand-primary)] animate-pulse shadow-[0_0_10px_var(--brand-primary)]" />
-              SYS_NODE // ACADEMIC_INGESTION
-            </div>
-            <div className="font-mono text-[10px] text-[var(--text-muted)] tracking-widest hidden sm:block">
-              REV-2019 'C' SCHEME • VERIFIED VAULT
-            </div>
-          </div>
 
           {error && (
             <div className="relative z-10 p-3.5 rounded-xl border border-red-500/40 bg-red-500/10 backdrop-blur-md text-red-500 dark:text-red-300 text-xs flex items-center gap-2.5">
@@ -204,68 +220,54 @@ export function ResourceUploadForm() {
             />
           </div>
 
-          {/* Branch & Semester Grid */}
+          {/* Branch & Semester Grid with Animated Spring Dropdowns */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-10">
             <div className="space-y-2">
               <label className="block text-[11px] font-mono text-[var(--text-secondary)] tracking-wider">
                 ACADEMIC BRANCH <span className="text-[var(--brand-primary)]">*</span>
               </label>
-              <select
-                value={branch}
-                onChange={(e) => setBranch(e.target.value as AcademicBranch)}
-                className="w-full px-4 py-3.5 rounded-xl border border-black/10 dark:border-white/15 bg-white/70 dark:bg-[#0E1612] backdrop-blur-xl text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]/50 transition-all cursor-pointer shadow-inner"
-              >
-                <option value="COMPS">Computer Engineering (COMPS)</option>
-                <option value="IT">Information Technology (IT)</option>
-                <option value="AI-DS">Artificial Intelligence &amp; Data Science (AI-DS)</option>
-                <option value="EXTC">Electronics &amp; Telecommunication (EXTC)</option>
-                <option value="MECH">Mechanical Engineering (MECH)</option>
-                <option value="CIVIL">Civil Engineering (CIVIL)</option>
-              </select>
+              <AnimatedFilterDropdown
+                selectedId={branch}
+                options={BRANCH_OPTIONS}
+                onSelect={(id) => setBranch(id as AcademicBranch)}
+                fullWidth
+                searchable={false}
+                triggerClassName="h-11 rounded-xl border border-black/10 dark:border-white/15 bg-white/50 dark:bg-white/[0.04] backdrop-blur-xl text-xs sm:text-sm text-[var(--text-primary)] hover:border-[var(--brand-primary)] shadow-inner"
+                panelClassName="backdrop-blur-2xl bg-white/95 dark:bg-[#0E1612]/95 border border-black/10 dark:border-white/15 shadow-2xl"
+              />
             </div>
 
             <div className="space-y-2">
               <label className="block text-[11px] font-mono text-[var(--text-secondary)] tracking-wider">
                 SEMESTER (1–8) <span className="text-[var(--brand-primary)]">*</span>
               </label>
-              <select
-                value={semester}
-                onChange={(e) => setSemester(Number(e.target.value) as AcademicSemester)}
-                className="w-full px-4 py-3.5 rounded-xl border border-black/10 dark:border-white/15 bg-white/70 dark:bg-[#0E1612] backdrop-blur-xl text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]/50 transition-all cursor-pointer shadow-inner"
-              >
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
-                  <option key={s} value={s}>
-                    Semester {s}
-                  </option>
-                ))}
-              </select>
+              <AnimatedFilterDropdown
+                selectedId={semester}
+                options={SEMESTER_OPTIONS}
+                onSelect={(id) => setSemester(Number(id) as AcademicSemester)}
+                fullWidth
+                searchable={false}
+                triggerClassName="h-11 rounded-xl border border-black/10 dark:border-white/15 bg-white/50 dark:bg-white/[0.04] backdrop-blur-xl text-xs sm:text-sm text-[var(--text-primary)] hover:border-[var(--brand-primary)] shadow-inner"
+                panelClassName="backdrop-blur-2xl bg-white/95 dark:bg-[#0E1612]/95 border border-black/10 dark:border-white/15 shadow-2xl"
+              />
             </div>
           </div>
 
-          {/* Document Category Liquid Glass Selector */}
+          {/* Document Category Liquid Glass Selector with Academic Vault HoverButtons */}
           <div className="space-y-2 relative z-10">
             <label className="block text-[11px] font-mono text-[var(--text-secondary)] tracking-wider">
               DOCUMENT CATEGORY <span className="text-[var(--brand-primary)]">*</span>
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              {[
-                { id: "pyq", label: "Question Paper" },
-                { id: "notes", label: "Lecture Notes" },
-                { id: "syllabus", label: "Syllabus" },
-                { id: "solution", label: "Solution" },
-              ].map((c) => (
-                <button
+              {CATEGORY_OPTIONS.map((c) => (
+                <HoverButton
                   key={c.id}
-                  type="button"
-                  onClick={() => setCategory(c.id as DocumentCategory)}
-                  className={`py-2.5 px-3 rounded-xl text-xs font-mono border backdrop-blur-xl transition-all cursor-pointer text-center ${
-                    category === c.id
-                      ? "bg-[var(--brand-primary)]/20 text-[var(--brand-primary)] border-[var(--brand-primary)] font-semibold shadow-[0_0_20px_rgba(0,194,105,0.3)]"
-                      : "bg-white/30 dark:bg-white/[0.04] text-[var(--text-secondary)] border-black/10 dark:border-white/10 hover:border-[var(--brand-primary)]/50 hover:text-[var(--text-primary)]"
-                  }`}
+                  active={category === c.id}
+                  onClick={() => setCategory(c.id)}
+                  className="font-mono text-xs py-2.5 px-3 rounded-xl w-full justify-center h-10"
                 >
                   {c.label}
-                </button>
+                </HoverButton>
               ))}
             </div>
           </div>
@@ -306,16 +308,14 @@ export function ResourceUploadForm() {
             </div>
           </div>
 
-          {/* Submit Action */}
-          <div className="pt-2 relative z-10">
-            <button
+          {/* Submit Action with Academic Vault AntiMetalButton */}
+          <div className="pt-2 relative z-10 flex justify-start">
+            <AntiMetalButton
               type="submit"
               disabled={loading}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-ambient,#34EE99)] text-[#05130D] text-xs font-bold font-mono uppercase tracking-wider transition-all duration-300 disabled:opacity-50 shadow-[0_0_24px_rgba(0,194,105,0.35)] hover:shadow-[0_0_36px_rgba(0,194,105,0.65)] hover:scale-[1.01] active:scale-[0.98] cursor-pointer"
-            >
-              <span>{loading ? "TRANSMITTING TO MODERATION..." : "TRANSMIT TO FACULTY REVIEW"}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+              label={loading ? "TRANSMITTING TO MODERATION..." : "TRANSMIT TO FACULTY REVIEW"}
+              className="w-full sm:w-auto h-12 min-w-[280px]"
+            />
           </div>
         </form>
       )}
