@@ -3,9 +3,11 @@
 import React, { useState } from 'react'
 import Image from 'next/image'
 import NumberFlow from '@number-flow/react'
-import { MapPin, MessageSquare, Sparkles } from 'lucide-react'
+import { MapPin, MessageSquare } from 'lucide-react'
 import Navbar from '@/components/navigation/Navbar'
 import Footer from '@/components/ui/footer-section'
+import TextBlockAnimation from '@/components/ui/TextBlockAnimation'
+import PathDrawingText from '@/components/ui/PathDrawingText'
 
 const facultyList = [
   {
@@ -49,21 +51,28 @@ export default function AboutPage() {
 
       {/* HERO */}
       <section className="pt-28 pb-16 px-4 max-w-5xl mx-auto text-center">
-        <span className="inline-flex items-center gap-2 border border-[var(--border-subtle)] bg-[var(--surface-base)] px-3.5 py-1.5 rounded-full text-xs font-mono text-[var(--brand-primary)] mb-6">
-          <Sparkles className="w-3.5 h-3.5" />
-          ABOUT CODEBITS / FOUNDATIONAL PEDAGOGY
-        </span>
+        <div className="flex flex-col items-center justify-center text-center max-w-4xl mx-auto">
+          <TextBlockAnimation blockColor="#00C269" duration={0.6} stagger={0.1}>
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-[var(--text-secondary)]">
+              Institutional Mentorship Built for
+            </h2>
+          </TextBlockAnimation>
 
-        <h1 className="text-3xl sm:text-6xl font-extrabold tracking-tight leading-tight max-w-4xl mx-auto">
-          Institutional Mentorship Built for{' '}
-          <span className="bg-gradient-to-r from-white via-slate-200 to-[#00C269] bg-clip-text text-transparent">
-            Mumbai University Engineering.
-          </span>
-        </h1>
+          {/* MUMBAI UNIVERSITY Path Drawing Hero */}
+          <PathDrawingText text="MUMBAI UNIVERSITY" />
 
-        <p className="mt-6 text-[var(--text-secondary)] max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
-          CodeBits bridges the gap between raw university syllabus requirements and real engineering mastery. Curated under the pedagogical guidance of Prof. Rohit Falake (M.R.F).
-        </p>
+          <TextBlockAnimation blockColor="#00C269" duration={0.6} delay={0.15}>
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-[var(--text-primary)]">
+              Engineering.
+            </h2>
+          </TextBlockAnimation>
+        </div>
+
+        <TextBlockAnimation blockColor="#00C269" delay={0.25} duration={0.55} stagger={0.08}>
+          <p className="mt-8 text-[var(--text-secondary)] max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
+            CodeBits bridges the gap between raw university syllabus requirements and real engineering mastery. Curated under the pedagogical guidance of Prof. Rohit Falake (M.R.F).
+          </p>
+        </TextBlockAnimation>
       </section>
 
       {/* STATS SECTION */}

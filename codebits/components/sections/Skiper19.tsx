@@ -74,6 +74,7 @@ export function Skiper19() {
 
         <Link
           href="/vault"
+          prefetch={true}
           className="mt-6 bg-[#00C269] hover:bg-[#009E52] text-[#0B0F0E] font-bold px-10 py-4 rounded-xl text-sm transition-all shadow-[0_0_25px_rgba(0,194,105,0.3)] hover:scale-105"
         >
           CONTINUE TO RESOURCES

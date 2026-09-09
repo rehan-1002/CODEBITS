@@ -1,7 +1,7 @@
 # CODEBITS BRAIN
 
 Living Engineering Memory & Architectural Source of Truth for CodeBits.
-*Last Updated: 2026-09-08 | Status: Verified & Persistent*
+*Last Updated: 2026-09-09 | Status: Verified & Persistent*
 
 ---
 
@@ -1448,4 +1448,55 @@ Ensure each card fills virtually the entire vertical viewport (`h-[72vh] min-h-[
 - TypeScript validation (`npx tsc --noEmit`) passed with 0 errors.
 - SSR HTTP 200 validated across `/` and `/vault`.
 - Confirmed Landing Page remains strictly untouched.
+
+---
+
+### Iteration 15: About Page Hero & Typography Animations, Local Network Cross-Origin Fixes (Half About Us Done)
+
+#### Date
+2026-09-09
+
+#### Objective
+1. Resolve local network loading and iOS WebKit rendering bugs so the site opens smoothly on mobile/iPad devices.
+2. Optimize navigation performance with `prefetch={true}` across navigation deck and hero links.
+3. Refactor the About Us page (`/about`) hero:
+   - Remove redundant `ABOUT CODEBITS / FOUNDATIONAL PEDAGOGY` pill badge.
+   - Implement `TextBlockAnimation` (GSAP SplitText + sweeping revealer block).
+   - Implement `PathDrawingText` inspired by 21st.dev Path Drawing Portfolio Hero for `MUMBAI UNIVERSITY` with looping gradient SVG stroke and coordinated underline flourish.
+4. Guarantee zero crashes and full TypeScript type safety across all components.
+
+#### Enhancements Implemented
+1. **Network Cross-Origin Configuration (`next.config.ts`)**:
+   - Added `allowedDevOrigins` in `next.config.ts` for `10.220.204.16` and `localhost:3000` to prevent Next.js 16 Turbopack from blocking dev HMR and script chunks on external devices.
+2. **WebKit / iOS Rendering Optimization**:
+   - Optimized `m-vertical-cut-reveal-2.tsx` by removing the CSS blur filter and activating hardware-accelerated transforms (`translateY` + `opacity`) to eliminate WebKit opacity clipping on iOS Chrome and Safari.
+3. **Link Prefetching (`ScrollStackNav.tsx` & `Skiper19.tsx`)**:
+   - Added `prefetch={true}` to all navigation links in the 3D stacked deck and the landing page CTA to pre-cache routes in the background for instant transitions.
+4. **GSAP Block Revealer (`TextBlockAnimation.tsx`)**:
+   - Installed `@gsap/react` and created `components/ui/TextBlockAnimation.tsx`.
+   - Utilizes `SplitText` to segment text lines, wrapping each in an overflow-hidden container with a sweeping emerald revealer block (`#00C269`).
+   - Bulletproof DOM manipulation using modern `line.replaceWith(wrapper)` wrapped in safety handlers to completely eliminate `insertBefore` NotFoundError exceptions.
+5. **Path Drawing Typography (`PathDrawingText.tsx`)**:
+   - Created `components/ui/PathDrawingText.tsx` inspired by `https://21st.dev/@httpsdesign-layercomja/components/path-drawing-portfolio-hero`.
+   - Features dual-layer rendering: solid luminous emerald base for 100% instant readability, overlaid with a looping SVG gradient stroke (`#00C269` ➔ `#34EE99` ➔ `#00E575`) drawing itself continuously with an animated SVG flourish underline.
+6. **About Page Hero Integration (`codebits/app/about/page.tsx`)**:
+   - Removed the pill badge and sparkles icon.
+   - Structured the hero into clean tiers: "Institutional Mentorship Built for" (`TextBlockAnimation`), the glowing centerpiece `MUMBAI UNIVERSITY` (`PathDrawingText`), "Engineering." (`TextBlockAnimation`), and the description (`TextBlockAnimation`).
+
+#### Files Changed
+- `codebits/next.config.ts` (Updated: Added `allowedDevOrigins`)
+- `codebits/components/ui/m-vertical-cut-reveal-2.tsx` (Updated: iOS WebKit hardware acceleration)
+- `codebits/components/navigation/ScrollStackNav.tsx` (Updated: Added `prefetch={true}` to deck links)
+- `codebits/components/sections/Skiper19.tsx` (Updated: Added `prefetch={true}` to vault link)
+- `codebits/package.json` & `codebits/package-lock.json` (Updated: Added `@gsap/react`)
+- `codebits/components/ui/TextBlockAnimation.tsx` (New: GSAP SplitText sweeping block revealer)
+- `codebits/components/ui/PathDrawingText.tsx` (New: 21st.dev-inspired looping gradient SVG stroke drawing)
+- `codebits/app/about/page.tsx` (Updated: Removed badge, integrated TextBlockAnimation and PathDrawingText)
+- `brain.md` (Updated: Iteration 15 logged)
+
+#### Verification
+- Next.js development server active on `http://localhost:3000/about` and `http://10.220.204.16:3000/about` with HTTP 200 OK.
+- `npx tsc --noEmit` passed with 0 errors.
+- Verified `MUMBAI UNIVERSITY` renders clearly with active looping gradient SVG stroke and zero DOM exceptions.
+
 

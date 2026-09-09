@@ -47,13 +47,14 @@ export default function VerticalCutRevealChars({
                 >
                   {/* Vertical Cut Character Motion (slides up from bottom cut) */}
                   <motion.span
-                    initial={{ y: '110%', opacity: 0, filter: 'blur(3px)' }}
-                    animate={{ y: '0%', opacity: 1, filter: 'blur(0px)' }}
+                    initial={{ y: '105%', opacity: 0 }}
+                    animate={{ y: '0%', opacity: 1 }}
                     transition={{
                       delay: staggerDelay,
-                      duration: 0.6,
-                      ease: [0.215, 0.61, 0.355, 1], // easeOutCubic
+                      duration: 0.5,
+                      ease: [0.215, 0.61, 0.355, 1],
                     }}
+                    style={{ willChange: 'transform, opacity' }}
                     className={`inline-block ${charClassName}`}
                   >
                     {char}

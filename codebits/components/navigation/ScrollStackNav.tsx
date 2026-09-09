@@ -252,6 +252,7 @@ export default function ScrollStackNav() {
                             >
                               <Link
                                 href={item.href}
+                                prefetch={true}
                                 onClick={() => setIsOpen(false)}
                                 className={`group relative flex flex-col justify-between h-[72vh] min-h-[520px] max-h-[720px] w-full rounded-3xl p-8 sm:p-14 md:p-16 transition-all duration-300 cursor-pointer ${
                                   isDark
