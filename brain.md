@@ -1711,3 +1711,21 @@ Ensure each card fills virtually the entire vertical viewport (`h-[72vh] min-h-[
 - Next.js dev server active and responding with HTTP 200 on `http://localhost:3000/upload`.
 - Verified dropdown floats above all form elements cleanly.
 - Verified fluid circular hover sweep animation on the submit button.
+
+---
+
+### Iteration 22: Moderation Lifecycle Guide Card Removal (/upload) (2026-09-10)
+
+#### Changes Implemented
+1. **Removed Moderation Protocol Guide Card**:
+   - Removed the 3-stage `CODEBITS ACADEMIC MODERATION LIFECYCLE` information block beneath the upload form in [ResourceUploadForm.tsx](file:///c:/Users/ASUS%20HN116WS/OneDrive/Desktop/CODEBITS/codebits/components/upload/ResourceUploadForm.tsx).
+   - Removed unused `ShieldAlert` icon import.
+   - Simplified the page layout to focus exclusively on the minimal Contribute header and the liquid glass upload form chassis.
+
+#### Files Changed
+- `codebits/components/upload/ResourceUploadForm.tsx` (Updated: removed moderation lifecycle card)
+- `brain.md` (Updated: logged Iteration 22)
+
+#### Verification
+- Confirmed clean compile and HTTP 200 on `http://localhost:3000/upload`.
+

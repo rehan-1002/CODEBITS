@@ -7,7 +7,6 @@ import {
   FileCheck,
   AlertCircle,
   Clock,
-  ShieldAlert,
   CheckCircle2,
   GraduationCap,
   BookOpen,
@@ -328,45 +327,6 @@ export function ResourceUploadForm() {
           </div>
         </form>
       )}
-
-      {/* Moderation Protocol Guide - Liquid Glass HUD Block */}
-      <div className="relative z-10 rounded-2xl backdrop-blur-2xl bg-white/30 dark:bg-white/[0.04] border border-white/50 dark:border-white/10 p-6 sm:p-7 space-y-4 shadow-[0_8px_32px_0_rgba(0,0,0,0.06)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden">
-        {/* Specular Glare */}
-        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-white/30 dark:from-white/10 to-transparent pointer-events-none" />
-
-        <div className="flex items-center gap-2 relative z-10">
-          <ShieldAlert className="w-4 h-4 text-[var(--brand-primary)]" />
-          <h3 className="text-xs font-mono font-bold text-[var(--text-primary)] uppercase tracking-wider">
-            CODEBITS ACADEMIC MODERATION LIFECYCLE
-          </h3>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 text-xs relative z-10">
-          <div className="p-3.5 rounded-xl border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/[0.03] backdrop-blur-xl space-y-1">
-            <span className="font-mono text-[10px] text-[var(--brand-primary)] font-bold">STAGE 01</span>
-            <div className="font-semibold text-[var(--text-primary)]">Student Submission</div>
-            <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed font-sans">
-              Paper uploaded with branch and semester metadata. Assigned status: <code className="font-mono text-[var(--text-muted)]">pending</code>.
-            </p>
-          </div>
-
-          <div className="p-3.5 rounded-xl border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/[0.03] backdrop-blur-xl space-y-1">
-            <span className="font-mono text-[10px] text-[var(--brand-primary)] font-bold">STAGE 02</span>
-            <div className="font-semibold text-[var(--text-primary)]">Faculty Verification</div>
-            <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed font-sans">
-              Educators review PDF for scheme alignment (Rev-2019 'C') and pedagogical correctness.
-            </p>
-          </div>
-
-          <div className="p-3.5 rounded-xl border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/[0.03] backdrop-blur-xl space-y-1">
-            <span className="font-mono text-[10px] text-[var(--brand-primary)] font-bold">STAGE 03</span>
-            <div className="font-semibold text-[var(--text-primary)]">Vault Publication</div>
-            <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed font-sans">
-              Approved documents become searchable in public vault and cbAI with verified attribution.
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
