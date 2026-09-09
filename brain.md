@@ -57,14 +57,23 @@ CodeBits solves this by replacing ad-hoc distribution with an authoritative, cur
   - Prominent "Continue to Resources" call-to-action.
 - **Constraints**: Absolutely no fabricated statistics, floating gradient blobs, or generic chatbot widgets.
 
-### 4.2 About & Centers (`/about`)
-- **Purpose**: Institutional credibility, placement track record, mentorship, and faculty showcase.
+### 4.2 About & Centers (`/about`) - FINALIZED
+- **Purpose**: Institutional credibility, placement track record, verified faculty directory, and offline center showcase.
 - **Key Sections**:
-  - Institutional Key Metrics powered by `@number-flow/react` and `Skiper37` (Candidates Placed, Hiring Partners, Average CTC—sourced strictly from verified data).
-  - Partner Marquee (Horizontal ticker displaying verified recruiting/institutional partner marks).
-  - Faculty Showcase (`FacultyAccordion` displaying all 8 authentic faculty portraits from `public/FACULTY/`, with smooth horizontal expanding accordion on desktop, vertical name tags on collapsed cards, glowing active emerald border `#00C269`, animated role badges, and responsive touch-expanded cards on mobile).
-  - Center Information & Academic Mentorship Programs.
-  - Institutional Inquiry Capture Form.
+  - **Edge-to-Edge Technical Hero**: Screen-margin left-aligned typography (`text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black`) pairing `TextBlockAnimation` and `PathDrawingText` gradient SVG loops. Removed all artificial card wrappers and subheadings.
+  - **Scroll-Triggered Centered Metrics**: Minimalist, card-free typography counters powered by `@number-flow/react` and `framer-motion`'s `useInView` rolling from `0` to verified targets (`250+ Candidates Placed`, `15+ Hiring Partners`, `8 LPA Average CTC`), cleanly centered in their grid columns.
+  - **Dual Infinite Velocity Text Marquee**: Built with `components/ui/text-marquee.tsx` ([21st.dev / UI Layouts](https://21st.dev/@uilayout.contact/components/text-marque)), featuring dual opposing parallax tickers (`MEET THE TEAM ✦` scrolling leftward and emerald `PILLARS OF CODEBITS ✦` scrolling rightward).
+  - **Faculty Showcase (`FacultyAccordion.tsx`)**: Displays all 8 authentic portraits with dark studio backdrops (`#192420` ➔ `#101815` ➔ `#0A0E0D`) and bottom scrims for high contrast in light and dark modes. Free of role tags; accurately presents each professor's exact curriculum subjects:
+    - Prof. Rohit Falake (M.R.F): Engineering Mathematics
+    - Prof. Om Baviskar: Basic Electrical Engineering
+    - Prof. Bharat Acharya: C Programming
+    - Prof. Sameer Velenkar: Python Programming
+    - Prof. Prashant Patil: Applied Chemistry
+    - Prof. Sunil Nagare: Engineering Chemistry
+    - Prof. Vineet Kutty: Engineering Mechanics & Engineering Drawing
+    - Prof. Rahul Jadhav: Applied Physics (utilizing verified portrait `Prof. Sunil Jadhav.webp`)
+  - **Offline Centers with Liquid Glass & Shine Border**: Modern physical hub showcase for Kalyan West and Ulhasnagar featuring liquid glass panels (`backdrop-blur-2xl bg-white/75 dark:bg-[#0E1512]/80`), top specular glare, direct WhatsApp action links, and the official [21st.dev / Magic UI Shine Border](https://21st.dev/@dillionverma/components/shine-border) by Dillion Verma in CodeBits brand emerald `["#00C269", "#34EE99", "#A6FFD2"]`.
+  - **Institutional Inquiry Capture Form**: Clean Supabase-ready inquiry form with live field validation.
 
 ### 4.3 Academic Vault (`/vault`)
 - **Purpose**: Core functional repository for Mumbai University academic assets.
@@ -235,7 +244,7 @@ UI shows notice: "You were logged out because your account was accessed from ano
 | Route | Route Type | Access Tier | Status | Planned Key Components | Dependencies / Services | Critical Constraints |
 |---|---|---|---|---|---|---|
 | `/` | Page (Public) | Public | `PLANNED` | `Navbar`, `Skiper19Scroll`, `TextAnimate`, `ScrollFloatTitle`, `ScrollStackNav` | GSAP, Framer Motion, Lenis, Next.js | No gradients, no emojis, no fake stats. Monogram uses `public/LOGO CB.png`. |
-| `/about` | Page (Public) | Public | `PLANNED` | `Navbar`, `Skiper37Stats`, `FacultyAccordion`, `MarqueeBanner`, Inquiry Form | `@number-flow/react`, `public/FACULTY/`, Supabase `inquiries` | Real faculty portraits only; no mock metrics. |
+| `/about` | Page (Public) | Public | `FINALIZED` | `Navbar`, `PathDrawingText`, `NumberFlowStats`, `TextMarquee`, `FacultyAccordion`, `ShineBorderHubs`, `InquiryForm` | `@number-flow/react`, `framer-motion`, `public/FACULTY/`, Supabase `inquiries` | Real faculty portraits only; no mock metrics. All 8 verified subjects mapped. |
 | `/vault` | Page (Public) | Public | `PLANNED` | `Navbar`, `ResourceFilters`, `ResourceGrid`, `ResourceCard`, `CbAiDrawer` | Supabase Client, Next.js App Router | Only `status = 'approved'` shown. No fake cards. Monospace metadata tags. |
 | `/login` | Page (Auth) | Public / Unauth | `PLANNED` | `LoginForm`, `RegisterForm`, `AnimatedThemeToggler` | Supabase Auth, Next.js Server Actions | Supports Email or Indian Phone (`^[6-9]\d{9}$`). No OTP. Sets `current_session_id`. |
 | `/viewer/[id]` | Page (Protected) | Authenticated | `PLANNED` | `ProtectedCanvasViewer`, `WatermarkLayer`, `SessionGuard` | `pdf.js`, HTML5 Canvas, Supabase Realtime | No iframe embed. Dynamic user watermark. Context menu & shortcut deterrence. Instant eviction on concurrent session. |
@@ -272,7 +281,7 @@ CURRENT PHASE: FRONTEND PLANNING / FRONTEND NOT YET IMPLEMENTED
 | Tailwind CSS & Design Tokens | `IMPLEMENTED` | Obsidian/Emerald tokens, dark & light mode, anti-gradient rule in `globals.css`. |
 | Global Shell & Navigation | `IMPLEMENTED` | `Navbar` with brand monogram, `ScrollStackNav` drawer, `Footer`, `AnimatedThemeToggler`. |
 | Landing Motion Engine (GSAP/Lenis/Skiper) | `IMPLEMENTED` | `Skiper19Scroll` kinetic path, `TextAnimate` reveal, `ScrollFloatTitle` GSAP climax. |
-| Institutional About & Faculty | `IMPLEMENTED` | `Skiper37Stats` with NumberFlow transitions, `FacultyAccordion`, `InquiryForm`. |
+| Institutional About & Faculty | `FINALIZED` | Edge-to-edge typography, NumberFlow counters, dual velocity text marquee, 8 faculty portraits with verified subjects & studio backdrops, liquid glass hub cards with Magic UI ShineBorder. |
 | Vault Catalog & Filtering | `IMPLEMENTED` | `ResourceFiltersBar`, `ResourceGrid`, `ResourceCard`, authentic empty state. |
 | Authentication UI | `IMPLEMENTED` | `LoginForm` (dual email/phone), `RegisterForm`, single active session notice. |
 | Community Upload UI | `IMPLEMENTED` | `ResourceUploadForm` with PDF dropzone and moderation lifecycle preview. |
@@ -1530,6 +1539,64 @@ Ensure each card fills virtually the entire vertical viewport (`h-[72vh] min-h-[
 - `npx tsc --noEmit` verified with 0 errors.
 - Verified Next.js dev server returns HTTP 200 on `/about` with all 8 professors present in HTML stream.
 - WebP portraits verified directly from `public/FACULTY/`.
+
+
+### Iteration 17: Complete Finalization & Modern Architectural Polish of the About Page (/about) (2026-09-09)
+
+#### Changes Implemented
+1. **Hero Section Redesign**:
+   - **Edge-to-Edge Typography**: Replaced artificial centered containers and `max-w-5xl` constraints with screen-margin left-aligned layout (`w-full px-4 sm:px-8 md:px-12 lg:px-16 text-left`).
+   - **Enlarged Headline**: Scaled typography to `text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black` combining `TextBlockAnimation` and continuous SVG gradient stroke loop `PathDrawingText`.
+   - **Clean Technical Hierarchy**: Stripped away redundant subheadings and badge icons for an authoritative editorial presentation.
+
+2. **Scroll-Triggered Centered Metrics**:
+   - Replaced boxed HUD cards with minimalist typography counters powered by `@number-flow/react`.
+   - Centered counters inside their respective columns (`text-center`, `items-center`).
+   - Wired with `framer-motion`'s `useInView` to roll smoothly from `0` to verified targets (`250+ Candidates Placed`, `15+ Hiring Partners`, `8 LPA Average CTC`) upon scrolling into view.
+
+3. **Dual Infinite Velocity Text Marquee (`components/ui/text-marquee.tsx`)**:
+   - Created high-performance velocity marquee based on [21st.dev / UI Layouts Text Marquee](https://21st.dev/@uilayout.contact/components/text-marque) using `framer-motion` physics (`useScroll`, `useVelocity`, `useSpring`, `useAnimationFrame`, `wrap`).
+   - Split marquee into dual opposing parallax streams:
+     - Row 1: `MEET THE TEAM ✦` (scrolling leftward).
+     - Row 2: `PILLARS OF CODEBITS ✦` highlighted in brand emerald `#00C269` (scrolling rightward).
+   - Removed intermediate redundant section headers ("Faculty & Mentorship Directory").
+
+4. **Faculty Portrait Contrast & Verified Subject Alignment**:
+   - Eliminated the top white gradient mesh and dot grids that previously bleached the transparent WebP portraits.
+   - Introduced a deep studio backdrop (`bg-gradient-to-b from-[#192420] via-[#101815] to-[#0A0E0D]`) and bottom text scrim (`from-black/95 via-black/60 via-35% to-transparent`) for full contrast across both light and dark themes.
+   - Removed generic role tags (`● FOUNDER & HEAD OF PEDAGOGY`, etc.) from all cards.
+   - Verified and locked accurate names and subjects taught:
+     - Prof. Rohit Falake (M.R.F): Engineering Mathematics
+     - Prof. Om Baviskar: Basic Electrical Engineering
+     - Prof. Bharat Acharya: C Programming
+     - Prof. Sameer Velenkar: Python Programming
+     - Prof. Prashant Patil: Applied Chemistry
+     - Prof. Sunil Nagare: Engineering Chemistry
+     - Prof. Vineet Kutty: Engineering Mechanics & Engineering Drawing
+     - Prof. Rahul Jadhav: Applied Physics (renamed from Sunil Jadhav, using verified portrait `Prof. Sunil Jadhav.webp`)
+
+5. **Offline Hubs with Liquid Glass & Official 21st.dev Shine Border**:
+   - Replaced academic boilerplate with a concise, punchy catchline:
+     - Tag: `OFFLINE HUBS`
+     - Heading: `Learn In Person`
+     - Subtitle: *"Real classrooms. Live mentors. Right by the station."*
+   - Transformed Kalyan West and Ulhasnagar center cards into liquid glass surfaces (`backdrop-blur-2xl bg-white/75 dark:bg-[#0E1512]/80`, top specular glare, responsive grid).
+   - Created official [Magic UI / 21st.dev Shine Border](https://21st.dev/@dillionverma/components/shine-border) by Dillion Verma in `components/ui/shine-border.tsx` with `@keyframes shine` in `globals.css`.
+   - Applied vibrant CodeBits brand emerald gradient `["#00C269", "#34EE99", "#A6FFD2"]`, with `z-20` layering over liquid glass for crisp, uninterrupted border animation.
+
+#### Files Changed
+- `codebits/app/about/page.tsx` (Updated: Edge-to-edge hero, NumberFlow metrics, dual marquee integration, liquid glass hub cards)
+- `codebits/components/sections/FacultyAccordion.tsx` (Updated: Studio dark backdrop, removed role badges, updated names and subjects)
+- `codebits/components/ui/PathDrawingText.tsx` (Updated: Left-aligned and edge-to-edge typography scaling)
+- `codebits/components/ui/text-marquee.tsx` (New: Dual infinite parallax velocity marquee)
+- `codebits/components/ui/shine-border.tsx` (New: Official 21st.dev / Magic UI animated shine border component)
+- `codebits/app/globals.css` (Updated: `@keyframes shine` and `--animate-shine` tokens)
+- `brain.md` (Updated: Section 4.2, Section 6, Section 8, and Iteration 17 logged)
+
+#### Verification
+- Dev server running smoothly with HTTP 200 on `/about`.
+- Verified type safety and clean Turbopack HMR updates.
+
 
 
 

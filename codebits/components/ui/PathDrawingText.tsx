@@ -6,28 +6,33 @@ import { motion } from "framer-motion";
 interface PathDrawingTextProps {
   text?: string;
   className?: string;
+  align?: "left" | "center";
 }
 
 export default function PathDrawingText({
   text = "MUMBAI UNIVERSITY",
   className = "",
+  align = "left",
 }: PathDrawingTextProps) {
   const rawId = useId();
   const gradId = `pgrad-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const gradId2 = `pgrad2-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const isLeft = align === "left";
 
   return (
     <div
-      className={`relative w-full flex flex-col items-center justify-center my-2 sm:my-4 select-none ${className}`}
+      className={`relative w-full flex flex-col ${
+        isLeft ? "items-start justify-start text-left" : "items-center justify-center text-center"
+      } my-2 sm:my-3 select-none ${className}`}
     >
       {/* Screen Reader Accessible Text */}
       <h1 className="sr-only">{text}</h1>
 
       {/* Hero Path-Drawing SVG Container */}
-      <div className="w-full max-w-4xl flex items-center justify-center px-2">
+      <div className={`w-full flex items-center ${isLeft ? "justify-start" : "justify-center max-w-5xl"} px-0`}>
         <svg
-          viewBox="0 0 920 130"
-          className="w-full h-auto max-h-[140px] overflow-visible"
+          viewBox="0 0 940 145"
+          className="w-full max-w-6xl h-auto max-h-[180px] overflow-visible"
           role="img"
           aria-label={text}
         >
@@ -70,9 +75,9 @@ export default function PathDrawingText({
 
           {/* Background Ambient Glow behind text */}
           <text
-            x="50%"
-            y="52%"
-            textAnchor="middle"
+            x={isLeft ? "4" : "50%"}
+            y="50%"
+            textAnchor={isLeft ? "start" : "middle"}
             dominantBaseline="middle"
             fill="none"
             stroke="#00C269"
@@ -80,9 +85,9 @@ export default function PathDrawingText({
             strokeOpacity="0.18"
             strokeLinejoin="round"
             strokeLinecap="round"
-            fontSize="64"
+            fontSize="72"
             fontWeight="900"
-            letterSpacing="0.06em"
+            letterSpacing="0.04em"
             className="font-black uppercase"
             style={{
               fontFamily: "var(--font-inter), system-ui, sans-serif",
@@ -93,14 +98,14 @@ export default function PathDrawingText({
 
           {/* Base Solid Luminous Text Fill (Guarantees 100% instant readability) */}
           <text
-            x="50%"
-            y="52%"
-            textAnchor="middle"
+            x={isLeft ? "4" : "50%"}
+            y="50%"
+            textAnchor={isLeft ? "start" : "middle"}
             dominantBaseline="middle"
             fill="currentColor"
-            fontSize="64"
+            fontSize="72"
             fontWeight="900"
-            letterSpacing="0.06em"
+            letterSpacing="0.04em"
             className="font-black uppercase text-[#00C269] dark:text-[#34EE99]"
             style={{
               fontFamily: "var(--font-inter), system-ui, sans-serif",
@@ -112,18 +117,18 @@ export default function PathDrawingText({
 
           {/* Looping Gradient Path-Drawing Stroke Layer */}
           <motion.text
-            x="50%"
-            y="52%"
-            textAnchor="middle"
+            x={isLeft ? "4" : "50%"}
+            y="50%"
+            textAnchor={isLeft ? "start" : "middle"}
             dominantBaseline="middle"
             fill="none"
             stroke={`url(#${gradId})`}
             strokeWidth="3"
             strokeLinejoin="round"
             strokeLinecap="round"
-            fontSize="64"
+            fontSize="72"
             fontWeight="900"
-            letterSpacing="0.06em"
+            letterSpacing="0.04em"
             className="font-black uppercase"
             style={{
               fontFamily: "var(--font-inter), system-ui, sans-serif",
@@ -146,7 +151,7 @@ export default function PathDrawingText({
 
           {/* Animated SVG Flourish Underline */}
           <motion.path
-            d="M 60 105 Q 460 120 860 105"
+            d={isLeft ? "M 4 116 Q 380 130 840 116" : "M 60 116 Q 470 130 880 116"}
             fill="none"
             stroke={`url(#${gradId2})`}
             strokeWidth="3.5"

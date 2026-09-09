@@ -205,6 +205,7 @@ body {
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --animate-shine: shine var(--duration, 14s) infinite linear;
 }
 
 .dark {
@@ -266,4 +267,21 @@ body {
 
 ::view-transition-new(root) {
   z-index: 9999;
+}
+
+/* Magic UI Shine Border Keyframes */
+@keyframes shine {
+  0% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  to {
+    background-position: 0% 0%;
+  }
+}
+
+.animate-shine {
+  animation: shine var(--duration, 14s) infinite linear;
 }
