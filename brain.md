@@ -105,9 +105,15 @@ CodeBits solves this by replacing ad-hoc distribution with an authoritative, cur
   - Client-side deterrence protections: Context-menu disable, text selection disable, print/save shortcut interception, focus-loss canvas obscuring.
   - Continuous background session verification: Instant eviction if concurrent login detected.
 
-### 4.6 Community Upload (`/upload`)
+### 4.6 Community Upload (`/upload`) - FINALIZED DESIGN
 - **Purpose**: Crowdsourced academic resource contribution pipeline.
-- **Form Inputs**: Subject name, Branch, Semester, Document Category (`PYQ`, `Notes`, `Syllabus`, `Solution`), and PDF file.
+- **Visual Design**:
+  - **Minimal Header**: Stripped away verbose badges, long subheadings, and paragraphs in favor of a single, authoritative, minimal headline: **"Contribute"** (`text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black`).
+  - **Liquid Glass HUD Form**: Transparent frosted glass chassis (`backdrop-blur-2xl bg-white/70 dark:bg-[#0B120E]/75 border border-white/60 dark:border-white/10`) featuring a top specular liquid reflection, emerald HUD corner ticks, and a technical status strip (`SYS_NODE // ACADEMIC_INGESTION`).
+  - **Refracted Backdrop Logo**: Centered behind the form is the authentic CodeBits monogram (`/LOGO CB.png`) with an ambient emerald radial glow, visible as a diffused, refracted silhouette through the semi-transparent liquid glass form.
+  - **HUD Form Controls**: Translucent glass inputs, glass category toggle pills with emerald active glow, dashed PDF dropzone with animated cloud icon, and high-impact emerald kinetic CTA button.
+  - **Liquid Glass Moderation Guide**: 3-stage protocol block (`Student Submission` ➔ `Faculty Verification` ➔ `Vault Publication`) encased in matching liquid glass.
+- **Form Inputs**: Subject name, Branch, Semester, Document Category (`PYQ`, `Notes`, `Syllabus`, `Solution`), and PDF payload.
 - **Moderation Workflow**:
   - Submissions by regular students are flagged as `status = 'pending'`.
   - Submissions by verified admins are flagged as `status = 'approved'`.
@@ -248,7 +254,7 @@ UI shows notice: "You were logged out because your account was accessed from ano
 | `/vault` | Page (Public) | Public | `PLANNED` | `Navbar`, `ResourceFilters`, `ResourceGrid`, `ResourceCard`, `CbAiDrawer` | Supabase Client, Next.js App Router | Only `status = 'approved'` shown. No fake cards. Monospace metadata tags. |
 | `/login` | Page (Auth) | Public / Unauth | `PLANNED` | `LoginForm`, `RegisterForm`, `AnimatedThemeToggler` | Supabase Auth, Next.js Server Actions | Supports Email or Indian Phone (`^[6-9]\d{9}$`). No OTP. Sets `current_session_id`. |
 | `/viewer/[id]` | Page (Protected) | Authenticated | `PLANNED` | `ProtectedCanvasViewer`, `WatermarkLayer`, `SessionGuard` | `pdf.js`, HTML5 Canvas, Supabase Realtime | No iframe embed. Dynamic user watermark. Context menu & shortcut deterrence. Instant eviction on concurrent session. |
-| `/upload` | Page (Protected) | Authenticated | `PLANNED` | `ResourceUploadForm`, `SessionGuard` | Supabase Storage, Supabase DB | Regular student uploads enter as `pending`. Admin uploads enter as `approved`. |
+| `/upload` | Page (Public / Auth) | Public / Auth | `FINALIZED` | `Navbar`, `ResourceUploadForm` (Liquid Glass HUD), `BlurredLogoBackdrop`, `ModerationGuide` | Next.js, Tailwind v4, Supabase (ready) | Minimal "Contribute" headline. Liquid glass HUD form blurring CodeBits logo in background. |
 | `/admin/moderation` | Page (Protected) | Admin Only | `PLANNED` | `ModerationQueue`, `ReviewCard` | Supabase Server Client, RLS | Strict server-side role check (`role === 'admin'`). |
 | `/api/cb-ai` | API Route | Public / Auth | `PLANNED` | Route Handler (`route.ts`) | Google Gemini API (`@google/genai` or REST), Supabase DB | Secret API key strictly on server. Outputs structured JSON. Zero hallucinations. |
 
@@ -284,7 +290,7 @@ CURRENT PHASE: FRONTEND PLANNING / FRONTEND NOT YET IMPLEMENTED
 | Institutional About & Faculty | `FINALIZED` | Edge-to-edge typography, NumberFlow counters, dual velocity text marquee, 8 faculty portraits with verified subjects & studio backdrops, liquid glass hub cards with Magic UI ShineBorder. |
 | Vault Catalog & Filtering | `IMPLEMENTED` | `ResourceFiltersBar`, `ResourceGrid`, `ResourceCard`, authentic empty state. |
 | Authentication UI | `IMPLEMENTED` | `LoginForm` (dual email/phone), `RegisterForm`, single active session notice. |
-| Community Upload UI | `IMPLEMENTED` | `ResourceUploadForm` with PDF dropzone and moderation lifecycle preview. |
+| Community Upload UI | `FINALIZED` | Minimal "Contribute" header, clear liquid glass HUD form with blurred CodeBits logo backdrop, specular glare, and moderation lifecycle. |
 | Protected Canvas PDF Viewer | `IMPLEMENTED` | `ProtectedCanvasViewer` with HTML5 canvas, forensic watermark, deterrence listeners. |
 | cbAI Command Search Dock | `IMPLEMENTED` | `CbAiDrawer` (`Ctrl+K`), structured parameter compiler, zero-hallucination fallback. |
 | Supabase Auth & Session Guard (Backend) | `PLANNED` | Frontend interfaces ready; backend database integration pending. |
@@ -1596,6 +1602,40 @@ Ensure each card fills virtually the entire vertical viewport (`h-[72vh] min-h-[
 #### Verification
 - Dev server running smoothly with HTTP 200 on `/about`.
 - Verified type safety and clean Turbopack HMR updates.
+
+
+### Iteration 18: Liquid Glass HUD Contribute Page (/upload) with Blurred CodeBits Logo Backdrop (2026-09-09)
+
+#### Changes Implemented
+1. **Minimal "Contribute" Header**:
+   - Replaced verbose badge pill (`COMMUNITY UPLOAD / ACADEMIC PROVENANCE`), long title (`Contribute to the Mumbai University Vault`), and explanatory paragraphs with a single, minimal, bold headline: **"Contribute"** (`text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-[var(--text-primary)]`).
+2. **Blurred CodeBits Logo Backdrop**:
+   - Positioned the authentic CodeBits monogram (`/LOGO CB.png`) centered directly in the background of the form container (`-z-10 absolute inset-0 flex items-center justify-center`).
+   - Enhanced with an ambient emerald radial glow (`bg-[var(--brand-primary)]/20 blur-3xl`) and subtle gentle pulse animation.
+3. **Clear Liquid Glass HUD Form Chassis**:
+   - Transformed the upload form into a high-end liquid glass HUD interface:
+     - Clear, translucent frosted glass body (`backdrop-blur-2xl bg-white/70 dark:bg-[#0B120E]/75 border border-white/60 dark:border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.08)] dark:shadow-[0_25px_80px_rgba(0,0,0,0.5)] rounded-3xl`).
+     - Visibly refracts and diffuses the CodeBits logo sitting directly behind it.
+     - Top specular glare reflection gradient (`bg-gradient-to-b from-white/35 dark:from-white/10 via-white/5 to-transparent`).
+     - Emerald HUD corner brackets (`border-t-2 border-l-2 border-[var(--brand-primary)]/80`).
+     - Cybernetic status header strip (`SYS_NODE // ACADEMIC_INGESTION` with live pulsating status dot).
+4. **Liquid Glass Form Controls**:
+   - Translucent frosted glass inputs (`bg-white/50 dark:bg-white/[0.04] backdrop-blur-md`).
+   - Liquid glass category buttons with active emerald glow and border highlights.
+   - 2px dashed emerald dropzone for PDF payloads with animated upload icon.
+   - High-contrast kinetic submit button (`shadow-[0_0_24px_rgba(0,194,105,0.35)] hover:shadow-[0_0_36px_rgba(0,194,105,0.65)]`).
+5. **HUD Moderation Guide**:
+   - Re-skinned the 3-stage academic moderation lifecycle into matching frosted liquid glass.
+
+#### Files Changed
+- `codebits/app/upload/page.tsx` (Updated: Minimalist Contribute headline)
+- `codebits/components/upload/ResourceUploadForm.tsx` (Updated: Clear liquid glass HUD form with blurred CodeBits logo backdrop)
+- `brain.md` (Updated: Section 4.6, Section 6, Section 8, and logged Iteration 18)
+
+#### Verification
+- Verified Next.js dev server returns HTTP 200 on `/upload`.
+- Verified liquid glass refraction, theme compatibility, and mobile responsiveness.
+
 
 
 
