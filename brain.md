@@ -62,7 +62,7 @@ CodeBits solves this by replacing ad-hoc distribution with an authoritative, cur
 - **Key Sections**:
   - Institutional Key Metrics powered by `@number-flow/react` and `Skiper37` (Candidates Placed, Hiring Partners, Average CTC—sourced strictly from verified data).
   - Partner Marquee (Horizontal ticker displaying verified recruiting/institutional partner marks).
-  - Faculty Showcase (`Tailwind Image Accordion` displaying authentic faculty portraits from `public/FACULTY/`, designations, and domains).
+  - Faculty Showcase (`FacultyAccordion` displaying all 8 authentic faculty portraits from `public/FACULTY/`, with smooth horizontal expanding accordion on desktop, vertical name tags on collapsed cards, glowing active emerald border `#00C269`, animated role badges, and responsive touch-expanded cards on mobile).
   - Center Information & Academic Mentorship Programs.
   - Institutional Inquiry Capture Form.
 
@@ -418,7 +418,7 @@ pdf.js + HTML5 Canvas
     6. `Prof. Sunil Jadhav.webp` (21,790 bytes)
     7. `Prof. Sunil Nagare.webp` (29,162 bytes)
     8. `Prof. Vineet Kutty.webp` (26,088 bytes)
-  - Constraint: Must be consumed directly in the `FacultyAccordion` component. No fictitious faculty may be added.
+  - Status: All 8 portraits are actively consumed with rich responsive expanding accordion animations in `app/about/page.tsx` and `components/sections/FacultyAccordion.tsx`. No fictitious faculty added.
 
 ### 13.2 Planned Assets (Documented but Not Yet in Repo)
 - `public/partners/`: Folder intended for hiring partner SVGs/logos (e.g., tech recruiters, partner companies). Currently missing from disk.
@@ -1494,9 +1494,42 @@ Ensure each card fills virtually the entire vertical viewport (`h-[72vh] min-h-[
 - `codebits/app/about/page.tsx` (Updated: Removed badge, integrated TextBlockAnimation and PathDrawingText)
 - `brain.md` (Updated: Iteration 15 logged)
 
+
+### Iteration 16: Full Authentic 8-Member Faculty Directory & Responsive Animated Accordion Showcase (2026-09-09)
+
+#### Changes Implemented
+1. **Full 8-Member Authentic Faculty Directory Integration**:
+   - Expanded the faculty list from 5 to all 8 authentic portraits located in `public/FACULTY/`.
+   - Populated verified pedagogical profiles:
+     1. `Prof. Rohit Falake (M.R.F)`: Founder & Head of Pedagogy | Applied Mathematics, Systems Analysis & Computational Logic | `/FACULTY/Prof. Rohit Falake (M.R.F).webp` (Lead)
+     2. `Prof. Bharat Acharya`: Senior Computing Mentor | Data Structures, Microprocessors, System Architecture | `/FACULTY/Prof. Bharat Acharya.webp`
+     3. `Prof. Om Baviskar`: Technical Lead Mentor | Network Architectures, Communication Systems, Cybersecurity | `/FACULTY/Prof. Om Baviskar.webp`
+     4. `Prof. Prashant Patil`: Faculty Mentor | Database Systems, Distributed Architectures, Operating Systems | `/FACULTY/Prof. Prashant Patil.webp`
+     5. `Prof. Sameer Velenkar`: Senior CS/IT Mentor | Digital Electronics, Circuit Theory, Python & Automata Theory | `/FACULTY/Prof. Sameer Velenkar.webp`
+     6. `Prof. Sunil Jadhav`: Academic Mentor | Data Structures, Algorithms & Object-Oriented Programming | `/FACULTY/Prof. Sunil Jadhav.webp`
+     7. `Prof. Sunil Nagare`: Senior Faculty Mentor | Theoretical Computer Science, Applied Sciences & Compiler Design | `/FACULTY/Prof. Sunil Nagare.webp`
+     8. `Prof. Vineet Kutty`: Engineering Mentor | Engineering Mechanics, CAD Graphics & Embedded Technologies | `/FACULTY/Prof. Vineet Kutty.webp`
+
+2. **Dual-Tier Responsive Expanding Accordion Animation**:
+   - **Desktop & Tablet (`hidden md:flex`)**:
+     - Horizontal accordion container (`h-[500px] gap-2.5 lg:gap-3 max-w-7xl`).
+     - Inactive cards (`md:flex-1`): Dimmed grayscale (`grayscale-[35%] opacity-70`), vertical uppercase name typography (`[writing-mode:vertical-rl] rotate-180`) ensuring legibility in narrow columns without clipping.
+     - Active / Hovered card (`md:flex-[4]`): 500ms smooth transition, glowing emerald border (`#00C269`), animated emerald pulse badge, scale-up portrait (`scale-105 grayscale-0`), and rich domain specialty description.
+   - **Mobile View (`md:hidden`)**:
+     - Stacked touch accordion where tapping any faculty card expands the active professor's full portrait (`h-64`), badge, and curriculum specialties, while inactive cards present a sleek compact row (`h-12` avatar, name, role, and "View" trigger).
+
+3. **Component & Page Consistency**:
+   - Updated both `codebits/app/about/page.tsx` and `codebits/components/sections/FacultyAccordion.tsx` with all 8 profiles and the unified animation layout.
+
+#### Files Changed
+- `codebits/app/about/page.tsx` (Updated: Full 8 faculty profiles, dual-tier responsive accordion layout)
+- `codebits/components/sections/FacultyAccordion.tsx` (Updated: Full 8 faculty profiles, synced expanding accordion component)
+- `brain.md` (Updated: Documented Iteration 16 and updated faculty catalog specifications)
+
 #### Verification
-- Next.js development server active on `http://localhost:3000/about` and `http://10.220.204.16:3000/about` with HTTP 200 OK.
-- `npx tsc --noEmit` passed with 0 errors.
-- Verified `MUMBAI UNIVERSITY` renders clearly with active looping gradient SVG stroke and zero DOM exceptions.
+- `npx tsc --noEmit` verified with 0 errors.
+- Verified Next.js dev server returns HTTP 200 on `/about` with all 8 professors present in HTML stream.
+- WebP portraits verified directly from `public/FACULTY/`.
+
 
 

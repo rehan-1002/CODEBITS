@@ -14,31 +14,50 @@ const facultyList = [
     name: 'Prof. Rohit Falake (M.R.F)',
     role: 'FOUNDER & HEAD OF PEDAGOGY',
     specialty: 'Applied Mathematics, Discrete Mathematics, Computational Logic',
-    image: '/faculty/Prof. Rohit Falake (M.R.F).webp',
+    image: '/FACULTY/Prof. Rohit Falake (M.R.F).webp',
+    lead: true,
   },
   {
     name: 'Prof. Bharat Acharya',
     role: 'SENIOR COMPUTING MENTOR',
-    specialty: 'Data Structures, Algorithms, System Architecture',
-    image: '/faculty/Prof. Bharat Acharya.webp',
+    specialty: 'Data Structures, Microprocessors, System Architecture',
+    image: '/FACULTY/Prof. Bharat Acharya.webp',
   },
   {
     name: 'Prof. Om Baviskar',
     role: 'TECHNICAL LEAD MENTOR',
-    specialty: 'Full-Stack Engineering, Cloud Systems, Database Management',
-    image: '/faculty/Prof. Om Baviskar.webp',
+    specialty: 'Network Architectures, Communication Systems, Cybersecurity',
+    image: '/FACULTY/Prof. Om Baviskar.webp',
   },
   {
     name: 'Prof. Prashant Patil',
     role: 'FACULTY MENTOR',
-    specialty: 'Operating Systems, Microprocessors, Computer Networks',
-    image: '/faculty/Prof. Prashant Patil.webp',
+    specialty: 'Database Systems, Distributed Architectures, Operating Systems',
+    image: '/FACULTY/Prof. Prashant Patil.webp',
+  },
+  {
+    name: 'Prof. Sameer Velenkar',
+    role: 'SENIOR CS/IT MENTOR',
+    specialty: 'Digital Electronics, Circuit Theory, Python & Automata Theory',
+    image: '/FACULTY/Prof. Sameer Velenkar.webp',
   },
   {
     name: 'Prof. Sunil Jadhav',
     role: 'ACADEMIC MENTOR',
-    specialty: 'Object-Oriented Programming, Software Engineering',
-    image: '/faculty/Prof. Sunil Jadhav.webp',
+    specialty: 'Data Structures, Algorithms & Object-Oriented Programming',
+    image: '/FACULTY/Prof. Sunil Jadhav.webp',
+  },
+  {
+    name: 'Prof. Sunil Nagare',
+    role: 'SENIOR FACULTY MENTOR',
+    specialty: 'Theoretical Computer Science, Applied Sciences & Compiler Design',
+    image: '/FACULTY/Prof. Sunil Nagare.webp',
+  },
+  {
+    name: 'Prof. Vineet Kutty',
+    role: 'ENGINEERING MENTOR',
+    specialty: 'Engineering Mechanics, CAD Graphics & Embedded Technologies',
+    image: '/FACULTY/Prof. Vineet Kutty.webp',
   },
 ]
 
@@ -128,7 +147,7 @@ export default function AboutPage() {
       </div>
 
       {/* FACULTY ACCORDION */}
-      <section className="px-4 max-w-6xl mx-auto mb-28">
+      <section className="px-4 max-w-7xl mx-auto mb-28">
         <div className="text-center mb-12">
           <span className="font-mono text-xs text-[var(--brand-primary)] uppercase tracking-widest block mb-2">
             Pillars of CodeBits
@@ -136,9 +155,13 @@ export default function AboutPage() {
           <h2 className="text-3xl sm:text-4xl font-black text-[var(--text-primary)]">
             Faculty &amp; Mentorship Directory
           </h2>
+          <p className="text-sm text-[var(--text-secondary)] mt-2 max-w-2xl mx-auto">
+            Curated under the pedagogical leadership and domain expertise of senior Mumbai University engineering educators.
+          </p>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4 h-auto md:h-[460px]">
+        {/* Desktop & Tablet Horizontal Expanding Accordion */}
+        <div className="hidden md:flex gap-2.5 lg:gap-3 h-[500px] w-full">
           {facultyList.map((fac, idx) => {
             const isActive = activeAccordion === idx
             return (
@@ -146,37 +169,115 @@ export default function AboutPage() {
                 key={fac.name}
                 onClick={() => setActiveAccordion(idx)}
                 onMouseEnter={() => setActiveAccordion(idx)}
-                className={`relative rounded-2xl overflow-hidden cursor-pointer border transition-all duration-500 min-h-[320px] md:min-h-0 ${
+                tabIndex={0}
+                role="button"
+                aria-expanded={isActive}
+                aria-label={`View profile of ${fac.name}`}
+                className={`relative rounded-2xl overflow-hidden cursor-pointer border transition-all duration-500 ease-out select-none focus:outline-none ${
                   isActive
-                    ? 'md:flex-[3] border-[var(--brand-primary)] shadow-[0_0_30px_rgba(0,194,105,0.2)] bg-[var(--surface-elevated)]'
-                    : 'md:flex-1 border-[var(--border-subtle)] bg-[var(--surface-base)] opacity-75 hover:opacity-100'
+                    ? 'md:flex-[4] border-[var(--brand-primary)] shadow-[0_0_35px_rgba(0,194,105,0.22)] bg-[var(--surface-elevated)] ring-1 ring-[var(--brand-primary)]/40'
+                    : 'md:flex-1 border-[var(--border-subtle)] bg-[var(--surface-base)] opacity-70 hover:opacity-95 hover:border-[var(--brand-primary)]/40'
                 }`}
               >
-                {/* Fallback pattern */}
+                {/* Portrait Image Container */}
                 <div className="absolute inset-0 bg-[var(--surface-base)]">
                   <Image
                     src={fac.image}
                     alt={fac.name}
                     fill
-                    sizes="(max-width: 1200px) 50vw, 33vw"
-                    className="object-cover object-top"
+                    sizes="(max-width: 1200px) 40vw, 25vw"
+                    className={`object-cover object-top transition-transform duration-700 ${
+                      isActive ? 'scale-105 grayscale-0' : 'scale-100 grayscale-[35%]'
+                    }`}
+                    priority={idx < 3}
                   />
-                  <div className="w-full h-full opacity-30 bg-[radial-gradient(var(--border-subtle)_1px,transparent_1px)] [background-size:16px_16px]" />
+                  <div className="w-full h-full opacity-25 bg-[radial-gradient(var(--border-subtle)_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
                 </div>
 
-                <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-base)] via-[var(--bg-base)]/70 to-transparent flex flex-col justify-end p-6 z-10">
-                  <span className="font-mono text-[10px] sm:text-xs text-[var(--brand-ambient)] tracking-wider mb-1">
-                    {fac.role}
-                  </span>
-                  <h3 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] leading-tight">
-                    {fac.name}
-                  </h3>
-                  {isActive && (
-                    <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-2 font-normal line-clamp-2">
+                {/* Active Expanded Overlay */}
+                {isActive ? (
+                  <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-base)] via-[var(--bg-base)]/80 to-transparent flex flex-col justify-end p-6 z-10 transition-opacity duration-300">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="inline-flex items-center gap-1.5 font-mono text-[10px] text-[var(--brand-primary)] uppercase tracking-wider border border-[var(--brand-primary)]/30 bg-[var(--brand-primary)]/10 px-2.5 py-0.5 rounded-full backdrop-blur-sm">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand-primary)] animate-pulse" />
+                        {fac.role}
+                      </span>
+                    </div>
+                    <h3 className="text-xl lg:text-2xl font-black text-[var(--text-primary)] leading-tight tracking-tight">
+                      {fac.name}
+                    </h3>
+                    <p className="text-xs lg:text-sm text-[var(--text-secondary)] mt-2 font-normal leading-relaxed line-clamp-2">
                       {fac.specialty}
                     </p>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  /* Collapsed Vertical Indicator */
+                  <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-base)]/90 via-[var(--bg-base)]/30 to-black/20 flex flex-col justify-end items-center pb-6 z-10 pointer-events-none">
+                    <span className="font-mono text-xs font-semibold text-[var(--text-secondary)] whitespace-nowrap [writing-mode:vertical-rl] rotate-180 tracking-widest uppercase opacity-85">
+                      {fac.name.replace('Prof. ', '')}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Mobile Stacked Touch Accordion */}
+        <div className="flex flex-col gap-3 md:hidden">
+          {facultyList.map((fac, idx) => {
+            const isActive = activeAccordion === idx
+            return (
+              <div
+                key={fac.name}
+                onClick={() => setActiveAccordion(idx)}
+                className={`rounded-2xl overflow-hidden border transition-all duration-300 cursor-pointer ${
+                  isActive
+                    ? 'border-[var(--brand-primary)] shadow-[0_0_25px_rgba(0,194,105,0.2)] bg-[var(--surface-elevated)]'
+                    : 'border-[var(--border-subtle)] bg-[var(--surface-base)] opacity-85'
+                }`}
+              >
+                {isActive ? (
+                  <div>
+                    <div className="relative h-64 w-full bg-[var(--surface-base)]">
+                      <Image
+                        src={fac.image}
+                        alt={fac.name}
+                        fill
+                        sizes="100vw"
+                        className="object-cover object-top"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-base)] via-[var(--bg-base)]/60 to-transparent" />
+                    </div>
+                    <div className="p-5 relative -mt-10 z-10">
+                      <span className="inline-flex items-center gap-1.5 font-mono text-[10px] text-[var(--brand-primary)] uppercase tracking-wider border border-[var(--brand-primary)]/30 bg-[var(--brand-primary)]/10 px-2.5 py-0.5 rounded-full mb-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand-primary)] animate-pulse" />
+                        {fac.role}
+                      </span>
+                      <h3 className="text-xl font-bold text-[var(--text-primary)]">{fac.name}</h3>
+                      <p className="text-xs text-[var(--text-secondary)] mt-1.5 leading-relaxed">{fac.specialty}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3.5 p-3.5">
+                    <div className="relative w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 border border-[var(--border-subtle)] bg-[var(--surface-elevated)]">
+                      <Image
+                        src={fac.image}
+                        alt={fac.name}
+                        fill
+                        sizes="48px"
+                        className="object-cover object-top grayscale-[30%]"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-semibold text-[var(--text-primary)] truncate">{fac.name}</h4>
+                      <p className="text-[10px] font-mono text-[var(--brand-primary)] truncate uppercase">{fac.role}</p>
+                    </div>
+                    <span className="text-[11px] font-mono text-[var(--text-secondary)] px-2 py-1 rounded bg-[var(--surface-elevated)] border border-[var(--border-subtle)]">
+                      View
+                    </span>
+                  </div>
+                )}
               </div>
             )
           })}
