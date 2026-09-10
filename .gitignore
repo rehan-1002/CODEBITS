@@ -42,3 +42,6 @@ next-env.d.ts
 .DS_Store
 *.pem
 Thumbs.db
+
+# Internal developer notes
+brain.md
