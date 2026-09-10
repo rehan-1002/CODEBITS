@@ -9,7 +9,7 @@ import { ResourceGrid } from "@/components/resources/ResourceGrid";
 import { GooeyInput } from "@/components/ui/gooey-input";
 import { AntiMetalButton } from "@/components/ui/anti-metal-button";
 
-// Syllabus-validated initial catalog resources for Mumbai University Rev-2019 'C' Scheme
+// Syllabus-validated initial catalog resources for Mumbai University Engineering
 const INITIAL_MU_RESOURCES: Resource[] = [
   {
     id: "mu-comps-sem3-am3-pyq",
@@ -17,7 +17,7 @@ const INITIAL_MU_RESOURCES: Resource[] = [
     subject: "Applied Mathematics III",
     branch: "COMPS",
     semester: 3,
-    scheme: "Rev-2019 C Scheme",
+    scheme: "Mumbai University",
     category: "pyq",
     file_url: "/sample.pdf",
     page_count: 6,
@@ -34,7 +34,7 @@ const INITIAL_MU_RESOURCES: Resource[] = [
     subject: "Data Structures & Analysis",
     branch: "COMPS",
     semester: 3,
-    scheme: "Rev-2019 C Scheme",
+    scheme: "Mumbai University",
     category: "notes",
     file_url: "/sample.pdf",
     page_count: 42,
@@ -51,7 +51,7 @@ const INITIAL_MU_RESOURCES: Resource[] = [
     subject: "Database Management Systems",
     branch: "IT",
     semester: 4,
-    scheme: "Rev-2019 C Scheme",
+    scheme: "Mumbai University",
     category: "solution",
     file_url: "/sample.pdf",
     page_count: 18,
@@ -68,7 +68,7 @@ const INITIAL_MU_RESOURCES: Resource[] = [
     subject: "Computer Organization & Architecture",
     branch: "COMPS",
     semester: 4,
-    scheme: "Rev-2019 C Scheme",
+    scheme: "Mumbai University",
     category: "pyq",
     file_url: "/sample.pdf",
     page_count: 5,
@@ -81,11 +81,11 @@ const INITIAL_MU_RESOURCES: Resource[] = [
   },
   {
     id: "mu-it-sem4-os-sol",
-    title: "Operating Systems - 5-Year Solved PYQ Compilation (2019–2023)",
+    title: "Operating Systems - 5-Year Solved PYQ Compilation",
     subject: "Operating Systems",
     branch: "IT",
     semester: 4,
-    scheme: "Rev-2019 C Scheme",
+    scheme: "Mumbai University",
     category: "solution",
     file_url: "/sample.pdf",
     page_count: 36,
@@ -102,7 +102,7 @@ const INITIAL_MU_RESOURCES: Resource[] = [
     subject: "AI & Data Science Curriculum",
     branch: "AI-DS",
     semester: 3,
-    scheme: "Rev-2019 C Scheme",
+    scheme: "Mumbai University",
     category: "syllabus",
     file_url: "/sample.pdf",
     page_count: 14,
@@ -119,7 +119,7 @@ const INITIAL_MU_RESOURCES: Resource[] = [
     subject: "Discrete Structures & Graph Theory",
     branch: "COMPS",
     semester: 3,
-    scheme: "Rev-2019 C Scheme",
+    scheme: "Mumbai University",
     category: "notes",
     file_url: "/sample.pdf",
     page_count: 28,
@@ -136,7 +136,7 @@ const INITIAL_MU_RESOURCES: Resource[] = [
     subject: "Engineering Mathematics IV",
     branch: "EXTC",
     semester: 4,
-    scheme: "Rev-2019 C Scheme",
+    scheme: "Mumbai University",
     category: "pyq",
     file_url: "/sample.pdf",
     page_count: 8,

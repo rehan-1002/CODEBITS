@@ -1,6 +1,6 @@
 /**
  * CodeBits Portal - Academic Catalog & Resource Domain Types
- * Specific to Mumbai University Rev-2019 'C' Scheme engineering.
+ * Specific to Mumbai University engineering.
  */
 
 export type AcademicBranch =
@@ -17,7 +17,7 @@ export type DocumentCategory = "pyq" | "notes" | "syllabus" | "solution";
 
 export type ModerationStatus = "pending" | "approved" | "rejected";
 
-export type AcademicScheme = "Rev-2019 C Scheme";
+export type AcademicScheme = "Mumbai University" | "Autonomous" | "General";
 
 export interface Resource {
   id: string;

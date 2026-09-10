@@ -24,9 +24,9 @@ const STEPS: NarrativeStep[] = [
   {
     index: "02",
     tag: "DISCOVERY",
-    title: "Taxonomy by Branch, Semester & Scheme",
+    title: "Taxonomy by Branch & Semester",
     description:
-      "Structured catalog categorization adhering strictly to Mumbai University Rev-2019 'C' Scheme across all 8 semesters for Computer, IT, AI-DS, EXTC, Mechanical, and Civil branches.",
+      "Structured catalog categorization curated for Mumbai University engineering across all 8 semesters for Computer, IT, AI-DS, EXTC, Mechanical, and Civil branches.",
     icon: FolderGit2,
   },
   {

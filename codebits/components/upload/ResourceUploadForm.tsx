@@ -29,9 +29,10 @@ const BRANCH_OPTIONS: FilterDropdownOption[] = [
 const SEMESTER_OPTIONS: FilterDropdownOption[] = [1, 2, 3, 4, 5, 6, 7, 8].map((s) => ({
   id: s,
   label: `Semester ${s}`,
-  sublabel: `Mumbai University Rev-2019 'C' Scheme (Term ${s})`,
+  sublabel: `Mumbai University Engineering (Term ${s})`,
   icon: BookOpen,
 }));
+
 
 const CATEGORY_OPTIONS: { id: DocumentCategory; label: string }[] = [
   { id: "pyq", label: "Question Paper" },

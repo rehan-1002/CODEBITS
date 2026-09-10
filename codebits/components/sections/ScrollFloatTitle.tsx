@@ -88,7 +88,7 @@ export function ScrollFloatTitle() {
         {/* Structural Subtitle & Call to Action */}
         <div className="max-w-2xl mx-auto space-y-6">
           <p className="text-sm sm:text-base text-[var(--text-secondary)] leading-relaxed font-sans">
-            Curated specifically for Mumbai University engineering branches under Rev-2019 'C' Scheme. Previous years' questions, vetted lecture notes, and detailed solutions.
+            Curated specifically for Mumbai University engineering branches. Previous years&apos; questions, vetted lecture notes, and detailed solutions.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">

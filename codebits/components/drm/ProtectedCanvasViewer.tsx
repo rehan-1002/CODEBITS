@@ -27,7 +27,7 @@ export function ProtectedCanvasViewer({
   documentId,
   documentTitle = "Mumbai University Question Paper & Solutions",
   subject = "Applied Mathematics IV",
-  scheme = "Rev-2019 'C' Scheme",
+  scheme = "Mumbai University Engineering",
   studentName = "ATHARVA JOSHI",
   studentPhone = "+91 9876543210",
 }: ProtectedCanvasViewerProps) {

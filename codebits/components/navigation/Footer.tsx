@@ -29,12 +29,13 @@ export function Footer() {
               </div>
             </div>
 
+
             <p className="text-xs text-black/80 leading-relaxed max-w-md font-medium">
-              A centralized, controlled academic repository delivering syllabus-validated question papers, faculty notes, and solutions for engineering students under Mumbai University Rev-2019 &apos;C&apos; Scheme.
+              A centralized, controlled academic repository delivering syllabus-validated question papers, faculty notes, and solutions for engineering students across Mumbai University.
             </p>
 
             <div className="pt-2 text-[11px] font-mono text-black/75 space-y-1 font-semibold">
-              <div>SCHEME: MUMBAI UNIVERSITY REV-2019 &apos;C&apos;</div>
+              <div>CURRICULUM: MUMBAI UNIVERSITY</div>
               <div>SUPERVISED BY: PROF. ROHIT FALAKE (M.R.F)</div>
             </div>
           </div>

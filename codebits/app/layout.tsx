@@ -23,16 +23,17 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "CodeBits | Mumbai University Academic Vault & Institutional Portal",
   description:
-    "Centralized, controlled academic repository and institutional gateway for Mumbai University engineering students under Rev-2019 'C' Scheme. Guided by Prof. Rohit Falake (M.R.F).",
+    "Centralized, controlled academic repository and institutional gateway for Mumbai University engineering students. Guided by Prof. Rohit Falake (M.R.F).",
   keywords: [
     "CodeBits",
     "Mumbai University",
     "Engineering Question Papers",
     "PYQ",
     "Engineering Notes",
-    "Rev-2019 C Scheme",
+    "Mumbai University Engineering",
     "Prof. MRF",
   ],
+
   authors: [{ name: "Prof. Rohit Falake (M.R.F) & CodeBits Academic Team" }],
   icons: {
     icon: "/LOGO CB.png",

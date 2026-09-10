@@ -179,7 +179,7 @@ export function CbAiDrawer({ isOpen, onClose }: CbAiDrawerProps) {
                       "3rd sem COMPS maths 3 PYQ",
                       "Semester 5 IT database notes",
                       "AI-DS Sem 4 applied mathematics",
-                      "EXTC rev 2019 syllabus",
+                      "EXTC engineering syllabus",
                     ].map((example) => (
                       <button
                         key={example}
@@ -200,7 +200,7 @@ export function CbAiDrawer({ isOpen, onClose }: CbAiDrawerProps) {
 
                   <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between text-[11px] font-mono text-[var(--text-muted)]">
                     <span>cbAI SEARCH PIPELINE</span>
-                    <span>REV-2019 'C' SCHEME ENFORCED</span>
+                    <span>MUMBAI UNIVERSITY CURATED</span>
                   </div>
                 </div>
               )}

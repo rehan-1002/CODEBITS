@@ -7,6 +7,7 @@ export type UserRole = "student" | "admin";
 export interface Profile {
   id: string;
   full_name: string;
+  username?: string;
   email: string;
   phone: string; // Indian 10-digit mobile, e.g. "9876543210"
   role: UserRole;
@@ -24,12 +25,15 @@ export interface AuthSession {
 export interface LoginFormData {
   identifier: string; // Email or 10-digit phone
   password: string;
+  rememberSession?: boolean;
 }
 
 export interface RegisterFormData {
   fullName: string;
+  department?: string;
   email: string;
   phone: string;
   password: string;
   confirmPassword?: string;
 }
+
