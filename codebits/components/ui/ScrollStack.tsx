@@ -17,10 +17,9 @@ export const ScrollStackItem = ({
   itemClassName?: string
 }) => (
   <div
-    className={`scroll-stack-card relative w-full will-change-transform transform-gpu box-border origin-top ${itemClassName}`.trim()}
+    className={`scroll-stack-card sticky w-full will-change-transform box-border origin-top ${itemClassName}`.trim()}
     style={{
       backfaceVisibility: 'hidden',
-      transformStyle: 'preserve-3d',
     }}
   >
     {children}
@@ -113,7 +112,10 @@ const ScrollStack = forwardRef<ScrollStackHandle, ScrollStackProps>(function Scr
 
     const { scrollTop, containerHeight } = getScrollData()
     const stackPositionPx = parsePercentage(stackPosition, containerHeight)
-    const endElementTop = initialEndTopRef.current || containerHeight * 5
+
+    const isMobile =
+      typeof window !== 'undefined' &&
+      (window.innerWidth < 768 || ('ontouchstart' in window && window.innerWidth < 1024))
 
     let calculatedActiveIndex = 0
 
@@ -122,89 +124,56 @@ const ScrollStack = forwardRef<ScrollStackHandle, ScrollStackProps>(function Scr
 
       const initialTop = initialTopsRef.current[i] ?? card.offsetTop
       const pinStart = initialTop - stackPositionPx - itemStackDistance * i
-      const pinEnd = Math.max(pinStart + 2500, endElementTop - containerHeight)
 
       if (scrollTop >= pinStart - 60) {
         calculatedActiveIndex = i
       }
 
-      // Calculate stacking translateY
-      let translateY = 0
-      if (scrollTop >= pinStart && scrollTop <= pinEnd) {
-        // Pinned state: stays locked at stack position
-        translateY = scrollTop - pinStart
-      } else if (scrollTop > pinEnd) {
-        // Stack released at end of track
-        translateY = pinEnd - pinStart
-      } else {
-        // Before pinning: natural position
-        translateY = 0
-      }
-
-      // Calculate scale, blur & depth lighting based on cards stacked on top
+      // Calculate stacking progression of cards above
       let stackedAbove = 0
       for (let j = i + 1; j < cardsRef.current.length; j++) {
         const jInitialTop = initialTopsRef.current[j] ?? cardsRef.current[j].offsetTop
         const jPinStart = jInitialTop - stackPositionPx - itemStackDistance * j
         if (scrollTop >= jPinStart) {
           stackedAbove++
-        } else if (scrollTop >= jPinStart - 140) {
-          const smoothLanding = (scrollTop - (jPinStart - 140)) / 140
+        } else if (scrollTop >= jPinStart - 120) {
+          const smoothLanding = (scrollTop - (jPinStart - 120)) / 120
           stackedAbove += smoothLanding
         }
       }
 
-      // Device-aware optimizations: on mobile/touch, avoid expensive CSS filter blur and 3D perspective thrashing
-      const isMobile =
-        typeof window !== 'undefined' &&
-        (window.innerWidth < 768 || ('ontouchstart' in window && window.innerWidth < 1024))
-
       // Scale decay: progressively scale down cards stacked underneath
-      const scale = Math.max(0.76, 1 - stackedAbove * itemScale)
-      // Progressive depth blur (desktop only to prevent mobile GPU frame drops)
+      const scale = Math.max(0.78, 1 - stackedAbove * itemScale)
+      // Progressive depth blur (desktop only)
       const blur = !isMobile && blurAmount > 0 ? Math.min(8, stackedAbove * blurAmount) : 0
       // Progressive opacity dimming on mobile (compositor-only, 0 repaints)
       const opacity = isMobile ? Math.max(0.4, 1 - stackedAbove * 0.14) : 1
       // Progressive depth dimming (brightness) on desktop
       const brightness = !isMobile ? Math.max(0.65, 1 - stackedAbove * 0.08) : 1
-      // Subtle 3D tilt angle (desktop only)
-      const rotateX = !isMobile ? Math.min(3.5, stackedAbove * 1.2) : 0
-      const rotation = !isMobile && rotationAmount ? i * rotationAmount * Math.min(1, stackedAbove) : 0
-
-      // Dynamic depth elevation shadow (desktop only)
-      const shadowBlur = Math.round(15 + stackedAbove * 14)
-      const shadowY = Math.round(8 + stackedAbove * 8)
-      const shadowOpacity = Math.min(0.55, 0.15 + stackedAbove * 0.12)
 
       const newTransform = {
-        translateY: Math.round(translateY * 10) / 10,
         scale: Math.round(scale * 1000) / 1000,
-        rotateX: Math.round(rotateX * 10) / 10,
-        rotation: Math.round(rotation * 10) / 10,
         blur: Math.round(blur * 10) / 10,
         opacity: Math.round(opacity * 100) / 100,
         brightness: Math.round(brightness * 100) / 100,
-        shadowY,
-        shadowBlur,
-        shadowOpacity,
       }
 
       const lastTransform = lastTransformsRef.current.get(i)
       const hasChanged =
         !lastTransform ||
-        Math.abs(lastTransform.translateY - newTransform.translateY) > 0.2 ||
         Math.abs(lastTransform.scale - newTransform.scale) > 0.002 ||
-        (!isMobile && Math.abs(lastTransform.rotateX - newTransform.rotateX) > 0.1) ||
         (!isMobile && Math.abs(lastTransform.blur - newTransform.blur) > 0.2) ||
         (isMobile && Math.abs(lastTransform.opacity - newTransform.opacity) > 0.02)
 
       if (hasChanged) {
+        // Native CSS position: sticky handles Y-positioning on the compositor thread.
+        // Transform ONLY applies scale smoothly in-place without any Y-translation jitter!
+        card.style.transform = newTransform.scale === 1 ? 'none' : `scale(${newTransform.scale})`
+
         if (isMobile) {
-          card.style.transform = `translate3d(0, ${newTransform.translateY}px, 0) scale(${newTransform.scale})`
           card.style.opacity = `${newTransform.opacity}`
           card.style.filter = 'none'
         } else {
-          card.style.transform = `translate3d(0, ${newTransform.translateY}px, 0) scale(${newTransform.scale}) perspective(1200px) rotateX(${newTransform.rotateX}deg) rotate(${newTransform.rotation}deg)`
           card.style.opacity = '1'
 
           const filterRules: string[] = []
@@ -215,12 +184,6 @@ const ScrollStack = forwardRef<ScrollStackHandle, ScrollStackProps>(function Scr
             filterRules.push(`brightness(${newTransform.brightness})`)
           }
           card.style.filter = filterRules.length ? filterRules.join(' ') : 'none'
-
-          if (stackedAbove > 0.05) {
-            card.style.boxShadow = `0 ${newTransform.shadowY}px ${newTransform.shadowBlur}px rgba(0, 0, 0, ${newTransform.shadowOpacity})`
-          } else {
-            card.style.boxShadow = ''
-          }
         }
 
         lastTransformsRef.current.set(i, newTransform)
@@ -247,7 +210,6 @@ const ScrollStack = forwardRef<ScrollStackHandle, ScrollStackProps>(function Scr
     itemScale,
     itemStackDistance,
     stackPosition,
-    rotationAmount,
     blurAmount,
     onStackComplete,
     onActiveCardChange,
@@ -303,17 +265,6 @@ const ScrollStack = forwardRef<ScrollStackHandle, ScrollStackProps>(function Scr
 
     cardsRef.current = cards
 
-    // Initialize card styles and spacing
-    cards.forEach((card, i) => {
-      if (i < cards.length - 1) {
-        card.style.marginBottom = `${itemDistance}px`
-      }
-      card.style.zIndex = `${i + 1}`
-      card.style.transformOrigin = 'top center'
-      card.style.backfaceVisibility = 'hidden'
-      card.style.perspective = '1200px'
-    })
-
     const endElement = (
       useWindowScroll
         ? document.querySelector('.scroll-stack-end')
@@ -321,15 +272,24 @@ const ScrollStack = forwardRef<ScrollStackHandle, ScrollStackProps>(function Scr
     ) as HTMLElement | null
 
     const measureAndInit = () => {
-      // Temporarily unset transforms to measure true layout offsets
-      cards.forEach((card) => {
-        card.style.transform = 'none'
+      const { containerHeight } = getScrollData()
+      const stackPositionPx = parsePercentage(stackPosition, containerHeight)
+
+      cards.forEach((card, i) => {
+        if (i < cards.length - 1) {
+          card.style.marginBottom = `${itemDistance}px`
+        }
+        card.style.zIndex = `${i + 1}`
+        card.style.position = 'sticky'
+        card.style.top = `${Math.round(stackPositionPx + itemStackDistance * i)}px`
+        card.style.transformOrigin = 'top center'
+        card.style.backfaceVisibility = 'hidden'
       })
+
       initialTopsRef.current = cards.map((c) => c.offsetTop)
       if (endElement) {
         initialEndTopRef.current = endElement.offsetTop
       }
-      lastTransformsRef.current.clear()
       updateCardTransforms()
     }
 
@@ -342,8 +302,7 @@ const ScrollStack = forwardRef<ScrollStackHandle, ScrollStackProps>(function Scr
     }
 
     // Measure again after brief delay to catch any font/CSS load shifts
-    const timerId = setTimeout(measureAndInit, 50)
-    const timerId2 = setTimeout(measureAndInit, 200)
+    const timerId = setTimeout(measureAndInit, 60)
 
     const handleResize = () => {
       measureAndInit()
@@ -352,7 +311,6 @@ const ScrollStack = forwardRef<ScrollStackHandle, ScrollStackProps>(function Scr
 
     return () => {
       clearTimeout(timerId)
-      clearTimeout(timerId2)
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current)
       window.removeEventListener('resize', handleResize)
       if (scrollTarget) {
@@ -361,7 +319,7 @@ const ScrollStack = forwardRef<ScrollStackHandle, ScrollStackProps>(function Scr
       cardsRef.current = []
       lastTransformsRef.current.clear()
     }
-  }, [itemDistance, handleScroll, updateCardTransforms, useWindowScroll])
+  }, [itemDistance, itemStackDistance, stackPosition, parsePercentage, getScrollData, handleScroll, updateCardTransforms, useWindowScroll])
 
   // Keyboard navigation inside scroller
   useEffect(() => {
