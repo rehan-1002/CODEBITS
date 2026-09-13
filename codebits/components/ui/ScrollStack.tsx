@@ -17,7 +17,7 @@ export const ScrollStackItem = ({
   itemClassName?: string
 }) => (
   <div
-    className={`scroll-stack-card relative w-full will-change-transform transform-gpu box-border origin-top transition-shadow duration-300 ${itemClassName}`.trim()}
+    className={`scroll-stack-card relative w-full will-change-transform transform-gpu box-border origin-top ${itemClassName}`.trim()}
     style={{
       backfaceVisibility: 'hidden',
       transformStyle: 'preserve-3d',
@@ -154,17 +154,24 @@ const ScrollStack = forwardRef<ScrollStackHandle, ScrollStackProps>(function Scr
         }
       }
 
+      // Device-aware optimizations: on mobile/touch, avoid expensive CSS filter blur and 3D perspective thrashing
+      const isMobile =
+        typeof window !== 'undefined' &&
+        (window.innerWidth < 768 || ('ontouchstart' in window && window.innerWidth < 1024))
+
       // Scale decay: progressively scale down cards stacked underneath
       const scale = Math.max(0.76, 1 - stackedAbove * itemScale)
-      // Progressive depth blur
-      const blur = blurAmount > 0 ? Math.min(8, stackedAbove * blurAmount) : 0
-      // Progressive depth dimming (brightness)
-      const brightness = Math.max(0.65, 1 - stackedAbove * 0.08)
-      // Subtle 3D tilt angle
-      const rotateX = Math.min(3.5, stackedAbove * 1.2)
-      const rotation = rotationAmount ? i * rotationAmount * Math.min(1, stackedAbove) : 0
+      // Progressive depth blur (desktop only to prevent mobile GPU frame drops)
+      const blur = !isMobile && blurAmount > 0 ? Math.min(8, stackedAbove * blurAmount) : 0
+      // Progressive opacity dimming on mobile (compositor-only, 0 repaints)
+      const opacity = isMobile ? Math.max(0.4, 1 - stackedAbove * 0.14) : 1
+      // Progressive depth dimming (brightness) on desktop
+      const brightness = !isMobile ? Math.max(0.65, 1 - stackedAbove * 0.08) : 1
+      // Subtle 3D tilt angle (desktop only)
+      const rotateX = !isMobile ? Math.min(3.5, stackedAbove * 1.2) : 0
+      const rotation = !isMobile && rotationAmount ? i * rotationAmount * Math.min(1, stackedAbove) : 0
 
-      // Dynamic depth elevation shadow
+      // Dynamic depth elevation shadow (desktop only)
       const shadowBlur = Math.round(15 + stackedAbove * 14)
       const shadowY = Math.round(8 + stackedAbove * 8)
       const shadowOpacity = Math.min(0.55, 0.15 + stackedAbove * 0.12)
@@ -175,6 +182,7 @@ const ScrollStack = forwardRef<ScrollStackHandle, ScrollStackProps>(function Scr
         rotateX: Math.round(rotateX * 10) / 10,
         rotation: Math.round(rotation * 10) / 10,
         blur: Math.round(blur * 10) / 10,
+        opacity: Math.round(opacity * 100) / 100,
         brightness: Math.round(brightness * 100) / 100,
         shadowY,
         shadowBlur,
@@ -186,26 +194,33 @@ const ScrollStack = forwardRef<ScrollStackHandle, ScrollStackProps>(function Scr
         !lastTransform ||
         Math.abs(lastTransform.translateY - newTransform.translateY) > 0.2 ||
         Math.abs(lastTransform.scale - newTransform.scale) > 0.002 ||
-        Math.abs(lastTransform.rotateX - newTransform.rotateX) > 0.1 ||
-        Math.abs(lastTransform.blur - newTransform.blur) > 0.2 ||
-        Math.abs(lastTransform.brightness - newTransform.brightness) > 0.02
+        (!isMobile && Math.abs(lastTransform.rotateX - newTransform.rotateX) > 0.1) ||
+        (!isMobile && Math.abs(lastTransform.blur - newTransform.blur) > 0.2) ||
+        (isMobile && Math.abs(lastTransform.opacity - newTransform.opacity) > 0.02)
 
       if (hasChanged) {
-        card.style.transform = `translate3d(0, ${newTransform.translateY}px, 0) scale(${newTransform.scale}) perspective(1200px) rotateX(${newTransform.rotateX}deg) rotate(${newTransform.rotation}deg)`
-
-        const filterRules: string[] = []
-        if (newTransform.blur > 0.4) {
-          filterRules.push(`blur(${newTransform.blur}px)`)
-        }
-        if (newTransform.brightness < 0.98) {
-          filterRules.push(`brightness(${newTransform.brightness})`)
-        }
-        card.style.filter = filterRules.length ? filterRules.join(' ') : 'none'
-
-        if (stackedAbove > 0.05) {
-          card.style.boxShadow = `0 ${newTransform.shadowY}px ${newTransform.shadowBlur}px rgba(0, 0, 0, ${newTransform.shadowOpacity})`
+        if (isMobile) {
+          card.style.transform = `translate3d(0, ${newTransform.translateY}px, 0) scale(${newTransform.scale})`
+          card.style.opacity = `${newTransform.opacity}`
+          card.style.filter = 'none'
         } else {
-          card.style.boxShadow = ''
+          card.style.transform = `translate3d(0, ${newTransform.translateY}px, 0) scale(${newTransform.scale}) perspective(1200px) rotateX(${newTransform.rotateX}deg) rotate(${newTransform.rotation}deg)`
+          card.style.opacity = '1'
+
+          const filterRules: string[] = []
+          if (newTransform.blur > 0.4) {
+            filterRules.push(`blur(${newTransform.blur}px)`)
+          }
+          if (newTransform.brightness < 0.98) {
+            filterRules.push(`brightness(${newTransform.brightness})`)
+          }
+          card.style.filter = filterRules.length ? filterRules.join(' ') : 'none'
+
+          if (stackedAbove > 0.05) {
+            card.style.boxShadow = `0 ${newTransform.shadowY}px ${newTransform.shadowBlur}px rgba(0, 0, 0, ${newTransform.shadowOpacity})`
+          } else {
+            card.style.boxShadow = ''
+          }
         }
 
         lastTransformsRef.current.set(i, newTransform)
@@ -240,8 +255,13 @@ const ScrollStack = forwardRef<ScrollStackHandle, ScrollStackProps>(function Scr
     getScrollData,
   ])
 
+  // RAF-throttled scroll handler for silky 60/120fps mobile display sync
   const handleScroll = useCallback(() => {
-    updateCardTransforms()
+    if (animationFrameRef.current !== null) return
+    animationFrameRef.current = requestAnimationFrame(() => {
+      updateCardTransforms()
+      animationFrameRef.current = null
+    })
   }, [updateCardTransforms])
 
   // Expose scroll helpers via forwardRef
@@ -385,10 +405,9 @@ const ScrollStack = forwardRef<ScrollStackHandle, ScrollStackProps>(function Scr
       style={{
         overscrollBehavior: 'contain',
         WebkitOverflowScrolling: 'touch',
-        scrollBehavior: 'smooth',
       }}
     >
-      <div className="scroll-stack-inner pt-2 pb-[70rem] px-4 sm:px-8 min-h-full">
+      <div className="scroll-stack-inner pt-2 pb-[35rem] md:pb-[70rem] px-3 sm:px-8 min-h-full">
         {children}
         <div className="scroll-stack-end w-full h-2" />
       </div>

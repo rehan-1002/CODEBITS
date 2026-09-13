@@ -166,7 +166,7 @@ export default function ScrollStackNav() {
                   isDark
                     ? 'bg-black/75 text-[#F8FAFC]'
                     : 'bg-slate-950/40 text-slate-900'
-                } backdrop-blur-2xl`}
+                } backdrop-blur-md md:backdrop-blur-2xl`}
                 style={{
                   position: 'fixed',
                   top: 0,
@@ -242,19 +242,20 @@ export default function ScrollStackNav() {
                         return (
                           <ScrollStackItem key={item.title}>
                             <motion.div
-                              initial={{ opacity: 0, y: 50, scale: 0.95 }}
-                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              initial={{ opacity: 0, y: 40 }}
+                              animate={{ opacity: 1, y: 0 }}
                               transition={{
-                                delay: 0.08 + idx * 0.05,
-                                duration: 0.45,
+                                delay: 0.05 + idx * 0.04,
+                                duration: 0.35,
                                 ease: [0.16, 1, 0.3, 1],
                               }}
+                              className="w-full h-full"
                             >
                               <Link
                                 href={item.href}
                                 prefetch={true}
                                 onClick={() => setIsOpen(false)}
-                                className={`group relative flex flex-col justify-between h-[72vh] min-h-[520px] max-h-[720px] w-full rounded-3xl p-8 sm:p-14 md:p-16 transition-all duration-300 cursor-pointer ${
+                                className={`group relative flex flex-col justify-between h-[66vh] sm:h-[72vh] min-h-[420px] sm:min-h-[520px] max-h-[720px] w-full rounded-3xl p-6 sm:p-14 md:p-16 transition-all duration-300 cursor-pointer ${
                                   isDark
                                     ? isPrimary
                                       ? 'bg-gradient-to-br from-[#10241B] via-[#0D1E16] to-[#0A1611] border-2 border-[#00C269] shadow-[0_30px_80px_rgba(0,194,105,0.28)] hover:border-[#34EE99] hover:shadow-[0_35px_90px_rgba(0,194,105,0.38)] text-white'
@@ -268,9 +269,9 @@ export default function ScrollStackNav() {
                                 <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-transparent via-[#00C269]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
 
                                 {/* Top Header Bar */}
-                                <div className="flex justify-between items-start mb-6 relative z-10">
+                                <div className="flex justify-between items-start mb-4 sm:mb-6 relative z-10">
                                   <div
-                                    className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105 duration-200 ${
+                                    className={`w-14 h-14 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105 duration-200 ${
                                       isDark
                                         ? isPrimary
                                           ? 'bg-[#00C269] text-[#0B0F0E] shadow-[0_8px_25px_rgba(0,194,105,0.45)]'
@@ -280,12 +281,12 @@ export default function ScrollStackNav() {
                                         : 'bg-slate-100 text-slate-800 border border-slate-200'
                                     }`}
                                   >
-                                    <Icon className="w-8 h-8 sm:w-10 sm:h-10" />
+                                    <Icon className="w-7 h-7 sm:w-10 sm:h-10" />
                                   </div>
 
-                                  <div className="flex items-center gap-4 sm:gap-6">
+                                  <div className="flex items-center gap-3 sm:gap-6">
                                     <span
-                                      className={`font-mono text-5xl sm:text-7xl md:text-8xl font-black tracking-tighter select-none ${
+                                      className={`font-mono text-4xl sm:text-7xl md:text-8xl font-black tracking-tighter select-none ${
                                         isDark
                                           ? isPrimary
                                             ? 'text-[#00C269]'
@@ -298,7 +299,7 @@ export default function ScrollStackNav() {
                                       {item.number}
                                     </span>
                                     <div
-                                      className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all duration-200 ${
+                                      className={`w-11 h-11 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all duration-200 ${
                                         isDark
                                           ? isPrimary
                                             ? 'bg-[#00C269]/10 text-[#00C269] group-hover:bg-[#00C269] group-hover:text-[#0B0F0E]'
@@ -308,15 +309,15 @@ export default function ScrollStackNav() {
                                           : 'bg-slate-100 text-slate-500 group-hover:bg-slate-900 group-hover:text-white'
                                       }`}
                                     >
-                                      <ArrowUpRight className="w-7 h-7 sm:w-8 sm:h-8 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform duration-200" />
+                                      <ArrowUpRight className="w-6 h-6 sm:w-8 sm:h-8 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform duration-200" />
                                     </div>
                                   </div>
                                 </div>
 
                                 {/* Clean Main Heading & 1-Lined Info */}
-                                <div className="my-auto py-6 relative z-10">
+                                <div className="my-auto py-3 sm:py-6 relative z-10">
                                   <h3
-                                    className={`text-4xl sm:text-6xl md:text-7xl font-black tracking-tight leading-tight transition-colors duration-200 ${
+                                    className={`text-3xl sm:text-6xl md:text-7xl font-black tracking-tight leading-tight transition-colors duration-200 ${
                                       isDark
                                         ? 'text-white group-hover:text-[#34EE99]'
                                         : 'text-slate-900 group-hover:text-[#009E52]'
@@ -325,7 +326,7 @@ export default function ScrollStackNav() {
                                     {item.title}
                                   </h3>
                                   <p
-                                    className={`text-lg sm:text-2xl md:text-3xl mt-4 sm:mt-6 max-w-3xl leading-relaxed font-medium ${
+                                    className={`text-sm sm:text-2xl md:text-3xl mt-2 sm:mt-6 max-w-3xl leading-relaxed font-medium ${
                                       isDark ? 'text-slate-300' : 'text-slate-600'
                                     }`}
                                   >
@@ -335,13 +336,13 @@ export default function ScrollStackNav() {
 
                                 {/* Bottom Minimalist Cue */}
                                 <div
-                                  className={`pt-6 border-t flex items-center justify-between font-mono text-xs sm:text-sm tracking-widest uppercase relative z-10 ${
+                                  className={`pt-4 sm:pt-6 border-t flex items-center justify-between font-mono text-[11px] sm:text-sm tracking-wider sm:tracking-widest uppercase relative z-10 ${
                                     isDark
                                       ? 'border-white/10 text-slate-500'
                                       : 'border-slate-200/90 text-slate-400'
                                   }`}
                                 >
-                                  <span>CodeBits Academic Gateway</span>
+                                  <span>CodeBits Gateway</span>
                                   <span className="flex items-center gap-1.5 group-hover:text-[var(--brand-primary)] transition-colors font-bold">
                                     Navigate Now <ArrowUpRight className="w-4 h-4" />
                                   </span>
