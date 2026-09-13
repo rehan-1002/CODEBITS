@@ -34,14 +34,14 @@ export function Skiper19() {
           scrollYProgress={scrollYProgress}
           containerRef={ref}
         />
-      </div>
 
-      {/* Mobile Dedicated LinePath: Scaled and centered to be 100% visible across the entire mobile screen */}
-      <MobileLinePath
-        className="block md:hidden absolute top-0 left-1/2 -translate-x-1/2 -z-10 pointer-events-none w-full max-w-[390px] h-full overflow-visible opacity-90"
-        scrollYProgress={scrollYProgress}
-        containerRef={ref}
-      />
+        {/* Mobile Dedicated LinePath: Scaled and centered to be 100% visible across mobile screens */}
+        <MobileLinePath
+          className="block md:hidden absolute top-1/2 -translate-y-[240px] left-1/2 -translate-x-1/2 -z-10 pointer-events-none w-full max-w-[390px] h-auto overflow-visible opacity-90"
+          scrollYProgress={scrollYProgress}
+          containerRef={ref}
+        />
+      </div>
 
       {/* 2. STORY POCKET 1: ONLY "scattered resources?" (No HUD card, clean typography) */}
       <div className="relative z-20 w-full max-w-5xl mx-auto mt-[40vh] flex justify-start pl-6 md:pl-16">
@@ -104,7 +104,7 @@ function generateMobilePath(basePath: string): { path: string; startX: number; s
   const scribbleK = 0.38
   const scribbleCenterX = 195
   const baseScribbleCenterX = 882.8
-  const scribbleYOffset = 250
+  const scribbleYOffset = 140
 
   // Trail bounds
   const baseMinX = -53.4837
@@ -115,7 +115,7 @@ function generateMobilePath(basePath: string): { path: string; startX: number; s
   const baseStartY = 561.655
   const baseSpanY = 2107.235
   const trailStartY = 561.655 * scribbleK + scribbleYOffset
-  const targetSpanY = 2220
+  const targetSpanY = 2300
 
   let lastX = 0
   let lastY = 0
@@ -314,7 +314,7 @@ const MobileLinePath = ({
     }
   }, [containerRef])
 
-  const pathLength = useTransform(scrollYProgress, [0, 1], [0.35, 1])
+  const pathLength = useTransform(scrollYProgress, [0, 1], [0.45, 1])
   const fullPath = extraD ? MOBILE_DATA.path + extraD : MOBILE_DATA.path
 
   return (
@@ -340,11 +340,10 @@ const MobileLinePath = ({
       <motion.path
         d={fullPath}
         stroke="#00C269"
-        strokeWidth="7"
+        strokeWidth="8"
         strokeLinecap="round"
         style={{
           pathLength,
-          strokeDashoffset: useTransform(pathLength, (value) => 1 - value),
         }}
       />
     </svg>
