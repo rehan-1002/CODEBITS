@@ -44,7 +44,7 @@ export function ResourceCard({ resource, index = 0 }: ResourceCardProps) {
     <div className="group relative w-full my-3 transition-all duration-500">
       {/* Skewed gradient panel 1 (crisp backdrop) */}
       <span
-        className="absolute top-0 left-[35px] w-1/2 h-full rounded-xl transform skew-x-[15deg] transition-all duration-500 group-hover:skew-x-0 group-hover:left-[15px] group-hover:w-[calc(100%-40px)] opacity-75 dark:opacity-85"
+        className="absolute top-0 left-[14px] sm:left-[35px] w-1/2 h-full rounded-xl transform skew-x-[6deg] sm:skew-x-[15deg] transition-all duration-500 group-hover:skew-x-0 group-hover:left-[10px] sm:group-hover:left-[15px] group-hover:w-[calc(100%-24px)] sm:group-hover:w-[calc(100%-40px)] opacity-75 dark:opacity-85"
         style={{
           background: `linear-gradient(315deg, ${gradient.from}, ${gradient.to})`,
         }}
@@ -52,20 +52,20 @@ export function ResourceCard({ resource, index = 0 }: ResourceCardProps) {
 
       {/* Skewed gradient panel 2 (diffuse luminous glow) */}
       <span
-        className="absolute top-0 left-[35px] w-1/2 h-full rounded-xl transform skew-x-[15deg] blur-[26px] opacity-45 dark:opacity-70 transition-all duration-500 group-hover:skew-x-0 group-hover:left-[15px] group-hover:w-[calc(100%-40px)] group-hover:opacity-65 dark:group-hover:opacity-90"
+        className="absolute top-0 left-[14px] sm:left-[35px] w-1/2 h-full rounded-xl transform skew-x-[6deg] sm:skew-x-[15deg] blur-[20px] sm:blur-[26px] opacity-45 dark:opacity-70 transition-all duration-500 group-hover:skew-x-0 group-hover:left-[10px] sm:group-hover:left-[15px] group-hover:w-[calc(100%-24px)] sm:group-hover:w-[calc(100%-40px)] group-hover:opacity-65 dark:group-hover:opacity-90"
         style={{
           background: `linear-gradient(315deg, ${gradient.from}, ${gradient.to})`,
         }}
       />
 
       {/* Floating glassmorphic animated blobs on hover */}
-      <span className="pointer-events-none absolute inset-0 z-10 overflow-visible">
+      <span className="pointer-events-none absolute inset-0 z-10 overflow-visible hidden sm:block">
         <span className="absolute top-0 left-0 w-0 h-0 rounded-xl opacity-0 bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/15 backdrop-blur-[10px] shadow-[0_5px_15px_rgba(0,0,0,0.06)] dark:shadow-[0_5px_15px_rgba(0,0,0,0.18)] transition-all duration-300 animate-blob group-hover:top-[-24px] group-hover:left-[24px] group-hover:w-[76px] group-hover:h-[76px] group-hover:opacity-100" />
         <span className="absolute bottom-0 right-0 w-0 h-0 rounded-xl opacity-0 bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/15 backdrop-blur-[10px] shadow-[0_5px_15px_rgba(0,0,0,0.06)] dark:shadow-[0_5px_15px_rgba(0,0,0,0.18)] transition-all duration-500 animate-blob animation-delay-1000 group-hover:bottom-[-24px] group-hover:right-[24px] group-hover:w-[76px] group-hover:h-[76px] group-hover:opacity-100" />
       </span>
 
       {/* Main Glass Content Card - Theme Adaptive */}
-      <div className="relative z-20 left-0 p-6 rounded-xl bg-white/90 dark:bg-[rgba(14,16,15,0.88)] backdrop-blur-[18px] border border-[var(--border-subtle)] dark:border-white/10 shadow-lg dark:shadow-2xl transition-all duration-500 group-hover:left-[-14px] flex flex-col justify-between space-y-4 min-h-[310px]">
+      <div className="relative z-20 left-0 p-5 sm:p-6 rounded-xl bg-white/90 dark:bg-[rgba(14,16,15,0.88)] backdrop-blur-[18px] border border-[var(--border-subtle)] dark:border-white/10 shadow-lg dark:shadow-2xl transition-all duration-500 sm:group-hover:left-[-14px] flex flex-col justify-between space-y-4 min-h-[300px] sm:min-h-[310px]">
         {/* Card Header & Badges */}
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">

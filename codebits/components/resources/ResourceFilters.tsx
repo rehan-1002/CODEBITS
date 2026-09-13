@@ -74,7 +74,7 @@ export function ResourceFiltersBar({
       {/* Primary Filters: Branches & Semester */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         {/* Branch Selection Pills */}
-        <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 lg:pb-0">
+        <div className="flex items-center space-x-1.5 overflow-x-auto pb-2 lg:pb-0 -mx-1 px-1 scrollbar-none">
           <span className="font-mono text-[11px] text-[var(--text-muted)] mr-1 shrink-0 font-medium">
             BRANCH:
           </span>
@@ -85,7 +85,7 @@ export function ResourceFiltersBar({
                 key={b}
                 active={isSelected}
                 onClick={() => handleBranchChange(b)}
-                className="font-mono min-w-[52px] text-xs px-3 py-1.5"
+                className="font-mono min-w-[52px] text-xs px-3 py-1.5 shrink-0"
               >
                 {b}
               </HoverButton>

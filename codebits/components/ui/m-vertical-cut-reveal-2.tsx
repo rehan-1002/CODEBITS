@@ -25,7 +25,7 @@ export default function VerticalCutRevealChars({
 
   return (
     <h1
-      className={`flex flex-wrap justify-center items-center content-center gap-x-[0.28em] gap-y-[0.12em] text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[1.12] max-w-5xl mx-auto text-center text-[var(--text-primary)] w-full transition-colors duration-200 ${className}`}
+      className={`flex flex-wrap justify-center items-center content-center gap-x-[0.26em] gap-y-[0.12em] text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[1.14] max-w-5xl mx-auto text-center text-[var(--text-primary)] w-full transition-colors duration-200 ${className}`}
     >
       {words.map((word, wordIdx) => {
         const chars = word.split('')

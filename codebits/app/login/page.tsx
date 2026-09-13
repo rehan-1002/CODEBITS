@@ -80,7 +80,7 @@ function LoginContent() {
             damping: 24,
             mass: 0.9,
           }}
-          className="w-full lg:w-1/2 lg:h-full lg:absolute lg:top-0 lg:left-0 z-10 bg-[var(--brand-primary)] text-black selection:bg-black selection:text-[var(--brand-primary)] flex flex-col justify-between p-7 sm:p-10 lg:p-12 overflow-hidden order-1 lg:order-none"
+          className="w-full lg:w-1/2 lg:h-full lg:absolute lg:top-0 lg:left-0 z-10 bg-[var(--brand-primary)] text-black selection:bg-black selection:text-[var(--brand-primary)] flex flex-col justify-between p-7 sm:p-10 lg:p-12 overflow-hidden order-2 lg:order-none"
         >
           {/* Subtle Primary Specular Lighting */}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(255,255,255,0.22),transparent_65%)] pointer-events-none" />
@@ -153,7 +153,7 @@ function LoginContent() {
             damping: 24,
             mass: 0.9,
           }}
-          className={`w-full lg:w-1/2 lg:h-full lg:absolute lg:top-0 lg:left-0 z-20 bg-[var(--surface-base)] flex flex-col justify-between p-6 sm:p-8 lg:p-10 overflow-y-auto order-2 lg:order-none ${
+          className={`w-full lg:w-1/2 lg:h-full lg:absolute lg:top-0 lg:left-0 z-20 bg-[var(--surface-base)] flex flex-col justify-between p-6 sm:p-8 lg:p-10 overflow-y-auto order-1 lg:order-none ${
             isRegister ? "lg:border-l lg:border-[var(--border-subtle)]" : "lg:border-r lg:border-[var(--border-subtle)]"
           }`}
         >

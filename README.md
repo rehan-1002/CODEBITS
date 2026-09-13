@@ -1,6 +1,6 @@
 # CodeBits — Academic Resource Platform
 
-Production frontend repository for the CodeBits Academic Portal, engineered specifically for Mumbai University under the Rev-2019 'C' Scheme.
+Production frontend repository for the CodeBits Academic Portal, engineered specifically for Mumbai University.
 
 ## Project Architecture
 - **Application Directory:** `./codebits`

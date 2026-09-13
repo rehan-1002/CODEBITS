@@ -96,7 +96,7 @@ export function ResourceUploadForm() {
         The liquid glass form sits at z-10 directly refracting and blurring this logo.
         ========================================================================
       */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0 overflow-visible">
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0 overflow-hidden">
         {/* Ambient Emerald Glow Bloom */}
         <div className="absolute w-[440px] sm:w-[580px] h-[440px] sm:h-[580px] rounded-full bg-[radial-gradient(circle,rgba(0,194,105,0.35)_0%,rgba(52,238,153,0.15)_40%,transparent_70%)] blur-[60px]" />
         <div className="absolute w-[300px] sm:w-[420px] h-[300px] sm:h-[420px] rounded-full bg-emerald-500/15 dark:bg-emerald-500/25 blur-[70px] -translate-y-8" />

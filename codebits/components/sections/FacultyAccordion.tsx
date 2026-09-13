@@ -154,8 +154,8 @@ export default function FacultyAccordion() {
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-3.5 p-3.5 bg-[var(--surface-base,#131917)]">
-                  <div className="relative w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 border border-[var(--border-subtle,#1F2925)] bg-[#101815]">
+                <div className="flex items-center gap-3.5 p-3.5 bg-[var(--surface-base)] border-t border-[var(--border-subtle)] first:border-t-0">
+                  <div className="relative w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 border border-[var(--border-subtle)] bg-[var(--surface-elevated)]">
                     <Image
                       src={fac.image}
                       alt={fac.name}
@@ -165,10 +165,10 @@ export default function FacultyAccordion() {
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-semibold text-[var(--text-primary,#FFFFFF)] truncate">{fac.name}</h4>
-                    <p className="text-[11px] font-medium text-[var(--brand-primary,#00C269)] truncate">{fac.specialty}</p>
+                    <h4 className="text-sm font-semibold text-[var(--text-primary)] truncate">{fac.name}</h4>
+                    <p className="text-[11px] font-medium text-[var(--brand-primary)] truncate">{fac.specialty}</p>
                   </div>
-                  <span className="text-[11px] font-mono text-[var(--text-secondary,#94A3B8)] px-2 py-1 rounded bg-[var(--surface-elevated,#18201D)] border border-[var(--border-subtle,#1F2925)]">
+                  <span className="text-[11px] font-mono text-[var(--text-secondary)] px-2 py-1 rounded bg-[var(--surface-elevated)] border border-[var(--border-subtle)]">
                     View
                   </span>
                 </div>

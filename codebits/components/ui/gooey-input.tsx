@@ -151,12 +151,36 @@ export function GooeyInput({
     prevExpandedRef.current = isExpanded;
   }, [isExpanded, setSearchText]);
 
+  const [windowWidth, setWindowWidth] = useState<number>(1024);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const actualExpandedWidth = useMemo(() => {
+    if (windowWidth < 640) {
+      const maxAvailable = Math.max(220, windowWidth - 84);
+      return Math.min(expandedWidth, maxAvailable);
+    }
+    return expandedWidth;
+  }, [windowWidth, expandedWidth]);
+
+  const actualExpandedOffset = useMemo(() => {
+    if (windowWidth < 640) {
+      return Math.min(expandedOffset, 36);
+    }
+    return expandedOffset;
+  }, [windowWidth, expandedOffset]);
+
   const buttonVariants = useMemo(
     () => ({
-      collapsed: { width: collapsedWidth, marginLeft: 0 },
-      expanded: { width: expandedWidth, marginLeft: expandedOffset },
+      collapsed: { width: Math.min(collapsedWidth, actualExpandedWidth), marginLeft: 0 },
+      expanded: { width: actualExpandedWidth, marginLeft: actualExpandedOffset },
     }),
-    [collapsedWidth, expandedWidth, expandedOffset],
+    [collapsedWidth, actualExpandedWidth, actualExpandedOffset],
   );
 
   const handleExpand = useCallback(() => {

@@ -188,24 +188,24 @@ export function ProtectedCanvasViewer({
         </div>
 
         {/* Center: Page Controls */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1 sm:space-x-2">
           <button
             type="button"
             disabled={currentPage <= 1}
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            className="p-1.5 rounded border border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-30 cursor-pointer"
+            className="w-8 h-8 sm:w-auto sm:h-auto p-2 sm:p-1.5 rounded border border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-30 cursor-pointer flex items-center justify-center"
             aria-label="Previous page"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="font-mono text-xs text-[var(--text-primary)] px-2">
-            PAGE {currentPage} / {totalPages}
+          <span className="font-mono text-[11px] sm:text-xs text-[var(--text-primary)] px-1 sm:px-2 whitespace-nowrap">
+            <span className="hidden sm:inline">PAGE </span>{currentPage} / {totalPages}
           </span>
           <button
             type="button"
             disabled={currentPage >= totalPages}
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            className="p-1.5 rounded border border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-30 cursor-pointer"
+            className="w-8 h-8 sm:w-auto sm:h-auto p-2 sm:p-1.5 rounded border border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-30 cursor-pointer flex items-center justify-center"
             aria-label="Next page"
           >
             <ChevronRight className="w-4 h-4" />
@@ -213,22 +213,22 @@ export function ProtectedCanvasViewer({
         </div>
 
         {/* Right: Zoom & Security Badge */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1 sm:space-x-2">
           <button
             type="button"
             onClick={() => setZoom((z) => Math.max(0.75, +(z - 0.1).toFixed(2)))}
-            className="p-1.5 rounded border border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
+            className="w-8 h-8 sm:w-auto sm:h-auto p-2 sm:p-1.5 rounded border border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer flex items-center justify-center"
             aria-label="Zoom out"
           >
             <ZoomOut className="w-4 h-4" />
           </button>
-          <span className="font-mono text-xs text-[var(--text-muted)] w-12 text-center">
+          <span className="font-mono text-[11px] sm:text-xs text-[var(--text-muted)] w-9 sm:w-12 text-center">
             {Math.round(zoom * 100)}%
           </span>
           <button
             type="button"
             onClick={() => setZoom((z) => Math.min(1.5, +(z + 0.1).toFixed(2)))}
-            className="p-1.5 rounded border border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
+            className="w-8 h-8 sm:w-auto sm:h-auto p-2 sm:p-1.5 rounded border border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer flex items-center justify-center"
             aria-label="Zoom in"
           >
             <ZoomIn className="w-4 h-4" />
