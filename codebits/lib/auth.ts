@@ -1,4 +1,4 @@
-import { Profile, AuthSession } from "@/types/auth";
+import { Profile, AuthSession, RegisterFormData } from "@/types/auth";
 
 export const DEFAULT_ADMIN_CREDENTIALS = {
   username: "CODEBITS",
@@ -132,4 +132,80 @@ export function authenticateUser(identifier: string, password: string, rememberS
 
   setSession(studentUser, rememberSession);
   return { success: true, user: studentUser };
+}
+
+// -------------------------------------------------------------
+// LIVE MONGODB ATLAS API METHODS (With offline fallback)
+// -------------------------------------------------------------
+export async function loginWithApi(
+  identifier: string,
+  password: string,
+  rememberSession = true
+): Promise<AuthResult> {
+  try {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ identifier, password, rememberSession }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      return { success: false, error: data.error || "Authentication failed." };
+    }
+    if (data.user) {
+      setSession(data.user, rememberSession);
+    }
+    return { success: true, user: data.user };
+  } catch {
+    // Graceful fallback to mock authentication if server is unreachable
+    return authenticateUser(identifier, password, rememberSession);
+  }
+}
+
+export async function registerWithApi(
+  formData: RegisterFormData
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      return { success: false, error: data.error || "Registration failed." };
+    }
+    if (data.user) {
+      setSession(data.user, true);
+    }
+    return { success: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Network error";
+    return { success: false, error: message };
+  }
+}
+
+export async function logoutUserApi(): Promise<void> {
+  try {
+    await fetch("/api/auth/logout", { method: "POST" });
+  } catch {
+    // Ignore network error during logout
+  }
+  clearSession();
+}
+
+export async function fetchCurrentAuthUser(): Promise<Profile | null> {
+  try {
+    const res = await fetch("/api/auth/me");
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.user) {
+        setSession(data.user, true);
+        return data.user;
+      }
+    }
+  } catch {
+    // Fall back to localStorage session
+  }
+  return getCurrentUser();
 }

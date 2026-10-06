@@ -65,7 +65,7 @@ export function ResourceUploadForm() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -81,10 +81,33 @@ export function ResourceUploadForm() {
 
     setLoading(true);
 
-    setTimeout(() => {
+    try {
+      const data = new FormData();
+      data.append("title", title.trim());
+      data.append("subject", subject.trim());
+      data.append("branch", branch);
+      data.append("semester", semester.toString());
+      data.append("category", category);
+      data.append("file", file);
+
+      const res = await fetch("/api/resources", {
+        method: "POST",
+        body: data,
+      });
+
+      const json = await res.json();
       setLoading(false);
+
+      if (!res.ok || !json.success) {
+        setError(json.error || "Failed to submit document to vault.");
+        return;
+      }
+
       setSubmitted(true);
-    }, 700);
+    } catch {
+      setLoading(false);
+      setError("Network error submitting document. Please try again.");
+    }
   };
 
   return (

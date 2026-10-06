@@ -66,7 +66,7 @@ const navDeck = [
     number: '01',
     title: 'Home Page',
     desc: 'Curriculum roadmap, faculty milestones, and Mumbai University portal gateway.',
-    href: '/',
+    href: '/?home=1',
     icon: Compass,
     isPrimary: false,
   },

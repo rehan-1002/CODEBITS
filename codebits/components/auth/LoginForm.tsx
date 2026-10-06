@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Lock, User, AlertCircle, CheckCircle2, ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Lock, User, AlertCircle, CheckCircle2, ArrowRight, Eye, EyeOff, Loader2, BookOpen, UploadCloud } from "lucide-react";
 import { LoginFormData } from "@/types/auth";
-import { authenticateUser } from "@/lib/auth";
+import { loginWithApi } from "@/lib/auth";
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -13,6 +13,11 @@ interface LoginFormProps {
 
 export function LoginForm({ onSuccess, concurrentReason }: LoginFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTarget = searchParams?.get("redirect") || "/vault";
+  const isFromViewer = redirectTarget.startsWith("/viewer");
+  const isFromUpload = redirectTarget.startsWith("/upload");
+
   const [formData, setFormData] = useState<LoginFormData>({
     identifier: "",
     password: "",
@@ -24,13 +29,13 @@ export function LoginForm({ onSuccess, concurrentReason }: LoginFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccessMessage(null);
     setLoading(true);
 
-    const res = authenticateUser(formData.identifier, formData.password, formData.rememberSession);
+    const res = await loginWithApi(formData.identifier, formData.password, formData.rememberSession);
     if (!res.success) {
       setLoading(false);
       setError(res.error || "Authentication failed.");
@@ -40,7 +45,9 @@ export function LoginForm({ onSuccess, concurrentReason }: LoginFormProps) {
     const isAdmin = res.user?.role === "admin";
     setSuccessMessage(
       isAdmin
-        ? "Administrator session authorized. Redirecting to Vault..."
+        ? "Administrator session authorized. Redirecting..."
+        : isFromViewer
+        ? "Access verified! Loading your study document..."
         : "Student session verified. Redirecting..."
     );
 
@@ -49,13 +56,25 @@ export function LoginForm({ onSuccess, concurrentReason }: LoginFormProps) {
       if (onSuccess) {
         onSuccess();
       } else {
-        router.push("/vault");
+        router.push(redirectTarget);
       }
     }, 600);
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {isFromViewer && (
+        <div className="p-3 rounded-xl border border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] text-xs flex items-center space-x-2 font-mono">
+          <BookOpen className="w-4 h-4 shrink-0" />
+          <span>Student login required to view and study vault documents.</span>
+        </div>
+      )}
+      {isFromUpload && (
+        <div className="p-3 rounded-xl border border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] text-xs flex items-center space-x-2 font-mono">
+          <UploadCloud className="w-4 h-4 shrink-0" />
+          <span>Student sign-in required to contribute study materials to the vault.</span>
+        </div>
+      )}
       {concurrentReason && (
         <div className="p-3.5 rounded-lg border border-amber-800/40 bg-amber-950/20 text-amber-300 text-xs flex items-start space-x-2.5">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />

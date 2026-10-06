@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Lock, User, Mail, Phone, AlertCircle, ArrowRight, Eye, EyeOff, GraduationCap, CheckCircle2, Loader2 } from "lucide-react";
 import { RegisterFormData } from "@/types/auth";
+import { registerWithApi } from "@/lib/auth";
 
 interface RegisterFormProps {
   onSuccess?: () => void;
@@ -33,7 +34,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
@@ -68,14 +69,18 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
 
     setLoading(true);
 
-    // Backend-ready integration boundary:
+    const res = await registerWithApi(formData);
+    setLoading(false);
+
+    if (!res.success) {
+      setError(res.error || "Registration failed. Please verify your details.");
+      return;
+    }
+
+    setSuccess("Account registered in MongoDB! Signing in...");
     setTimeout(() => {
-      setLoading(false);
-      setSuccess("Account profile validated! Ready for database synchronization. Switching to Sign In...");
-      setTimeout(() => {
-        if (onSuccess) onSuccess();
-      }, 1500);
-    }, 700);
+      if (onSuccess) onSuccess();
+    }, 1200);
   };
 
   return (

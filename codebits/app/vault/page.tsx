@@ -3,151 +3,22 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import {
+  ShieldAlert,
+  CheckCircle2,
+  Trash2,
+  ExternalLink,
+  FileText,
+  Clock,
+  GraduationCap,
+  Sparkles,
+} from "lucide-react";
 import { Resource, ResourceFilters, AcademicBranch, AcademicSemester, DocumentCategory } from "@/types/resources";
 import { ResourceFiltersBar } from "@/components/resources/ResourceFilters";
 import { ResourceGrid } from "@/components/resources/ResourceGrid";
 import { GooeyInput } from "@/components/ui/gooey-input";
 import { AntiMetalButton } from "@/components/ui/anti-metal-button";
-
-// Syllabus-validated initial catalog resources for Mumbai University Engineering
-const INITIAL_MU_RESOURCES: Resource[] = [
-  {
-    id: "mu-comps-sem3-am3-pyq",
-    title: "Applied Mathematics III (AM-III) - Winter Dec 2023 Official Question Paper",
-    subject: "Applied Mathematics III",
-    branch: "COMPS",
-    semester: 3,
-    scheme: "Mumbai University",
-    category: "pyq",
-    file_url: "/sample.pdf",
-    page_count: 6,
-    uploader_id: "admin-mrf",
-    uploader_name: "Prof. Rohit Falake (M.R.F)",
-    uploader_role: "admin",
-    status: "approved",
-    view_count: 248,
-    created_at: "2024-01-15T10:00:00Z",
-  },
-  {
-    id: "mu-comps-sem3-dsa-notes",
-    title: "Data Structures & Analysis - Module 1–5 Faculty Complete Reference Notes",
-    subject: "Data Structures & Analysis",
-    branch: "COMPS",
-    semester: 3,
-    scheme: "Mumbai University",
-    category: "notes",
-    file_url: "/sample.pdf",
-    page_count: 42,
-    uploader_id: "admin-mrf",
-    uploader_name: "Prof. Rohit Falake (M.R.F)",
-    uploader_role: "admin",
-    status: "approved",
-    view_count: 482,
-    created_at: "2024-02-01T12:30:00Z",
-  },
-  {
-    id: "mu-it-sem4-dbms-sol",
-    title: "Database Management Systems (DBMS) - May 2024 Exam Verified Answer Key",
-    subject: "Database Management Systems",
-    branch: "IT",
-    semester: 4,
-    scheme: "Mumbai University",
-    category: "solution",
-    file_url: "/sample.pdf",
-    page_count: 18,
-    uploader_id: "admin-mrf",
-    uploader_name: "Prof. Rohit Falake (M.R.F)",
-    uploader_role: "admin",
-    status: "approved",
-    view_count: 319,
-    created_at: "2024-06-10T14:00:00Z",
-  },
-  {
-    id: "mu-comps-sem4-coa-pyq",
-    title: "Computer Organization & Architecture (COA) - Dec 2023 End-Sem Paper",
-    subject: "Computer Organization & Architecture",
-    branch: "COMPS",
-    semester: 4,
-    scheme: "Mumbai University",
-    category: "pyq",
-    file_url: "/sample.pdf",
-    page_count: 5,
-    uploader_id: "admin-codebits",
-    uploader_name: "Admin (CODEBITS)",
-    uploader_role: "admin",
-    status: "approved",
-    view_count: 173,
-    created_at: "2024-01-20T09:15:00Z",
-  },
-  {
-    id: "mu-it-sem4-os-sol",
-    title: "Operating Systems - 5-Year Solved PYQ Compilation",
-    subject: "Operating Systems",
-    branch: "IT",
-    semester: 4,
-    scheme: "Mumbai University",
-    category: "solution",
-    file_url: "/sample.pdf",
-    page_count: 36,
-    uploader_id: "admin-mrf",
-    uploader_name: "Prof. Rohit Falake (M.R.F)",
-    uploader_role: "admin",
-    status: "approved",
-    view_count: 512,
-    created_at: "2024-03-05T16:45:00Z",
-  },
-  {
-    id: "mu-aids-sem3-syllabus",
-    title: "Artificial Intelligence & Data Science - Official Semester 3 Syllabus & Scheme",
-    subject: "AI & Data Science Curriculum",
-    branch: "AI-DS",
-    semester: 3,
-    scheme: "Mumbai University",
-    category: "syllabus",
-    file_url: "/sample.pdf",
-    page_count: 14,
-    uploader_id: "academic-dir",
-    uploader_name: "MU Directorate Board",
-    uploader_role: "admin",
-    status: "approved",
-    view_count: 220,
-    created_at: "2023-11-12T11:00:00Z",
-  },
-  {
-    id: "mu-comps-sem3-dsgt-notes",
-    title: "Discrete Structures & Graph Theory (DSGT) - Proof Techniques & Recurrence Notes",
-    subject: "Discrete Structures & Graph Theory",
-    branch: "COMPS",
-    semester: 3,
-    scheme: "Mumbai University",
-    category: "notes",
-    file_url: "/sample.pdf",
-    page_count: 28,
-    uploader_id: "admin-mrf",
-    uploader_name: "Prof. Rohit Falake (M.R.F)",
-    uploader_role: "admin",
-    status: "approved",
-    view_count: 365,
-    created_at: "2024-02-18T13:20:00Z",
-  },
-  {
-    id: "mu-extc-sem4-am4-pyq",
-    title: "Engineering Mathematics IV (EM-IV) - Model Question Papers & Marking Scheme",
-    subject: "Engineering Mathematics IV",
-    branch: "EXTC",
-    semester: 4,
-    scheme: "Mumbai University",
-    category: "pyq",
-    file_url: "/sample.pdf",
-    page_count: 8,
-    uploader_id: "admin-mrf",
-    uploader_name: "Prof. Rohit Falake (M.R.F)",
-    uploader_role: "admin",
-    status: "approved",
-    view_count: 194,
-    created_at: "2024-04-02T10:30:00Z",
-  },
-];
+import { getCurrentUser } from "@/lib/auth";
 
 function VaultContent() {
   const searchParams = useSearchParams();
@@ -158,6 +29,24 @@ function VaultContent() {
     category: "ALL",
     searchQuery: "",
   });
+
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [activeTab, setActiveTab] = useState<"catalog" | "moderation">("catalog");
+  const [allResources, setAllResources] = useState<Resource[]>([]);
+  const [pendingResources, setPendingResources] = useState<Resource[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
+
+  // Check user role
+  useEffect(() => {
+    const user = getCurrentUser();
+    const adminCheck = user?.role === "admin";
+    setIsAdmin(adminCheck);
+
+    if (searchParams.get("tab") === "moderation" && adminCheck) {
+      setActiveTab("moderation");
+    }
+  }, [searchParams]);
 
   // Sync with URL query parameters on initial mount
   useEffect(() => {
@@ -174,10 +63,87 @@ function VaultContent() {
     });
   }, [searchParams]);
 
-  // Catalog source with syllabus-validated authentic records
-  const [allResources] = useState<Resource[]>(INITIAL_MU_RESOURCES);
+  // Fetch approved catalog
+  const fetchApproved = () => {
+    setLoading(true);
+    fetch("/api/resources")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.resources)) {
+          setAllResources(data.resources);
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching resources:", err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
 
-  // Filter application
+  // Fetch pending contributions for Admin
+  const fetchPending = () => {
+    fetch("/api/resources?status=pending")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.resources)) {
+          setPendingResources(data.resources);
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching pending queue:", err);
+      });
+  };
+
+  useEffect(() => {
+    fetchApproved();
+    if (isAdmin) {
+      fetchPending();
+    }
+  }, [isAdmin]);
+
+  // Admin Approve Handler
+  const handleApprove = async (id: string, title: string) => {
+    try {
+      const res = await fetch(`/api/resources/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "approved" }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPendingResources((prev) => prev.filter((r) => r.id !== id));
+        fetchApproved();
+        showNotice(`Approved & published: "${title}"`);
+      }
+    } catch {
+      showNotice("Error approving resource. Please try again.");
+    }
+  };
+
+  // Admin Reject Handler
+  const handleReject = async (id: string, title: string) => {
+    if (!confirm(`Are you sure you want to reject and delete "${title}"?`)) return;
+    try {
+      const res = await fetch(`/api/resources/${id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPendingResources((prev) => prev.filter((r) => r.id !== id));
+        showNotice(`Removed: "${title}"`);
+      }
+    } catch {
+      showNotice("Error deleting resource.");
+    }
+  };
+
+  const showNotice = (msg: string) => {
+    setActionNotice(msg);
+    setTimeout(() => setActionNotice(null), 3500);
+  };
+
+  // Filter application for catalog
   const filteredResources = allResources.filter((r) => {
     if (r.status !== "approved") return false;
     if (filters.branch && filters.branch !== "ALL" && r.branch !== filters.branch) return false;
@@ -194,6 +160,14 @@ function VaultContent() {
 
   return (
     <div className="flex flex-col w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16 space-y-8">
+      {/* Toast Notification */}
+      {actionNotice && (
+        <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-2xl bg-[#0E1512] border border-[var(--brand-primary)] text-[var(--brand-primary)] text-xs font-mono font-bold shadow-2xl flex items-center gap-2 animate-bounce">
+          <Sparkles className="w-4 h-4 text-[var(--brand-primary)]" />
+          <span>{actionNotice}</span>
+        </div>
+      )}
+
       {/* Vault Title Bar */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-[var(--border-subtle)]">
         <div className="space-y-1.5">
@@ -212,64 +186,201 @@ function VaultContent() {
         />
       </div>
 
-      {/* Top Gooey Search Dock */}
-      <div className="relative overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-base)] p-6 sm:p-8 flex flex-col items-center justify-center text-center space-y-4 shadow-sm">
-        <div className="space-y-1.5 max-w-xl">
-          <h2 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] tracking-tight">
-            Search Mumbai University Papers & Notes
-          </h2>
-          <p className="text-xs text-[var(--text-secondary)] max-w-md mx-auto">
-            Click to expand and type any subject, module, or topic to instantly filter syllabus-validated resources.
-          </p>
+      {/* Admin View Switcher (Only visible to authenticated Admin/Faculty) */}
+      {isAdmin && (
+        <div className="flex items-center gap-3 p-1.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-base)] w-fit">
+          <button
+            type="button"
+            onClick={() => setActiveTab("catalog")}
+            className={`px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
+              activeTab === "catalog"
+                ? "bg-[var(--brand-primary)] text-black shadow-md"
+                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            }`}
+          >
+            📚 PUBLISHED CATALOG ({allResources.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("moderation");
+              fetchPending();
+            }}
+            className={`px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              activeTab === "moderation"
+                ? "bg-amber-400 text-black shadow-md"
+                : "text-amber-400/80 hover:text-amber-300"
+            }`}
+          >
+            <ShieldAlert className="w-4 h-4" />
+            FACULTY REVIEW QUEUE ({pendingResources.length})
+          </button>
         </div>
+      )}
 
-        {/* Aceternity Gooey Input */}
-        <div className="pt-2 pb-1 flex items-center justify-center">
-          <GooeyInput
-            value={filters.searchQuery || ""}
-            onValueChange={(val) =>
-              setFilters((prev) => ({ ...prev, searchQuery: val }))
-            }
-            placeholder="Search subjects (e.g. Applied Maths, DBMS, DSA)..."
-            collapsedWidth={165}
-            expandedWidth={360}
-            expandedOffset={48}
-          />
-        </div>
-
-        {filters.searchQuery && (
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--surface-elevated)] border border-[var(--brand-primary)]/40 text-[11px] font-mono text-[var(--brand-primary)]">
-            <span>Filtering catalog by: &quot;{filters.searchQuery}&quot;</span>
-            <button
-              onClick={() => setFilters((prev) => ({ ...prev, searchQuery: "" }))}
-              className="hover:text-white transition-colors cursor-pointer ml-1"
-              title="Clear search filter"
-            >
-              ✕
-            </button>
+      {activeTab === "moderation" ? (
+        /* ========================================================= */
+        /* FACULTY MODERATION QUEUE VIEW                              */
+        /* ========================================================= */
+        <div className="space-y-6">
+          <div className="p-6 rounded-2xl border border-amber-500/30 bg-amber-500/5 backdrop-blur-md space-y-1">
+            <span className="text-xs font-mono font-bold text-amber-400 tracking-wider uppercase block">
+              FACULTY DESK • PENDING CONTRIBUTIONS
+            </span>
+            <h2 className="text-xl sm:text-2xl font-black text-[var(--text-primary)]">
+              Submissions Awaiting Verification
+            </h2>
+            <p className="text-xs sm:text-sm text-[var(--text-secondary)]">
+              Inspect uploaded student PDFs in the protected canvas viewer before approving them into the public vault.
+            </p>
           </div>
-        )}
-      </div>
 
-      {/* Filter Dock */}
-      <ResourceFiltersBar
-        filters={filters}
-        onChange={setFilters}
-        totalCount={filteredResources.length}
-      />
+          {pendingResources.length === 0 ? (
+            <div className="py-16 text-center rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-base)] space-y-3">
+              <div className="w-12 h-12 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-[var(--text-primary)]">Queue Clean</h3>
+              <p className="text-xs text-[var(--text-secondary)] max-w-sm mx-auto">
+                All submitted student question papers and reference notes have been reviewed.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {pendingResources.map((res) => (
+                <div
+                  key={res.id}
+                  className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-base)] p-6 flex flex-col justify-between space-y-4 shadow-lg hover:border-amber-400/40 transition-all"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-[11px] font-mono">
+                      <span className="px-2.5 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/40 text-amber-400 uppercase font-bold flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> PENDING REVIEW
+                      </span>
+                      <span className="text-[var(--text-muted)]">
+                        {new Date(res.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
 
-      {/* Resource Catalog Grid or Authentic Empty State */}
-      <ResourceGrid
-        resources={filteredResources}
-        onResetFilters={() =>
-          setFilters({
-            branch: "ALL",
-            semester: "ALL",
-            category: "ALL",
-            searchQuery: "",
-          })
-        }
-      />
+                    <h3 className="text-base sm:text-lg font-black text-[var(--text-primary)] line-clamp-2">
+                      {res.title}
+                    </h3>
+
+                    <div className="text-xs text-[var(--text-secondary)] space-y-1 font-sans">
+                      <p>
+                        <strong className="text-[var(--text-primary)]">Subject:</strong> {res.subject}
+                      </p>
+                      <p>
+                        <strong className="text-[var(--text-primary)]">Branch & Semester:</strong> {res.branch} • Sem {res.semester} ({res.category.toUpperCase()})
+                      </p>
+                      <p className="text-[11px] font-mono text-[var(--brand-primary)]">
+                        Submitted by: {res.uploader_name}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Faculty Actions */}
+                  <div className="pt-3 border-t border-[var(--border-subtle)] flex flex-wrap items-center justify-between gap-2">
+                    <Link
+                      href={`/viewer/${res.id}`}
+                      target="_blank"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-xs font-mono text-[var(--text-primary)] hover:border-[var(--brand-primary)] transition-all cursor-pointer"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>PREVIEW PDF</span>
+                      <ExternalLink className="w-3 h-3 text-[var(--text-muted)]" />
+                    </Link>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleReject(res.id, res.title)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-red-500/30 bg-red-500/10 text-red-400 text-xs font-mono font-bold hover:bg-red-500/20 transition-all cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>REJECT</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleApprove(res.id, res.title)}
+                        className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-[var(--brand-primary)] text-black text-xs font-mono font-bold hover:bg-[var(--brand-dark,#00C269)] transition-all cursor-pointer shadow-md"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>APPROVE & PUBLISH</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        /* ========================================================= */
+        /* STANDARD PUBLIC CATALOG VIEW                              */
+        /* ========================================================= */
+        <>
+          {/* Top Gooey Search Dock */}
+          <div className="relative overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-base)] p-6 sm:p-8 flex flex-col items-center justify-center text-center space-y-4 shadow-sm">
+            <div className="space-y-1.5 max-w-xl">
+              <h2 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] tracking-tight">
+                Search Mumbai University Papers & Notes
+              </h2>
+              <p className="text-xs text-[var(--text-secondary)] max-w-md mx-auto">
+                Click to expand and type any subject, module, or topic to instantly filter syllabus-validated resources.
+              </p>
+            </div>
+
+            {/* Aceternity Gooey Input */}
+            <div className="pt-2 pb-1 flex items-center justify-center">
+              <GooeyInput
+                value={filters.searchQuery || ""}
+                onValueChange={(val) =>
+                  setFilters((prev) => ({ ...prev, searchQuery: val }))
+                }
+                placeholder="Search subjects (e.g. Applied Maths, DBMS, DSA)..."
+                collapsedWidth={165}
+                expandedWidth={360}
+                expandedOffset={48}
+              />
+            </div>
+
+            {filters.searchQuery && (
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--surface-elevated)] border border-[var(--brand-primary)]/40 text-[11px] font-mono text-[var(--brand-primary)]">
+                <span>Filtering catalog by: &quot;{filters.searchQuery}&quot;</span>
+                <button
+                  onClick={() => setFilters((prev) => ({ ...prev, searchQuery: "" }))}
+                  className="hover:text-white transition-colors cursor-pointer ml-1"
+                  title="Clear search filter"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Filter Dock */}
+          <ResourceFiltersBar
+            filters={filters}
+            onChange={setFilters}
+            totalCount={filteredResources.length}
+          />
+
+          {/* Resource Catalog Grid or Authentic Empty State */}
+          <ResourceGrid
+            resources={filteredResources}
+            onResetFilters={() =>
+              setFilters({
+                branch: "ALL",
+                semester: "ALL",
+                category: "ALL",
+                searchQuery: "",
+              })
+            }
+          />
+        </>
+      )}
     </div>
   );
 }

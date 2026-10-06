@@ -36,7 +36,12 @@ export const metadata: Metadata = {
 
   authors: [{ name: "Prof. Rohit Falake (M.R.F) & CodeBits Academic Team" }],
   icons: {
-    icon: "/LOGO CB.png",
+    icon: [
+      { url: "/favicon.png", sizes: "32x32" },
+      { url: "/LOGO CB.png" },
+    ],
+    shortcut: "/favicon.png",
+    apple: "/LOGO CB.png",
   },
 };
 
