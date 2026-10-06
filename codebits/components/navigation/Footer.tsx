@@ -136,10 +136,6 @@ export function Footer() {
           <div>
             &copy; {new Date().getFullYear()} CODEBITS. ALL RIGHTS RESERVED.
           </div>
-          <div className="mt-2 sm:mt-0 flex items-center space-x-4">
-            <span>OBSIDIAN-EMERALD ARCHITECTURE</span>
-            <span>PROTECTED CANVAS DELIVERY</span>
-          </div>
         </div>
       </div>
     </footer>
