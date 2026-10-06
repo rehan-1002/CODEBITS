@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -12,10 +12,13 @@ import {
   Lock,
   ChevronLeft,
   ChevronRight,
+  Loader2,
+  FileX,
 } from "lucide-react";
 
 interface ProtectedCanvasViewerProps {
   documentId: string;
+  fileUrl?: string;
   documentTitle?: string;
   subject?: string;
   scheme?: string;
@@ -25,30 +28,33 @@ interface ProtectedCanvasViewerProps {
 
 export function ProtectedCanvasViewer({
   documentId,
-  documentTitle = "Mumbai University Question Paper & Solutions",
-  subject = "Applied Mathematics IV",
-  scheme = "Mumbai University Engineering",
-  studentName = "ATHARVA JOSHI",
-  studentPhone = "+91 9876543210",
+  fileUrl,
+  documentTitle = "Mumbai University Academic Document",
+  subject = "Mumbai University Engineering",
+  scheme = "Mumbai University",
+  studentName = "STUDENT",
+  studentPhone = "+91 9920336099",
 }: ProtectedCanvasViewerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const pdfDocRef = useRef<any>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = 4;
+  const [totalPages, setTotalPages] = useState(1);
   const [zoom, setZoom] = useState(1.0);
+  const [loading, setLoading] = useState(true);
+  const [rendering, setRendering] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [isWindowBlurred, setIsWindowBlurred] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   // Client-Side Deterrence Controls
   useEffect(() => {
-    // 1. Context Menu Suppression
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
       showTemporaryNotice("Context menu suppressed for document protection.");
     };
 
-    // 2. Print / Save Shortcut Interception
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
         (e.ctrlKey || e.metaKey) &&
@@ -59,7 +65,6 @@ export function ProtectedCanvasViewer({
       }
     };
 
-    // 3. Window Blur Detection (Obscures document when window loses focus)
     const handleBlur = () => setIsWindowBlurred(true);
     const handleFocus = () => setIsWindowBlurred(false);
 
@@ -81,84 +86,161 @@ export function ProtectedCanvasViewer({
     setTimeout(() => setNotice(null), 3000);
   };
 
-  // Canvas rasterization simulation with Dynamic Forensic Watermark
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  // Helper to dynamically load PDF.js from cdnjs
+  const loadPdfJs = useCallback(async (): Promise<any> => {
+    if (typeof window === "undefined") return null;
+    if ((window as any).pdfjsLib) return (window as any).pdfjsLib;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    return new Promise((resolve, reject) => {
+      const existingScript = document.querySelector('script[src*="pdf.js"]') || document.querySelector('script[src*="pdf.min.js"]');
+      if (existingScript) {
+        const interval = setInterval(() => {
+          if ((window as any).pdfjsLib) {
+            clearInterval(interval);
+            const pdfjs = (window as any).pdfjsLib;
+            pdfjs.GlobalWorkerOptions.workerSrc =
+              "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+            resolve(pdfjs);
+          }
+        }, 50);
+        setTimeout(() => {
+          clearInterval(interval);
+          if ((window as any).pdfjsLib) resolve((window as any).pdfjsLib);
+          else reject(new Error("Timeout loading PDF.js"));
+        }, 8000);
+        return;
+      }
 
-    // High DPI Canvas Scaling
-    const width = 800 * zoom;
-    const height = 1100 * zoom;
-    canvas.width = width;
-    canvas.height = height;
-
-    // Base document paper background
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fillRect(0, 0, width, height);
-
-    // Document header rule
-    ctx.fillStyle = "#0B0F0E";
-    ctx.font = `bold ${16 * zoom}px sans-serif`;
-    ctx.fillText("UNIVERSITY OF MUMBAI", 40 * zoom, 50 * zoom);
-
-    ctx.font = `${12 * zoom}px monospace`;
-    ctx.fillStyle = "#64748B";
-    ctx.fillText(`${scheme.toUpperCase()} • EXAMINATION REPOSITORY`, 40 * zoom, 70 * zoom);
-    ctx.fillText(`COURSE: ${subject.toUpperCase()}`, 40 * zoom, 88 * zoom);
-
-    ctx.strokeStyle = "#CBD5E1";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(40 * zoom, 100 * zoom);
-    ctx.lineTo(width - 40 * zoom, 100 * zoom);
-    ctx.stroke();
-
-    // Document Body simulation lines
-    ctx.fillStyle = "#1E293B";
-    ctx.font = `${11 * zoom}px sans-serif`;
-
-    const sampleQuestions = [
-      `Q${currentPage}.1 Evaluate the Laplace transform of f(t) = e^(-2t) * cos(3t).`,
-      `Q${currentPage}.2 Solve using Gauss-Seidel iteration method up to 3 decimal places.`,
-      `Q${currentPage}.3 State and prove Cayley-Hamilton theorem for square matrices.`,
-      `Q${currentPage}.4 Find the orthogonal trajectories of the family of curves x^2 - y^2 = c.`,
-      `Q${currentPage}.5 Find the directional derivative of φ = 2xy + z^2 at point (1, -1, 3).`,
-    ];
-
-    sampleQuestions.forEach((q, idx) => {
-      ctx.fillText(q, 40 * zoom, (140 + idx * 55) * zoom);
-      // Simulated mathematical solution line
-      ctx.fillStyle = "#007A3E";
-      ctx.font = `italic ${10 * zoom}px monospace`;
-      ctx.fillText(`[Verified Solution Step ${idx + 1}: Applied Theorem MU-${scheme.slice(0, 4)}]`, 60 * zoom, (160 + idx * 55) * zoom);
-      ctx.fillStyle = "#1E293B";
-      ctx.font = `${11 * zoom}px sans-serif`;
+      const script = document.createElement("script");
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+      script.async = true;
+      script.onload = () => {
+        const pdfjs = (window as any).pdfjsLib;
+        if (pdfjs) {
+          pdfjs.GlobalWorkerOptions.workerSrc =
+            "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+          resolve(pdfjs);
+        } else {
+          reject(new Error("PDF.js library failed to initialize"));
+        }
+      };
+      script.onerror = () => reject(new Error("Failed to load PDF.js engine from CDN"));
+      document.head.appendChild(script);
     });
+  }, []);
 
-    // Page indicator at bottom
-    ctx.fillStyle = "#64748B";
-    ctx.font = `${10 * zoom}px monospace`;
-    ctx.fillText(`PAGE ${currentPage} OF ${totalPages}`, width / 2 - 40 * zoom, height - 30 * zoom);
+  // 1. Load the actual PDF document
+  useEffect(() => {
+    let isCancelled = false;
 
-    // --- Dynamic Forensic Watermark Injection ---
-    ctx.save();
-    ctx.translate(width / 2, height / 2);
-    ctx.rotate(-Math.PI / 4.5);
-    ctx.font = `bold ${14 * zoom}px monospace`;
-    ctx.fillStyle = "rgba(0, 160, 80, 0.16)"; // Restrained emerald watermark
-    ctx.textAlign = "center";
+    async function initPdf() {
+      if (!fileUrl) {
+        setError("Document source URL is missing.");
+        setLoading(false);
+        return;
+      }
 
-    const watermarkText = `${studentName} • ${studentPhone} • CODEBITS LICENSED`;
-    for (let y = -400 * zoom; y <= 400 * zoom; y += 120 * zoom) {
-      for (let x = -300 * zoom; x <= 300 * zoom; x += 380 * zoom) {
-        ctx.fillText(watermarkText, x, y);
+      try {
+        setLoading(true);
+        setError(null);
+        const pdfjs = await loadPdfJs();
+        if (isCancelled || !pdfjs) return;
+
+        const loadingTask = pdfjs.getDocument(fileUrl);
+        const pdf = await loadingTask.promise;
+
+        if (isCancelled) return;
+        pdfDocRef.current = pdf;
+        setTotalPages(pdf.numPages);
+        setCurrentPage(1);
+        setLoading(false);
+      } catch (err: any) {
+        if (isCancelled) return;
+        console.error("Failed to load authentic PDF:", err);
+        setError(err?.message || "Could not load the authentic PDF document.");
+        setLoading(false);
       }
     }
-    ctx.restore();
-  }, [currentPage, zoom, scheme, subject, studentName, studentPhone]);
+
+    initPdf();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [fileUrl, loadPdfJs]);
+
+  // 2. Render the authentic PDF page onto HTML5 Canvas with Forensic Watermarking
+  useEffect(() => {
+    let cancelRender = false;
+
+    async function renderPage() {
+      const pdf = pdfDocRef.current;
+      const canvas = canvasRef.current;
+      if (!pdf || !canvas) return;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      try {
+        setRendering(true);
+        const page = await pdf.getPage(currentPage);
+        if (cancelRender) return;
+
+        // High DPI sharpness calculation
+        const dpr = typeof window !== "undefined" ? Math.min(window.devicePixelRatio || 1, 2) : 1;
+        const baseScale = 1.35 * zoom;
+        const viewport = page.getViewport({ scale: baseScale * dpr });
+
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        canvas.style.width = `${viewport.width / dpr}px`;
+        canvas.style.height = `${viewport.height / dpr}px`;
+
+        const renderContext = {
+          canvasContext: ctx,
+          viewport: viewport,
+        };
+
+        await page.render(renderContext).promise;
+        if (cancelRender) return;
+
+        // --- Injected Forensic Watermark on top of the rendered PDF page ---
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(-Math.PI / 4.5);
+        const fontSize = Math.max(13 * dpr, 15 * zoom * dpr);
+        ctx.font = `bold ${fontSize}px monospace`;
+        ctx.fillStyle = "rgba(0, 160, 80, 0.16)"; // Restrained non-obstructive emerald watermark
+        ctx.textAlign = "center";
+
+        const watermarkText = `${studentName} • ${studentPhone || "LICENSED"} • CODEBITS ACADEMIC`;
+        const stepY = 150 * zoom * dpr;
+        const stepX = 420 * zoom * dpr;
+
+        for (let y = -canvas.height; y <= canvas.height; y += stepY) {
+          for (let x = -canvas.width; x <= canvas.width; x += stepX) {
+            ctx.fillText(watermarkText, x, y);
+          }
+        }
+        ctx.restore();
+
+        setRendering(false);
+      } catch (err) {
+        if (!cancelRender) {
+          console.error("Error rendering authentic PDF page:", err);
+          setRendering(false);
+        }
+      }
+    }
+
+    if (!loading && pdfDocRef.current) {
+      renderPage();
+    }
+
+    return () => {
+      cancelRender = true;
+    };
+  }, [currentPage, zoom, loading, studentName, studentPhone]);
 
   return (
     <div
@@ -191,7 +273,7 @@ export function ProtectedCanvasViewer({
         <div className="flex items-center space-x-2">
           <button
             type="button"
-            disabled={currentPage <= 1}
+            disabled={currentPage <= 1 || loading}
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             className="p-1.5 rounded border border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-30 cursor-pointer"
             aria-label="Previous page"
@@ -203,7 +285,7 @@ export function ProtectedCanvasViewer({
           </span>
           <button
             type="button"
-            disabled={currentPage >= totalPages}
+            disabled={currentPage >= totalPages || loading}
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
             className="p-1.5 rounded border border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-30 cursor-pointer"
             aria-label="Next page"
@@ -216,8 +298,9 @@ export function ProtectedCanvasViewer({
         <div className="flex items-center space-x-2">
           <button
             type="button"
-            onClick={() => setZoom((z) => Math.max(0.75, +(z - 0.1).toFixed(2)))}
-            className="p-1.5 rounded border border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
+            disabled={loading}
+            onClick={() => setZoom((z) => Math.max(0.65, +(z - 0.1).toFixed(2)))}
+            className="p-1.5 rounded border border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-30 cursor-pointer"
             aria-label="Zoom out"
           >
             <ZoomOut className="w-4 h-4" />
@@ -227,8 +310,9 @@ export function ProtectedCanvasViewer({
           </span>
           <button
             type="button"
-            onClick={() => setZoom((z) => Math.min(1.5, +(z + 0.1).toFixed(2)))}
-            className="p-1.5 rounded border border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
+            disabled={loading}
+            onClick={() => setZoom((z) => Math.min(2.0, +(z + 0.1).toFixed(2)))}
+            className="p-1.5 rounded border border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-30 cursor-pointer"
             aria-label="Zoom in"
           >
             <ZoomIn className="w-4 h-4" />
@@ -250,26 +334,55 @@ export function ProtectedCanvasViewer({
       )}
 
       {/* Main Canvas Document Stage */}
-      <div className="flex-1 overflow-auto p-4 sm:p-8 flex justify-center items-start bg-[var(--bg-base)]">
-        <div className="relative shadow-2xl rounded border border-[var(--border-subtle)] overflow-hidden">
-          {/* HTML5 Canvas Document */}
-          <canvas ref={canvasRef} className="block max-w-full h-auto" />
+      <div className="flex-1 overflow-auto p-4 sm:p-8 flex justify-center items-start bg-[var(--bg-base)] min-h-[calc(100vh-120px)]">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center p-16 space-y-4 text-center my-auto">
+            <Loader2 className="w-8 h-8 text-[var(--brand-primary)] animate-spin" />
+            <p className="font-mono text-xs text-[var(--text-secondary)]">
+              Loading authentic academic document...
+            </p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center p-12 space-y-4 text-center max-w-md rounded-2xl border border-red-500/30 bg-red-500/10 my-auto">
+            <FileX className="w-10 h-10 text-red-400" />
+            <h3 className="text-sm font-bold text-red-300">Document Unavailable</h3>
+            <p className="text-xs text-[var(--text-secondary)] font-mono">{error}</p>
+            <Link
+              href="/vault"
+              className="mt-2 px-4 py-2 rounded-lg bg-[var(--brand-primary)] text-black font-bold text-xs"
+            >
+              Return to Vault
+            </Link>
+          </div>
+        ) : (
+          <div className="relative shadow-2xl rounded border border-[var(--border-subtle)] overflow-hidden bg-white">
+            {/* HTML5 Canvas Document */}
+            <canvas ref={canvasRef} className="block max-w-full h-auto" />
 
-          {/* Window Blur Obscuring Shield */}
-          {isWindowBlurred && (
-            <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center text-center p-6 space-y-3 z-20">
-              <div className="w-12 h-12 rounded-full border border-[var(--border-subtle)] bg-[var(--surface-base)] flex items-center justify-center text-[var(--brand-primary)]">
-                <EyeOff className="w-6 h-6" />
+            {/* Subtle rendering overlay indicator */}
+            {rendering && (
+              <div className="absolute top-3 right-3 p-1.5 rounded-md bg-black/60 backdrop-blur-md text-white font-mono text-[10px] flex items-center space-x-1.5 z-10">
+                <Loader2 className="w-3 h-3 animate-spin text-[var(--brand-primary)]" />
+                <span>Rendering...</span>
               </div>
-              <h3 className="text-base font-bold text-[var(--text-primary)]">
-                Document Protected
-              </h3>
-              <p className="text-xs text-[var(--text-secondary)] max-w-xs font-mono">
-                Canvas view obscured while window is unfocused. Click anywhere to resume study session.
-              </p>
-            </div>
-          )}
-        </div>
+            )}
+
+            {/* Window Blur Obscuring Shield */}
+            {isWindowBlurred && (
+              <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center text-center p-6 space-y-3 z-20">
+                <div className="w-12 h-12 rounded-full border border-[var(--border-subtle)] bg-[var(--surface-base)] flex items-center justify-center text-[var(--brand-primary)]">
+                  <EyeOff className="w-6 h-6" />
+                </div>
+                <h3 className="text-base font-bold text-[var(--text-primary)]">
+                  Document Protected
+                </h3>
+                <p className="text-xs text-[var(--text-secondary)] max-w-xs font-mono">
+                  Canvas view obscured while window is unfocused. Click anywhere to resume study session.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Security Disclaimer Banner */}
@@ -278,7 +391,7 @@ export function ProtectedCanvasViewer({
           <Lock className="w-3.5 h-3.5 text-[var(--brand-primary)] shrink-0" />
           <span>FORENSICALLY STAMPED TO {studentName} ({studentPhone})</span>
         </div>
-        <div>CLIENT DETERRENCE ACTIVE • NO IFRAME DEPLOYED</div>
+        <div>CLIENT DETERRENCE ACTIVE • AUTHENTIC CANVAS RENDERED</div>
       </div>
     </div>
   );

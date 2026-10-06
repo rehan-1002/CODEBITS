@@ -53,6 +53,7 @@ export default async function ViewerPage({ params }: ViewerPageProps) {
     <div className="w-full min-h-screen">
       <ProtectedCanvasViewer
         documentId={id}
+        fileUrl={resource?.file_url}
         documentTitle={resource?.title || "Mumbai University Engineering Document"}
         subject={resource?.subject || "Mumbai University Engineering"}
         scheme={resource?.scheme || "Mumbai University Engineering"}
