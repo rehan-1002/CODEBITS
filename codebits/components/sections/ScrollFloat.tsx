@@ -14,7 +14,7 @@ export default function ScrollFloat({
   containerClassName = '',
   textClassName = '',
   animationDuration = 1,
-  ease = 'back.inOut(2)',
+  ease = 'power2.out',
   scrollStart = 'top bottom-=20%',
   scrollEnd = 'bottom center',
   stagger = 0.03,

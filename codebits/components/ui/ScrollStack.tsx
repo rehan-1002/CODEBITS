@@ -17,9 +17,11 @@ export const ScrollStackItem = ({
   itemClassName?: string
 }) => (
   <div
-    className={`scroll-stack-card sticky w-full will-change-transform box-border origin-top ${itemClassName}`.trim()}
+    className={`scroll-stack-card sticky w-full box-border origin-top ${itemClassName}`.trim()}
     style={{
       backfaceVisibility: 'hidden',
+      transform: 'translateZ(0)',
+      willChange: 'transform, opacity',
     }}
   >
     {children}
@@ -122,17 +124,18 @@ const ScrollStack = forwardRef<ScrollStackHandle, ScrollStackProps>(function Scr
     cardsRef.current.forEach((card, i) => {
       if (!card) return
 
-      const initialTop = initialTopsRef.current[i] ?? card.offsetTop
+      // Use pre-measured tops to prevent layout thrashing (zero offsetTop reads during active scroll)
+      const initialTop = initialTopsRef.current[i] ?? 0
       const pinStart = initialTop - stackPositionPx - itemStackDistance * i
 
       if (scrollTop >= pinStart - 60) {
         calculatedActiveIndex = i
       }
 
-      // Calculate stacking progression of cards above
+      // Calculate stacking progression of cards above without touching DOM layout
       let stackedAbove = 0
       for (let j = i + 1; j < cardsRef.current.length; j++) {
-        const jInitialTop = initialTopsRef.current[j] ?? cardsRef.current[j].offsetTop
+        const jInitialTop = initialTopsRef.current[j] ?? 0
         const jPinStart = jInitialTop - stackPositionPx - itemStackDistance * j
         if (scrollTop >= jPinStart) {
           stackedAbove++
@@ -142,49 +145,27 @@ const ScrollStack = forwardRef<ScrollStackHandle, ScrollStackProps>(function Scr
         }
       }
 
-      // Scale decay: progressively scale down cards stacked underneath
+      // Hardware-accelerated scale decay (cards stacked underneath scale smoothly)
       const scale = Math.max(0.78, 1 - stackedAbove * itemScale)
-      // Progressive depth blur (desktop only)
-      const blur = !isMobile && blurAmount > 0 ? Math.min(8, stackedAbove * blurAmount) : 0
-      // Progressive opacity dimming on mobile (compositor-only, 0 repaints)
-      const opacity = isMobile ? Math.max(0.4, 1 - stackedAbove * 0.14) : 1
-      // Progressive depth dimming (brightness) on desktop
-      const brightness = !isMobile ? Math.max(0.65, 1 - stackedAbove * 0.08) : 1
+      // Hardware-accelerated opacity decay (0 repaints, 100% GPU compositor)
+      const opacity = Math.max(0.55, 1 - stackedAbove * 0.12)
 
       const newTransform = {
         scale: Math.round(scale * 1000) / 1000,
-        blur: Math.round(blur * 10) / 10,
         opacity: Math.round(opacity * 100) / 100,
-        brightness: Math.round(brightness * 100) / 100,
       }
 
       const lastTransform = lastTransformsRef.current.get(i)
       const hasChanged =
         !lastTransform ||
         Math.abs(lastTransform.scale - newTransform.scale) > 0.002 ||
-        (!isMobile && Math.abs(lastTransform.blur - newTransform.blur) > 0.2) ||
-        (isMobile && Math.abs(lastTransform.opacity - newTransform.opacity) > 0.02)
+        Math.abs(lastTransform.opacity - newTransform.opacity) > 0.015
 
       if (hasChanged) {
         // Native CSS position: sticky handles Y-positioning on the compositor thread.
-        // Transform ONLY applies scale smoothly in-place without any Y-translation jitter!
-        card.style.transform = newTransform.scale === 1 ? 'none' : `scale(${newTransform.scale})`
-
-        if (isMobile) {
-          card.style.opacity = `${newTransform.opacity}`
-          card.style.filter = 'none'
-        } else {
-          card.style.opacity = '1'
-
-          const filterRules: string[] = []
-          if (newTransform.blur > 0.4) {
-            filterRules.push(`blur(${newTransform.blur}px)`)
-          }
-          if (newTransform.brightness < 0.98) {
-            filterRules.push(`brightness(${newTransform.brightness})`)
-          }
-          card.style.filter = filterRules.length ? filterRules.join(' ') : 'none'
-        }
+        // Scale and opacity are transformed with zero layout reflows and zero GPU blur stalls.
+        card.style.transform = newTransform.scale === 1 ? 'translateZ(0)' : `translateZ(0) scale(${newTransform.scale})`
+        card.style.opacity = `${newTransform.opacity}`
 
         lastTransformsRef.current.set(i, newTransform)
       }

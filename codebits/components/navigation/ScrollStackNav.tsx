@@ -255,7 +255,7 @@ export default function ScrollStackNav() {
                                 href={item.href}
                                 prefetch={true}
                                 onClick={() => setIsOpen(false)}
-                                className={`group relative flex flex-col justify-between h-[66vh] sm:h-[72vh] min-h-[420px] sm:min-h-[520px] max-h-[720px] w-full rounded-3xl p-6 sm:p-14 md:p-16 transition-all duration-300 cursor-pointer ${
+                                className={`group relative flex flex-col justify-between h-[66vh] sm:h-[72vh] min-h-[420px] sm:min-h-[520px] max-h-[720px] w-full rounded-3xl p-6 sm:p-14 md:p-16 transition-[border-color,box-shadow,background-color] duration-200 cursor-pointer ${
                                   isDark
                                     ? isPrimary
                                       ? 'bg-gradient-to-br from-[#10241B] via-[#0D1E16] to-[#0A1611] border-2 border-[#00C269] shadow-[0_30px_80px_rgba(0,194,105,0.28)] hover:border-[#34EE99] hover:shadow-[0_35px_90px_rgba(0,194,105,0.38)] text-white'

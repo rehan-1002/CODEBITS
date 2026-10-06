@@ -63,7 +63,7 @@ export function Skiper19() {
         <ScrollFloat
           useBrandLogo={true}
           animationDuration={1}
-          ease="back.inOut(2)"
+          ease="power2.out"
           scrollStart="top bottom-=20%"
           scrollEnd="bottom center"
           containerClassName="my-4"
@@ -181,7 +181,6 @@ const LinePath = ({
         strokeLinecap="round"
         style={{
           pathLength,
-          strokeDashoffset: useTransform(pathLength, (value) => 1 - value),
         }}
       />
     </svg>

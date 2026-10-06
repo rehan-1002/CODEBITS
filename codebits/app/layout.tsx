@@ -54,7 +54,7 @@ export default function RootLayout({
     <html
       lang="en"
       data-theme="dark"
-      className={cn("h-full", "antialiased", inter.variable, jetbrainsMono.variable, "font-sans", geist.variable)}
+      className={cn("antialiased", inter.variable, jetbrainsMono.variable, "font-sans", geist.variable)}
       suppressHydrationWarning
     >
       <head>
