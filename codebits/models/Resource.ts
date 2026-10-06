@@ -37,7 +37,7 @@ const ResourceSchema = new Schema<IResource>(
     branch: {
       type: String,
       required: true,
-      enum: ['COMPS', 'IT', 'AI-DS', 'EXTC', 'MECH', 'CIVIL'],
+      enum: ['ALL', 'COMPS', 'IT', 'AI-DS', 'EXTC', 'MECH', 'CIVIL'],
     },
     semester: {
       type: Number,

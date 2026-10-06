@@ -54,7 +54,8 @@ export function CbAiDrawer({ isOpen, onClose }: CbAiDrawerProps) {
       let subject: string | undefined;
 
       // Detect branch
-      if (cleanQuery.includes("comp") || cleanQuery.includes("computer")) branch = "COMPS";
+      if (cleanQuery.includes("all branch") || cleanQuery.includes("first year") || cleanQuery.includes("fe") || cleanQuery.includes("common")) branch = "ALL";
+      else if (cleanQuery.includes("comp") || cleanQuery.includes("computer")) branch = "COMPS";
       else if (cleanQuery.includes("it") || cleanQuery.includes("info")) branch = "IT";
       else if (cleanQuery.includes("ai") || cleanQuery.includes("ds")) branch = "AI-DS";
       else if (cleanQuery.includes("extc") || cleanQuery.includes("telecom")) branch = "EXTC";

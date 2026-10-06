@@ -11,6 +11,7 @@ interface ResourceCardProps {
 }
 
 const BRANCH_GRADIENTS: Record<string, { from: string; to: string }> = {
+  ALL: { from: "#00e599", to: "#38bdf8" },   // Emerald to Bright Sky (Common First Year)
   COMPS: { from: "#00e599", to: "#00b4d8" }, // Emerald to Electric Cyan
   IT: { from: "#03a9f4", to: "#ff0058" },    // Sky Blue to Rose Pink
   "AI-DS": { from: "#a855f7", to: "#ec4899" }, // Violet to Neon Magenta
@@ -71,7 +72,7 @@ export function ResourceCard({ resource, index = 0 }: ResourceCardProps) {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center space-x-1.5">
               <span className="font-mono text-xs font-bold text-[var(--brand-primary)] bg-[var(--badge-bg)] border border-[var(--badge-border)] px-2.5 py-0.5 rounded-md shadow-xs">
-                {resource.branch}
+                {resource.branch === "ALL" ? "ALL BRANCH" : resource.branch}
               </span>
               <span className="font-mono text-xs text-[var(--text-secondary)] bg-[var(--surface-elevated)] border border-[var(--border-subtle)] px-2.5 py-0.5 rounded-md">
                 SEM {resource.semester}

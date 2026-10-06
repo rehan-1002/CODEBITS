@@ -37,9 +37,10 @@ export async function GET(req: NextRequest) {
     // Defensive query construction (type-safe, strictly sanitized)
     const filter: Record<string, unknown> = { status: statusFilter };
 
-    const validBranches = ['COMPS', 'IT', 'AI-DS', 'EXTC', 'MECH', 'CIVIL'];
+    const validBranches = ['ALL', 'COMPS', 'IT', 'AI-DS', 'EXTC', 'MECH', 'CIVIL'];
     if (branch && branch !== 'ALL' && validBranches.includes(branch)) {
-      filter.branch = branch as AcademicBranch;
+      // First year subjects uploaded as 'ALL' are common to all branches
+      filter.branch = { $in: [branch, 'ALL'] };
     }
 
     if (semester && semester !== 'ALL') {
@@ -163,11 +164,14 @@ export async function POST(req: NextRequest) {
     const isAdmin = user?.role === 'admin';
     const status = isAdmin ? 'approved' : 'pending';
 
+    const validBranches = ['ALL', 'COMPS', 'IT', 'AI-DS', 'EXTC', 'MECH', 'CIVIL'];
+    const safeBranch = branch && validBranches.includes(branch) ? branch : (semester <= 2 ? 'ALL' : 'COMPS');
+
     const newResource = await ResourceModel.create({
       title,
       subject,
-      branch: branch || 'COMPS',
-      semester: semester || 3,
+      branch: safeBranch,
+      semester: semester || (safeBranch === 'ALL' ? 1 : 3),
       scheme: 'Mumbai University',
       category: category || 'pyq',
       file_url: fileUrl,

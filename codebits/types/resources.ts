@@ -4,6 +4,7 @@
  */
 
 export type AcademicBranch =
+  | "ALL"
   | "COMPS"
   | "IT"
   | "AI-DS"

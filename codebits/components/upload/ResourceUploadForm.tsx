@@ -18,6 +18,7 @@ import { FlowHoverButton } from "@/components/ui/flow-hover-button";
 import { HoverButton } from "@/components/ui/hover-button";
 
 const BRANCH_OPTIONS: FilterDropdownOption[] = [
+  { id: "ALL", label: "ALL BRANCHES (First Year Common)", sublabel: "Common Curriculum for Semesters 1 & 2", icon: GraduationCap },
   { id: "COMPS", label: "Computer Engineering (COMPS)", sublabel: "Department of Computer Engg", icon: GraduationCap },
   { id: "IT", label: "Information Technology (IT)", sublabel: "Department of Info Tech", icon: GraduationCap },
   { id: "AI-DS", label: "Artificial Intelligence & Data Science (AI-DS)", sublabel: "Department of AI & DS", icon: GraduationCap },
@@ -274,7 +275,13 @@ export function ResourceUploadForm() {
               <AnimatedFilterDropdown
                 selectedId={semester}
                 options={SEMESTER_OPTIONS}
-                onSelect={(id) => setSemester(Number(id) as AcademicSemester)}
+                onSelect={(id) => {
+                  const sem = Number(id) as AcademicSemester;
+                  setSemester(sem);
+                  if (sem === 1 || sem === 2) {
+                    setBranch("ALL");
+                  }
+                }}
                 fullWidth
                 searchable={false}
                 triggerClassName="h-11 rounded-xl border border-black/10 dark:border-white/15 bg-white/50 dark:bg-white/[0.04] backdrop-blur-xl text-xs sm:text-sm text-[var(--text-primary)] hover:border-[var(--brand-primary)] shadow-inner"
