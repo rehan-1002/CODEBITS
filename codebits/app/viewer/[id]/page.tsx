@@ -46,7 +46,7 @@ export default async function ViewerPage({ params }: ViewerPageProps) {
       resource = await ResourceModel.findByIdAndUpdate(
         id,
         { $inc: { view_count: 1 } },
-        { new: true }
+        { returnDocument: 'after' }
       ).lean();
     }
   } catch (err) {

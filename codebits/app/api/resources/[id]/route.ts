@@ -19,7 +19,7 @@ export async function GET(
       doc = await ResourceModel.findByIdAndUpdate(
         id,
         { $inc: { view_count: 1 } },
-        { new: true }
+        { returnDocument: 'after' }
       ).lean();
     }
 
@@ -91,7 +91,7 @@ export async function PATCH(
     const updated = await ResourceModel.findByIdAndUpdate(
       id,
       { status },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
 
     if (!updated) {
