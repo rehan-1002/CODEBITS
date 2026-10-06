@@ -17,10 +17,10 @@ export function Skiper19() {
   return (
     <section
       ref={ref}
-      className="relative mx-auto flex min-h-[320vh] w-full flex-col items-center overflow-hidden bg-[var(--bg-base)] px-4 text-[var(--text-primary)] transition-colors duration-200"
+      className="relative mx-auto flex min-h-[320vh] w-full flex-col items-center overflow-x-clip bg-[var(--bg-base)] px-4 text-[var(--text-primary)] transition-colors duration-200"
     >
-      {/* Ambient Radial Background Glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-[radial-gradient(ellipse_at_center,rgba(0,194,105,0.12)_0%,transparent_70%)] pointer-events-none z-0" />
+      {/* Ambient Radial Background Glow (smoothly radiating from top with zero hard edges) */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[450px] sm:h-[600px] bg-[radial-gradient(ellipse_at_top,rgba(0,194,105,0.14)_0%,transparent_70%)] pointer-events-none z-0" />
 
       {/* 1. TOP LANDING BLOCK (Text brought to front, centered in hero viewport) */}
       <div className="relative z-20 min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center text-center max-w-5xl mx-auto w-full px-4">
@@ -30,7 +30,7 @@ export function Skiper19() {
 
         {/* The Exact Skiper19 SVG Scribble & Trail positioned directly behind the centered landing text */}
         <LinePath
-          className="absolute top-1/2 -translate-y-[240px] left-1/2 -translate-x-1/2 -z-10 pointer-events-none w-[1100px] md:w-[1278px] h-auto overflow-visible opacity-85"
+          className="absolute top-1/2 -translate-y-[160px] sm:-translate-y-[240px] left-1/2 -translate-x-1/2 -z-10 pointer-events-none w-[94vw] sm:w-[90vw] md:w-[1100px] lg:w-[1278px] h-auto overflow-visible opacity-85"
           scrollYProgress={scrollYProgress}
           containerRef={ref}
         />
@@ -61,13 +61,13 @@ export function Skiper19() {
       {/* 4. CLIMAX: The Name and Logo arrive as the scroll finishes */}
       <div className="relative z-20 w-full max-w-5xl mx-auto mt-[48vh] pb-28 flex flex-col items-center justify-center text-center">
         <ScrollFloat
-          logoSrc="/LOGO CB.png"
+          useBrandLogo={true}
           animationDuration={1}
           ease="back.inOut(2)"
           scrollStart="top bottom-=20%"
           scrollEnd="bottom center"
           containerClassName="my-4"
-          textClassName="text-[var(--text-primary)] tracking-[0.25em] font-black uppercase text-[12vw] sm:text-[9vw]"
+          textClassName="text-[var(--text-primary)] tracking-[0.14em] sm:tracking-[0.25em] font-black uppercase text-[10vw] sm:text-[9vw]"
         >
           CODEBITS
         </ScrollFloat>

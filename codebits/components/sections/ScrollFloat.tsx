@@ -10,6 +10,7 @@ gsap.registerPlugin(ScrollTrigger)
 export default function ScrollFloat({
   children,
   logoSrc,
+  useBrandLogo = true,
   containerClassName = '',
   textClassName = '',
   animationDuration = 1,
@@ -20,6 +21,7 @@ export default function ScrollFloat({
 }: {
   children: string
   logoSrc?: string
+  useBrandLogo?: boolean
   containerClassName?: string
   textClassName?: string
   animationDuration?: number
@@ -78,21 +80,45 @@ export default function ScrollFloat({
   return (
     <div
       ref={containerRef}
-      className={`flex flex-col items-center justify-center overflow-hidden ${containerClassName}`}
+      className={`flex flex-col items-center justify-center overflow-visible ${containerClassName}`}
     >
-      {logoSrc && (
+      {useBrandLogo ? (
+        <div className="climax-anim relative w-48 sm:w-64 md:w-80 h-14 sm:h-18 md:h-22 mb-4 sm:mb-6 flex items-center justify-center">
+          {/* Soft ambient radial emerald aura with zero hard edges */}
+          <div className="absolute inset-0 -inset-x-6 bg-[radial-gradient(ellipse_at_center,rgba(0,194,105,0.22)_0%,transparent_70%)] blur-2xl pointer-events-none" />
+
+          {/* Light Mode Brand Logo matching top-left navbar */}
+          <Image
+            src="/codebits-brand-logo.png"
+            alt="CodeBits by Prof. MRF"
+            fill
+            sizes="(max-width: 640px) 192px, (max-width: 768px) 256px, 320px"
+            className="object-contain block dark:hidden select-none"
+            priority
+          />
+          {/* Dark Mode Brand Logo matching top-left navbar with smooth emerald aura */}
+          <Image
+            src="/codebits-brand-logo-dark.png"
+            alt="CodeBits by Prof. MRF"
+            fill
+            sizes="(max-width: 640px) 192px, (max-width: 768px) 256px, 320px"
+            className="object-contain hidden dark:block select-none drop-shadow-[0_0_16px_rgba(0,194,105,0.35)]"
+            priority
+          />
+        </div>
+      ) : logoSrc ? (
         <div className="climax-anim relative w-20 h-20 sm:w-28 sm:h-28 mb-6 inline-block">
           <Image
             src={logoSrc}
             alt="CodeBits Monogram"
             fill
             sizes="112px"
-            className="object-contain drop-shadow-[0_0_35px_rgba(0,194,105,0.45)]"
+            className="object-contain drop-shadow-[0_0_20px_rgba(0,194,105,0.35)]"
             priority
           />
         </div>
-      )}
-      <h2 className="overflow-hidden">
+      ) : null}
+      <h2 className="overflow-hidden py-1 max-w-full">
         <span className={`inline-block font-black text-center ${textClassName}`}>
           {splitText}
         </span>
