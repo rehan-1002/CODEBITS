@@ -104,5 +104,10 @@ const ResourceSchema = new Schema<IResource>(
 ResourceSchema.index({ branch: 1, semester: 1, category: 1, status: 1 });
 ResourceSchema.index({ subject: 'text', title: 'text' });
 
+// In Next.js, invalidate cached model during hot reloads so updated enums are applied immediately
+if (mongoose.models && mongoose.models.Resource) {
+  delete mongoose.models.Resource;
+}
+
 export const ResourceModel: Model<IResource> =
   mongoose.models.Resource || mongoose.model<IResource>('Resource', ResourceSchema);
