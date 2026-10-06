@@ -43,7 +43,11 @@ export default async function ViewerPage({ params }: ViewerPageProps) {
   try {
     await connectToDatabase();
     if (isValidObjectId(id)) {
-      resource = await ResourceModel.findById(id).lean();
+      resource = await ResourceModel.findByIdAndUpdate(
+        id,
+        { $inc: { view_count: 1 } },
+        { new: true }
+      ).lean();
     }
   } catch (err) {
     console.error("Error fetching resource from database:", err);
