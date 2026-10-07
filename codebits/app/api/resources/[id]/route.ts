@@ -20,7 +20,9 @@ export async function GET(
         id,
         { $inc: { view_count: 1 } },
         { returnDocument: 'after' }
-      ).lean();
+      )
+        .select('title subject branch semester scheme category file_url file_size page_count uploader_id uploader_name uploader_role status view_count createdAt')
+        .lean();
     }
 
     if (!doc) {

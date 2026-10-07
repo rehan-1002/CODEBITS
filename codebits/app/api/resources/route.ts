@@ -64,6 +64,7 @@ export async function GET(req: NextRequest) {
     }
 
     const docs = await ResourceModel.find(filter)
+      .select('title subject branch semester scheme category file_url file_size page_count uploader_id uploader_name uploader_role status view_count createdAt')
       .sort({ createdAt: -1 })
       .lean();
 
@@ -86,7 +87,19 @@ export async function GET(req: NextRequest) {
       created_at: doc.createdAt?.toISOString() || new Date().toISOString(),
     }));
 
-    return NextResponse.json({ success: true, resources });
+    const response = NextResponse.json({ success: true, resources });
+
+    // Edge caching: minimize bandwidth on Vercel and browser
+    if (statusFilter === 'approved') {
+      response.headers.set(
+        'Cache-Control',
+        'public, s-maxage=60, stale-while-revalidate=300'
+      );
+    } else {
+      response.headers.set('Cache-Control', 'no-store');
+    }
+
+    return response;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Server error';
     return NextResponse.json({ success: false, error: message }, { status: 500 });
