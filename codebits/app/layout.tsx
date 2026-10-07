@@ -53,8 +53,8 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      data-theme="dark"
-      className={cn("antialiased", inter.variable, jetbrainsMono.variable, "font-sans", geist.variable)}
+      data-theme="light"
+      className={cn("antialiased", inter.variable, jetbrainsMono.variable, "font-sans", geist.variable, "light")}
       suppressHydrationWarning
     >
       <head>
@@ -63,14 +63,14 @@ export default function RootLayout({
             __html: `
               try {
                 const saved = localStorage.getItem('codebits-theme');
-                if (saved === 'light') {
-                  document.documentElement.setAttribute('data-theme', 'light');
-                  document.documentElement.classList.add('light');
-                  document.documentElement.classList.remove('dark');
-                } else {
+                if (saved === 'dark') {
                   document.documentElement.setAttribute('data-theme', 'dark');
                   document.documentElement.classList.add('dark');
                   document.documentElement.classList.remove('light');
+                } else {
+                  document.documentElement.setAttribute('data-theme', 'light');
+                  document.documentElement.classList.add('light');
+                  document.documentElement.classList.remove('dark');
                 }
               } catch (e) {}
             `,

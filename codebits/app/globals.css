@@ -101,9 +101,14 @@
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
   background-color: var(--bg-base);
   color: var(--text-primary);
+}
+
+html[data-theme="dark"],
+html.dark {
+  color-scheme: dark;
 }
 
 html[data-theme="light"],

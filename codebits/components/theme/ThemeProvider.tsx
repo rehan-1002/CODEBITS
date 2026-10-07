@@ -11,19 +11,19 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType>({
-  theme: "dark",
+  theme: "light",
   toggleTheme: () => {},
   setTheme: () => {},
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("dark");
+  const [theme, setThemeState] = useState<Theme>("light");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Check saved preference or default to dark (primary CodeBits identity)
+    // Check saved preference or default to light theme
     const saved = localStorage.getItem("codebits-theme") as Theme | null;
-    const initial = saved || "dark";
+    const initial = saved || "light";
     setThemeState(initial);
     applyTheme(initial);
     setMounted(true);
