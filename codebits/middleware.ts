@@ -4,9 +4,9 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
-  // 1. Mandatory Authentication Gate for Studying PDFs or Contributing Materials
-  // Without logging in, users CANNOT access /viewer or /upload
-  if (pathname.startsWith('/viewer') || pathname.startsWith('/upload')) {
+  // 1. Mandatory Authentication Gate for Studying PDFs, Contributing Materials or AI Question Solver
+  // Without logging in, users CANNOT access /viewer, /upload, or /solver
+  if (pathname.startsWith('/viewer') || pathname.startsWith('/upload') || pathname.startsWith('/solver')) {
     const token = request.cookies.get('codebits_token')?.value;
     if (!token) {
       const loginUrl = request.nextUrl.clone();
@@ -56,5 +56,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/viewer/:path*', '/upload'],
+  matcher: ['/', '/viewer/:path*', '/upload', '/solver/:path*'],
 };

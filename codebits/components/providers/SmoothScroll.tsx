@@ -29,6 +29,25 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
       touchMultiplier: 1.0,
       syncTouch: false, // Preserves native 120Hz compositor touch scrolling on mobile and precision trackpads
       autoRaf: false,
+      prevent: (node: HTMLElement) => {
+        // Check for explicit data-lenis-prevent flag
+        if (node.hasAttribute?.("data-lenis-prevent") || node.closest?.("[data-lenis-prevent]")) {
+          return true;
+        }
+        // Automatically detect any scrollable HUD or container under cursor
+        let current: HTMLElement | null = node;
+        while (current && current !== document.body && current !== document.documentElement) {
+          const style = window.getComputedStyle(current);
+          const isScrollable =
+            (style.overflowY === "auto" || style.overflowY === "scroll") &&
+            current.scrollHeight > current.clientHeight;
+          if (isScrollable) {
+            return true;
+          }
+          current = current.parentElement;
+        }
+        return false;
+      },
     });
 
     lenisRef.current = lenis;

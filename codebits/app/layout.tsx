@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Geist } from "next/font/google";
 import "./globals.css";
+import "katex/dist/katex.min.css";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { SmoothScroll } from "@/components/providers/SmoothScroll";
 import { GlobalShell } from "@/components/providers/GlobalShell";
