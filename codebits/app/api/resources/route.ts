@@ -92,15 +92,11 @@ export async function GET(req: NextRequest) {
 
     const response = NextResponse.json({ success: true, resources });
 
-    // Edge caching: minimize bandwidth on Vercel and browser
-    if (statusFilter === 'approved') {
-      response.headers.set(
-        'Cache-Control',
-        'public, s-maxage=60, stale-while-revalidate=300'
-      );
-    } else {
-      response.headers.set('Cache-Control', 'no-store');
-    }
+    // Prevent stale caching on Edge CDN and browser so new uploads appear immediately
+    response.headers.set(
+      'Cache-Control',
+      'no-cache, no-store, max-age=0, must-revalidate'
+    );
 
     return response;
   } catch (err: unknown) {
@@ -237,7 +233,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: isAdmin ? 'Resource published directly to vault.' : 'Resource queued for faculty review.',
+      message: isAdmin
+        ? 'Resource published directly to academic vault.'
+        : 'Resource submitted for faculty verification.',
       resource: {
         id: newResource._id.toString(),
         title: newResource.title,

@@ -63,10 +63,10 @@ function VaultContent() {
     });
   }, [searchParams]);
 
-  // Fetch approved catalog
+  // Fetch approved catalog with fresh live data
   const fetchApproved = () => {
     setLoading(true);
-    fetch("/api/resources")
+    fetch(`/api/resources?t=${Date.now()}`, { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (data.success && Array.isArray(data.resources)) {
@@ -83,7 +83,7 @@ function VaultContent() {
 
   // Fetch pending contributions for Admin
   const fetchPending = () => {
-    fetch("/api/resources?status=pending")
+    fetch(`/api/resources?status=pending&t=${Date.now()}`, { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (data.success && Array.isArray(data.resources)) {
@@ -100,6 +100,18 @@ function VaultContent() {
     if (isAdmin) {
       fetchPending();
     }
+
+    // Auto-refresh when tab becomes active so new uploads appear immediately
+    const handleRefresh = () => {
+      fetchApproved();
+      if (isAdmin) fetchPending();
+    };
+    window.addEventListener("focus", handleRefresh);
+    document.addEventListener("visibilitychange", handleRefresh);
+    return () => {
+      window.removeEventListener("focus", handleRefresh);
+      document.removeEventListener("visibilitychange", handleRefresh);
+    };
   }, [isAdmin]);
 
   // Admin Approve Handler
@@ -198,7 +210,7 @@ function VaultContent() {
                 : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             }`}
           >
-            📚 PUBLISHED CATALOG ({allResources.length})
+            PUBLISHED CATALOG ({allResources.length})
           </button>
           <button
             type="button"

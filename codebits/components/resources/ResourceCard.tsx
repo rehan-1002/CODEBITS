@@ -10,23 +10,23 @@ interface ResourceCardProps {
   index?: number;
 }
 
-const BRANCH_GRADIENTS: Record<string, { from: string; to: string }> = {
-  ALL: { from: "#00e599", to: "#38bdf8" },   // Emerald to Bright Sky (Common First Year)
-  COMPS: { from: "#00e599", to: "#00b4d8" }, // Emerald to Electric Cyan
-  IT: { from: "#03a9f4", to: "#ff0058" },    // Sky Blue to Rose Pink
-  "AI-DS": { from: "#a855f7", to: "#ec4899" }, // Violet to Neon Magenta
-  EXTC: { from: "#ffbc00", to: "#ff0058" },  // Amber to Crimson Red
-  MECH: { from: "#f97316", to: "#ef4444" },  // Vibrant Orange to Flame
-  CIVIL: { from: "#4dff03", to: "#00d0ff" }, // Lime Green to Cyan
+const BRANCH_GRADIENTS: Record<string, { from: string; to: string; border: string }> = {
+  ALL: { from: "#00e599", to: "#38bdf8", border: "rgba(0, 229, 153, 0.35)" },
+  COMPS: { from: "#00e599", to: "#00b4d8", border: "rgba(0, 180, 216, 0.35)" },
+  IT: { from: "#03a9f4", to: "#ff0058", border: "rgba(3, 169, 244, 0.35)" },
+  "AI-DS": { from: "#a855f7", to: "#ec4899", border: "rgba(168, 85, 247, 0.35)" },
+  EXTC: { from: "#ffbc00", to: "#ff0058", border: "rgba(255, 188, 0, 0.35)" },
+  MECH: { from: "#f97316", to: "#ef4444", border: "rgba(249, 115, 22, 0.35)" },
+  CIVIL: { from: "#4dff03", to: "#00d0ff", border: "rgba(77, 255, 3, 0.35)" },
 };
 
 const DEFAULT_GRADIENTS = [
-  { from: "#00e599", to: "#00b4d8" },
-  { from: "#ffbc00", to: "#ff0058" },
-  { from: "#03a9f4", to: "#ff0058" },
-  { from: "#4dff03", to: "#00d0ff" },
-  { from: "#a855f7", to: "#ec4899" },
-  { from: "#f97316", to: "#ef4444" },
+  { from: "#00e599", to: "#00b4d8", border: "rgba(0, 180, 216, 0.35)" },
+  { from: "#ffbc00", to: "#ff0058", border: "rgba(255, 188, 0, 0.35)" },
+  { from: "#03a9f4", to: "#ff0058", border: "rgba(3, 169, 244, 0.35)" },
+  { from: "#4dff03", to: "#00d0ff", border: "rgba(77, 255, 3, 0.35)" },
+  { from: "#a855f7", to: "#ec4899", border: "rgba(168, 85, 247, 0.35)" },
+  { from: "#f97316", to: "#ef4444", border: "rgba(249, 115, 22, 0.35)" },
 ];
 
 export function ResourceCard({ resource, index = 0 }: ResourceCardProps) {
@@ -42,31 +42,17 @@ export function ResourceCard({ resource, index = 0 }: ResourceCardProps) {
     DEFAULT_GRADIENTS[index % DEFAULT_GRADIENTS.length];
 
   return (
-    <div className="group relative w-full my-3 transition-all duration-500">
-      {/* Skewed gradient panel 1 (crisp backdrop) */}
-      <span
-        className="absolute top-0 left-[35px] w-1/2 h-full rounded-xl transform skew-x-[15deg] transition-all duration-500 group-hover:skew-x-0 group-hover:left-[15px] group-hover:w-[calc(100%-40px)] opacity-75 dark:opacity-85"
+    <div className="group relative w-full my-2 transition-transform duration-300 transform-gpu hover:-translate-y-1">
+      {/* Ambient glow on hover - hardware accelerated, zero layout thrashing */}
+      <div
+        className="absolute -inset-0.5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none blur-sm"
         style={{
-          background: `linear-gradient(315deg, ${gradient.from}, ${gradient.to})`,
+          background: `linear-gradient(135deg, ${gradient.from}, ${gradient.to})`,
         }}
       />
 
-      {/* Skewed gradient panel 2 (diffuse luminous glow) */}
-      <span
-        className="absolute top-0 left-[35px] w-1/2 h-full rounded-xl transform skew-x-[15deg] blur-[26px] opacity-45 dark:opacity-70 transition-all duration-500 group-hover:skew-x-0 group-hover:left-[15px] group-hover:w-[calc(100%-40px)] group-hover:opacity-65 dark:group-hover:opacity-90"
-        style={{
-          background: `linear-gradient(315deg, ${gradient.from}, ${gradient.to})`,
-        }}
-      />
-
-      {/* Floating glassmorphic animated blobs on hover */}
-      <span className="pointer-events-none absolute inset-0 z-10 overflow-visible">
-        <span className="absolute top-0 left-0 w-0 h-0 rounded-xl opacity-0 bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/15 backdrop-blur-[10px] shadow-[0_5px_15px_rgba(0,0,0,0.06)] dark:shadow-[0_5px_15px_rgba(0,0,0,0.18)] transition-all duration-300 animate-blob group-hover:top-[-24px] group-hover:left-[24px] group-hover:w-[76px] group-hover:h-[76px] group-hover:opacity-100" />
-        <span className="absolute bottom-0 right-0 w-0 h-0 rounded-xl opacity-0 bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/15 backdrop-blur-[10px] shadow-[0_5px_15px_rgba(0,0,0,0.06)] dark:shadow-[0_5px_15px_rgba(0,0,0,0.18)] transition-all duration-500 animate-blob animation-delay-1000 group-hover:bottom-[-24px] group-hover:right-[24px] group-hover:w-[76px] group-hover:h-[76px] group-hover:opacity-100" />
-      </span>
-
-      {/* Main Glass Content Card - Theme Adaptive */}
-      <div className="relative z-20 left-0 p-6 rounded-xl bg-white/90 dark:bg-[rgba(14,16,15,0.88)] backdrop-blur-[18px] border border-[var(--border-subtle)] dark:border-white/10 shadow-lg dark:shadow-2xl transition-all duration-500 group-hover:left-[-14px] flex flex-col justify-between space-y-4 min-h-[310px]">
+      {/* Main Content Card */}
+      <div className="relative z-10 p-5 sm:p-6 rounded-2xl bg-[var(--surface-base)] border border-[var(--border-subtle)] group-hover:border-[var(--border-strong)] transition-colors duration-300 shadow-md flex flex-col justify-between space-y-4 min-h-[290px]">
         {/* Card Header & Badges */}
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -79,13 +65,13 @@ export function ResourceCard({ resource, index = 0 }: ResourceCardProps) {
               </span>
             </div>
 
-            <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider border border-[var(--border-subtle)] bg-[var(--surface-base)] px-2 py-0.5 rounded-md">
+            <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider border border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-2 py-0.5 rounded-md">
               {categoryLabels[resource.category] || resource.category.toUpperCase()}
             </span>
           </div>
 
           {/* Resource Title & Subject */}
-          <div>
+          <div className="pt-1">
             <h3 className="text-base font-bold text-[var(--text-primary)] group-hover:text-[var(--brand-primary)] transition-colors line-clamp-2">
               {resource.title}
             </h3>
@@ -102,7 +88,7 @@ export function ResourceCard({ resource, index = 0 }: ResourceCardProps) {
               {resource.page_count ? `${resource.page_count} pages` : "Official PDF"}
             </span>
             <span className="shrink-0 flex items-center space-x-1">
-              <Eye className="w-3 h-3 text-[var(--text-muted)]" />
+              <Eye className="w-3.5 h-3.5 text-[var(--text-muted)]" />
               <span>{resource.view_count} views</span>
             </span>
           </div>
@@ -123,7 +109,7 @@ export function ResourceCard({ resource, index = 0 }: ResourceCardProps) {
             {/* Read / Study Action Link */}
             <Link
               href={`/viewer/${resource.id}`}
-              className="inline-flex items-center space-x-1 px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold text-[var(--bg-base)] bg-[var(--text-primary)] dark:text-black dark:bg-white hover:bg-[var(--brand-primary)] hover:text-black dark:hover:bg-[var(--brand-primary)] hover:shadow-md transition-all duration-300 cursor-pointer shadow-xs"
+              className="inline-flex items-center space-x-1 px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold text-black bg-[var(--brand-primary)] hover:bg-[var(--brand-ambient)] transition-colors duration-200 cursor-pointer shadow-sm"
             >
               <FileText className="w-3.5 h-3.5 mr-0.5" />
               <span>STUDY</span>
@@ -131,20 +117,6 @@ export function ResourceCard({ resource, index = 0 }: ResourceCardProps) {
           </div>
         </div>
       </div>
-
-      {/* Embedded Animation Styles */}
-      <style>{`
-        @keyframes blob {
-          0%, 100% { transform: translateY(8px); }
-          50% { transform: translateY(-8px); }
-        }
-        .animate-blob {
-          animation: blob 2s ease-in-out infinite;
-        }
-        .animation-delay-1000 {
-          animation-delay: -1s;
-        }
-      `}</style>
     </div>
   );
 }

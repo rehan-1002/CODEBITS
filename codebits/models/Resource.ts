@@ -106,6 +106,7 @@ const ResourceSchema = new Schema<IResource>(
 );
 
 // Indexes for fast searching in the Academic Vault
+ResourceSchema.index({ status: 1, createdAt: -1 });
 ResourceSchema.index({ branch: 1, semester: 1, category: 1, status: 1 });
 ResourceSchema.index({ subject: 'text', title: 'text' });
 
