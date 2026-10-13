@@ -61,6 +61,10 @@ export function ResourceUploadForm() {
         setError("Only PDF documents (.pdf) are accepted for the academic vault.");
         return;
       }
+      if (selected.size > 25 * 1024 * 1024) {
+        setError("Document size exceeds 25 MB limit. Please compress or upload a PDF under 25 MB.");
+        return;
+      }
       setFile(selected);
       setError(null);
     }
@@ -80,6 +84,11 @@ export function ResourceUploadForm() {
       return;
     }
 
+    if (file.size > 25 * 1024 * 1024) {
+      setError("Document size exceeds 25 MB limit. Please compress or upload a PDF under 25 MB.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -94,6 +103,7 @@ export function ResourceUploadForm() {
       const res = await fetch("/api/resources", {
         method: "POST",
         body: data,
+        credentials: "include",
       });
 
       const json = await res.json();
@@ -337,7 +347,7 @@ export function ResourceUploadForm() {
                       Drag &amp; drop PDF here, or click to browse files
                     </p>
                     <p className="text-[10px] font-mono text-[var(--text-muted)] tracking-wider">
-                      PDF DOCUMENTS ONLY • MAXIMUM 50 MB
+                      PDF DOCUMENTS ONLY • MAXIMUM 25 MB
                     </p>
                   </>
                 )}

@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
-import crypto from 'crypto';
+import mongoose from 'mongoose';
 import { connectToDatabase } from '@/lib/db';
 import { ResourceModel } from '@/models/Resource';
 import { verifySessionToken, COOKIE_NAME } from '@/lib/auth-server';
 import { AcademicBranch, AcademicSemester, DocumentCategory } from '@/types/resources';
+import { saveResourcePdf } from '@/lib/storage';
 
 // Escape regex special characters to prevent ReDoS / Regex Injection
 function escapeRegex(text: string): string {
@@ -64,7 +63,7 @@ export async function GET(req: NextRequest) {
     }
 
     const docs = await ResourceModel.find(filter)
-      .select('title subject branch semester scheme category file_url file_size page_count uploader_id uploader_name uploader_role status view_count createdAt')
+      .select('title subject branch semester scheme category file_url gridfs_id file_size page_count uploader_id uploader_name uploader_role status view_count createdAt')
       .sort({ createdAt: -1 })
       .lean();
 
@@ -77,6 +76,7 @@ export async function GET(req: NextRequest) {
       scheme: doc.scheme,
       category: doc.category,
       file_url: doc.file_url,
+      gridfs_id: doc.gridfs_id,
       file_size: doc.file_size,
       page_count: doc.page_count,
       uploader_id: doc.uploader_id,
@@ -160,15 +160,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 5. Store File securely in /public/uploads
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-    await mkdir(uploadsDir, { recursive: true });
-
-    const safeFileName = `doc_${Date.now()}_${crypto.randomBytes(6).toString('hex')}.pdf`;
-    const filePath = path.join(uploadsDir, safeFileName);
-    await writeFile(filePath, buffer);
-
-    const fileUrl = `/uploads/${safeFileName}`;
+    // 5. Store File permanently in MongoDB GridFS with resilient local disk caching
+    const saved = await saveResourcePdf(buffer, file.name);
 
     // 6. Check user session for moderation status
     const token = req.cookies.get(COOKIE_NAME)?.value;
@@ -180,14 +173,22 @@ export async function POST(req: NextRequest) {
     const validBranches = ['ALL', 'COMPS', 'IT', 'AI-DS', 'EXTC', 'MECH', 'CIVIL'];
     const safeBranch = branch && validBranches.includes(branch) ? branch : (semester <= 2 ? 'ALL' : 'COMPS');
 
+    const validCategories = ['pyq', 'notes', 'syllabus', 'solution'];
+    const safeCategory = category && validCategories.includes(category) ? category : 'pyq';
+
+    const newResourceId = new mongoose.Types.ObjectId();
+    const fileUrl = `/api/resources/${newResourceId.toString()}/file`;
+
     const newResource = await ResourceModel.create({
+      _id: newResourceId,
       title,
       subject,
       branch: safeBranch,
       semester: semester || (safeBranch === 'ALL' ? 1 : 3),
       scheme: 'Mumbai University',
-      category: category || 'pyq',
+      category: safeCategory,
       file_url: fileUrl,
+      gridfs_id: saved.gridfsId,
       file_size: file.size,
       page_count: 1,
       uploader_id: user?.id || 'guest-contributor',

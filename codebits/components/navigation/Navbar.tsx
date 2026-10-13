@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import ScrollStackNav from '@/components/navigation/ScrollStackNav'
+import RandomLetterSwapNav from '@/components/ui/m-random-letter-swap-1'
 import { AnimatedThemeToggler } from '@/components/theme/AnimatedThemeToggler'
 import { getCurrentUser, clearSession, logoutUserApi, fetchCurrentAuthUser } from '@/lib/auth'
 import { Profile } from '@/types/auth'
@@ -31,7 +32,7 @@ export default function Navbar({ onOpenSearch }: NavbarProps = {}) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         
         {/* Left: Official CodeBits Brand Identity */}
-        <Link className="flex items-center group py-1" href="/?home=1">
+        <Link className="flex items-center group py-1 shrink-0" href="/?home=1">
           <div className="relative h-9 sm:h-10 w-36 sm:w-44 flex items-center">
             {/* Light Mode Logo */}
             <Image
@@ -54,9 +55,13 @@ export default function Navbar({ onOpenSearch }: NavbarProps = {}) {
           </div>
         </Link>
 
+        {/* Center: Quick Nav with Random Letter Swap Interaction */}
+        <div className="hidden md:flex items-center justify-center flex-1 mx-6">
+          <RandomLetterSwapNav />
+        </div>
 
         {/* Right Actions: Theme Toggler, Admin Badge & Stacked Navigation Trigger */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           {user?.role === 'admin' ? (
             <div className="flex items-center space-x-2">
               <Link

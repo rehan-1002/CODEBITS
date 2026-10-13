@@ -16,6 +16,7 @@ export interface IResource extends Document {
   uploader_role: 'student' | 'admin';
   status: ModerationStatus;
   view_count: number;
+  gridfs_id?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -87,7 +88,11 @@ const ResourceSchema = new Schema<IResource>(
     status: {
       type: String,
       enum: ['pending', 'approved', 'rejected'],
-      default: 'approved',
+      default: 'pending',
+    },
+    gridfs_id: {
+      type: String,
+      sparse: true,
     },
     view_count: {
       type: Number,

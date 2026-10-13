@@ -294,3 +294,22 @@ body {
 .animate-shine {
   animation: shine var(--duration, 14s) infinite linear;
 }
+
+/* 60/120fps GPU Hardware-Accelerated Marquee */
+@keyframes marquee-glide {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-marquee-glide {
+  animation: marquee-glide 42s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee-glide:hover {
+  animation-play-state: paused;
+}

@@ -23,6 +23,9 @@
 # misc
 .DS_Store
 *.pem
+/CAP DATA/
+/public/uploads/*.pdf
+!/public/uploads/.gitkeep
 
 # debug
 npm-debug.log*

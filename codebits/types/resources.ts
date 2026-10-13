@@ -36,6 +36,7 @@ export interface Resource {
   uploader_role?: "student" | "admin";
   status: ModerationStatus;
   view_count: number;
+  gridfs_id?: string;
   created_at: string;
   updated_at?: string;
 }

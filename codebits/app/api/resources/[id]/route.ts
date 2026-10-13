@@ -3,6 +3,7 @@ import { isValidObjectId } from 'mongoose';
 import { connectToDatabase } from '@/lib/db';
 import { ResourceModel } from '@/models/Resource';
 import { verifySessionToken, COOKIE_NAME } from '@/lib/auth-server';
+import { deleteResourcePdf } from '@/lib/storage';
 
 export async function GET(
   req: NextRequest,
@@ -21,7 +22,7 @@ export async function GET(
         { $inc: { view_count: 1 } },
         { returnDocument: 'after' }
       )
-        .select('title subject branch semester scheme category file_url file_size page_count uploader_id uploader_name uploader_role status view_count createdAt')
+        .select('title subject branch semester scheme category file_url gridfs_id file_size page_count uploader_id uploader_name uploader_role status view_count createdAt')
         .lean();
     }
 
@@ -40,6 +41,7 @@ export async function GET(
         scheme: doc.scheme,
         category: doc.category,
         file_url: doc.file_url,
+        gridfs_id: doc.gridfs_id,
         file_size: doc.file_size,
         page_count: doc.page_count,
         uploader_id: doc.uploader_id,
@@ -138,7 +140,10 @@ export async function DELETE(
       return NextResponse.json({ success: false, error: 'Invalid document ID.' }, { status: 400 });
     }
 
-    await ResourceModel.findByIdAndDelete(id);
+    const deletedDoc = await ResourceModel.findByIdAndDelete(id);
+    if (deletedDoc) {
+      await deleteResourcePdf(deletedDoc.gridfs_id, deletedDoc.file_url);
+    }
 
     return NextResponse.json({
       success: true,

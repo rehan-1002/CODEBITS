@@ -13,6 +13,7 @@ import {
   Compass,
   GraduationCap,
   Sparkles,
+  SlidersHorizontal,
 } from 'lucide-react'
 import ScrollStack, { ScrollStackItem, ScrollStackHandle } from '@/components/ui/ScrollStack'
 import { useTheme } from '@/components/theme/ThemeProvider'
@@ -81,6 +82,14 @@ const navDeck = [
   },
   {
     number: '03',
+    title: '11th & 12th Hub',
+    desc: 'CAP College Predictor, 372 engineering institutes, entrance marquee, and eligibility suite.',
+    href: '/11th-12th',
+    icon: SlidersHorizontal,
+    isPrimary: true,
+  },
+  {
+    number: '04',
     title: 'AI Question Solver',
     desc: 'Scan handwritten papers or question banks and generate mark-specific Mumbai University solutions.',
     href: '/solver',
@@ -88,7 +97,7 @@ const navDeck = [
     isPrimary: true,
   },
   {
-    number: '04',
+    number: '05',
     title: 'About Us',
     desc: 'Institutional mentorship, engineering faculty directory, centers, and student placement records.',
     href: '/about',
@@ -96,7 +105,7 @@ const navDeck = [
     isPrimary: false,
   },
   {
-    number: '05',
+    number: '06',
     title: 'Community Upload',
     desc: 'Contribute exam papers, solutions, and module notes for peer moderation.',
     href: '/upload',
@@ -104,7 +113,7 @@ const navDeck = [
     isPrimary: false,
   },
   {
-    number: '06',
+    number: '07',
     title: 'Login',
     desc: 'Secure student portal with active session protection and submission tracking.',
     href: '/login',
