@@ -55,17 +55,18 @@ export async function saveResourcePdf(
       .on('finish', () => resolve(uploadStream.id.toString()));
   });
 
-  // 2. Best-effort local file write for local development speed / cache
-  try {
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-    await mkdir(uploadsDir, { recursive: true });
-    await writeFile(path.join(uploadsDir, safeFileName), buffer);
-  } catch (fsErr) {
-    // Expected on Vercel / read-only serverless runtimes. GridFS already has the full file!
-    console.warn(
-      'Notice: Local filesystem write skipped (file is safely stored in MongoDB GridFS):',
-      fsErr instanceof Error ? fsErr.message : fsErr
-    );
+  // 2. Best-effort local file write for local development speed / cache (skipped on Vercel)
+  if (!process.env.VERCEL) {
+    try {
+      const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+      await mkdir(uploadsDir, { recursive: true });
+      await writeFile(path.join(uploadsDir, safeFileName), buffer);
+    } catch (fsErr) {
+      console.warn(
+        'Notice: Local filesystem write skipped (file is safely stored in MongoDB GridFS):',
+        fsErr instanceof Error ? fsErr.message : fsErr
+      );
+    }
   }
 
   return {

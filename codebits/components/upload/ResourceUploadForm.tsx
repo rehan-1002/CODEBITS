@@ -54,6 +54,8 @@ export function ResourceUploadForm() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const MAX_UPLOAD_BYTES = 4.5 * 1024 * 1024; // 4.5 MB Vercel Serverless payload ceiling
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selected = e.target.files[0];
@@ -61,8 +63,10 @@ export function ResourceUploadForm() {
         setError("Only PDF documents (.pdf) are accepted for the academic vault.");
         return;
       }
-      if (selected.size > 25 * 1024 * 1024) {
-        setError("Document size exceeds 25 MB limit. Please compress or upload a PDF under 25 MB.");
+      if (selected.size > MAX_UPLOAD_BYTES) {
+        setError(
+          `Document size (${(selected.size / (1024 * 1024)).toFixed(1)} MB) exceeds the 4.5 MB upload limit. Please compress your PDF or upload a smaller file.`
+        );
         return;
       }
       setFile(selected);
@@ -84,12 +88,17 @@ export function ResourceUploadForm() {
       return;
     }
 
-    if (file.size > 25 * 1024 * 1024) {
-      setError("Document size exceeds 25 MB limit. Please compress or upload a PDF under 25 MB.");
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setError(
+        `Document size (${(file.size / (1024 * 1024)).toFixed(1)} MB) exceeds the 4.5 MB limit. Please compress your PDF and try again.`
+      );
       return;
     }
 
     setLoading(true);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for mobile uploads
 
     try {
       const data = new FormData();
@@ -104,20 +113,43 @@ export function ResourceUploadForm() {
         method: "POST",
         body: data,
         credentials: "include",
+        signal: controller.signal,
       });
 
-      const json = await res.json();
+      clearTimeout(timeoutId);
+
+      let json: any = null;
+      try {
+        json = await res.json();
+      } catch {
+        // Handle non-JSON server responses (e.g., 413, 502, 504 from edge proxy)
+        if (res.status === 413) {
+          setLoading(false);
+          setError("Document payload is too large for serverless upload (limit 4.5 MB). Please compress your PDF.");
+          return;
+        }
+        setLoading(false);
+        setError(`Server returned status ${res.status} (${res.statusText || "Communication error"}). Please try again.`);
+        return;
+      }
+
       setLoading(false);
 
-      if (!res.ok || !json.success) {
-        setError(json.error || "Failed to submit document to vault.");
+      if (!res.ok || !json?.success) {
+        setError(json?.error || "Failed to submit document to vault. Please verify your inputs.");
         return;
       }
 
       setSubmitted(true);
-    } catch {
+    } catch (err: unknown) {
+      clearTimeout(timeoutId);
       setLoading(false);
-      setError("Network error submitting document. Please try again.");
+      if (err instanceof Error && err.name === "AbortError") {
+        setError("Upload timed out due to slow mobile network. Please check your connection and retry.");
+        return;
+      }
+      const msg = err instanceof Error ? err.message : "Network error submitting document. Please check your connection and try again.";
+      setError(msg);
     }
   };
 
@@ -347,7 +379,7 @@ export function ResourceUploadForm() {
                       Drag &amp; drop PDF here, or click to browse files
                     </p>
                     <p className="text-[10px] font-mono text-[var(--text-muted)] tracking-wider">
-                      PDF DOCUMENTS ONLY • MAXIMUM 25 MB
+                      PDF DOCUMENTS ONLY • MAXIMUM 4.5 MB
                     </p>
                   </>
                 )}

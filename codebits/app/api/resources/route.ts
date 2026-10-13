@@ -6,6 +6,9 @@ import { verifySessionToken, COOKIE_NAME } from '@/lib/auth-server';
 import { AcademicBranch, AcademicSemester, DocumentCategory } from '@/types/resources';
 import { saveResourcePdf } from '@/lib/storage';
 
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+
 // Escape regex special characters to prevent ReDoS / Regex Injection
 function escapeRegex(text: string): string {
   return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
@@ -127,16 +130,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. File existence and size check (Max 25MB)
+    // 2. File existence and size check (Max 4.5MB for Serverless compatibility)
     if (!file) {
       return NextResponse.json({ success: false, error: 'A PDF file is required.' }, { status: 400 });
     }
 
-    const MAX_SIZE = 25 * 1024 * 1024; // 25 MB
+    const MAX_SIZE = 4.5 * 1024 * 1024; // 4.5 MB platform limit
     if (file.size > MAX_SIZE) {
       return NextResponse.json(
-        { success: false, error: 'File size exceeds maximum allowed limit of 25MB.' },
-        { status: 400 }
+        {
+          success: false,
+          error: `File size (${(file.size / (1024 * 1024)).toFixed(1)} MB) exceeds the 4.5 MB serverless limit. Please compress your PDF before uploading.`,
+        },
+        { status: 413 }
       );
     }
 
@@ -208,7 +214,8 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Server error';
+    console.error('Resource upload failure in /api/resources:', err);
+    const message = err instanceof Error ? err.message : 'Server error occurred while submitting document.';
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
