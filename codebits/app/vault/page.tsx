@@ -101,10 +101,14 @@ function VaultContent() {
       fetchPending();
     }
 
-    // Auto-refresh when tab becomes active so new uploads appear immediately
+    // Auto-refresh only when tab becomes active after being in background for at least 45 seconds
+    let lastFetched = Date.now();
     const handleRefresh = () => {
-      fetchApproved();
-      if (isAdmin) fetchPending();
+      if (document.visibilityState === "visible" && Date.now() - lastFetched > 45000) {
+        lastFetched = Date.now();
+        fetchApproved();
+        if (isAdmin) fetchPending();
+      }
     };
     window.addEventListener("focus", handleRefresh);
     document.addEventListener("visibilitychange", handleRefresh);
