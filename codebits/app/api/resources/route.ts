@@ -109,18 +109,56 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST: Secure Resource Contribution & PDF File Validation
+// POST: Secure Resource Contribution & PDF File Validation (Supports JSON Base64 and FormData)
 export async function POST(req: NextRequest) {
   try {
     await connectToDatabase();
 
-    const formData = await req.formData();
-    const title = formData.get('title')?.toString().trim();
-    const subject = formData.get('subject')?.toString().trim();
-    const branch = formData.get('branch')?.toString().trim() as AcademicBranch;
-    const semester = parseInt(formData.get('semester')?.toString() || '3', 10) as AcademicSemester;
-    const category = formData.get('category')?.toString().trim() as DocumentCategory;
-    const file = formData.get('file') as File | null;
+    const contentType = req.headers.get('content-type') || '';
+    let title = '';
+    let subject = '';
+    let branch: AcademicBranch = 'COMPS';
+    let semester: AcademicSemester = 3;
+    let category: DocumentCategory = 'pyq';
+    let fileName = '';
+    let fileSize = 0;
+    let buffer: Buffer;
+
+    if (contentType.includes('application/json')) {
+      const json = await req.json();
+      title = (json.title || '').toString().trim();
+      subject = (json.subject || '').toString().trim();
+      branch = (json.branch || 'COMPS').toString().trim() as AcademicBranch;
+      semester = parseInt(json.semester?.toString() || '3', 10) as AcademicSemester;
+      category = (json.category || 'pyq').toString().trim() as DocumentCategory;
+      fileName = (json.fileName || 'document.pdf').toString().trim();
+
+      const rawB64 = (json.fileBase64 || '').toString();
+      const cleanB64 = rawB64.replace(/^data:[^;]+;base64,/, '').trim();
+      if (!cleanB64) {
+        return NextResponse.json({ success: false, error: 'A valid PDF document is required.' }, { status: 400 });
+      }
+
+      buffer = Buffer.from(cleanB64, 'base64');
+      fileSize = buffer.length;
+    } else {
+      const formData = await req.formData();
+      title = formData.get('title')?.toString().trim() || '';
+      subject = formData.get('subject')?.toString().trim() || '';
+      branch = formData.get('branch')?.toString().trim() as AcademicBranch;
+      semester = parseInt(formData.get('semester')?.toString() || '3', 10) as AcademicSemester;
+      category = formData.get('category')?.toString().trim() as DocumentCategory;
+      const file = formData.get('file') as File | null;
+
+      if (!file) {
+        return NextResponse.json({ success: false, error: 'A PDF file is required.' }, { status: 400 });
+      }
+
+      fileName = file.name;
+      fileSize = file.size;
+      const arrayBuffer = await file.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+    }
 
     // 1. Field validation
     if (!title || !subject || title.length > 200 || subject.length > 120) {
@@ -130,24 +168,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. File existence and size check (Max 4.5MB for Serverless compatibility)
-    if (!file) {
-      return NextResponse.json({ success: false, error: 'A PDF file is required.' }, { status: 400 });
-    }
-
+    // 2. File size check (Max 4.5MB for Serverless compatibility)
     const MAX_SIZE = 4.5 * 1024 * 1024; // 4.5 MB platform limit
-    if (file.size > MAX_SIZE) {
+    if (fileSize > MAX_SIZE) {
       return NextResponse.json(
         {
           success: false,
-          error: `File size (${(file.size / (1024 * 1024)).toFixed(1)} MB) exceeds the 4.5 MB serverless limit. Please compress your PDF before uploading.`,
+          error: `File size (${(fileSize / (1024 * 1024)).toFixed(1)} MB) exceeds the 4.5 MB serverless limit. Please compress your PDF before uploading.`,
         },
         { status: 413 }
       );
     }
 
     // 3. Name check
-    if (!file.name.toLowerCase().endsWith('.pdf')) {
+    if (!fileName.toLowerCase().endsWith('.pdf')) {
       return NextResponse.json(
         { success: false, error: 'Only PDF documents (.pdf) are allowed.' },
         { status: 400 }
@@ -155,10 +189,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Magic Byte Verification (%PDF- header verification)
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
     const magicHeader = buffer.subarray(0, 4).toString('ascii');
-
     if (magicHeader !== '%PDF') {
       return NextResponse.json(
         { success: false, error: 'Security rejection: Uploaded file is not a valid PDF document.' },
@@ -167,7 +198,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 5. Store File permanently in MongoDB GridFS with resilient local disk caching
-    const saved = await saveResourcePdf(buffer, file.name);
+    const saved = await saveResourcePdf(buffer, fileName);
 
     // 6. Check user session for moderation status
     const token = req.cookies.get(COOKIE_NAME)?.value;
@@ -195,7 +226,7 @@ export async function POST(req: NextRequest) {
       category: safeCategory,
       file_url: fileUrl,
       gridfs_id: saved.gridfsId,
-      file_size: file.size,
+      file_size: fileSize,
       page_count: 1,
       uploader_id: user?.id || 'guest-contributor',
       uploader_name: user?.full_name || 'Student Contributor',

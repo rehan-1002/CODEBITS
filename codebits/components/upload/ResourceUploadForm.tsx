@@ -97,35 +97,40 @@ export function ResourceUploadForm() {
 
     setLoading(true);
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for mobile uploads
-
     try {
-      const data = new FormData();
-      data.append("title", title.trim());
-      data.append("subject", subject.trim());
-      data.append("branch", branch);
-      data.append("semester", semester.toString());
-      data.append("category", category);
-      data.append("file", file);
+      // 1. Read file into memory via FileReader (bypasses mobile WebKit detached file stream bugs)
+      const fileBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error("Unable to read selected PDF from device storage. Please re-select the file."));
+        reader.readAsDataURL(file);
+      });
+
+      const payload = {
+        title: title.trim(),
+        subject: subject.trim(),
+        branch,
+        semester,
+        category,
+        fileName: file.name,
+        fileBase64,
+      };
 
       const res = await fetch("/api/resources", {
         method: "POST",
-        body: data,
-        credentials: "include",
-        signal: controller.signal,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
       });
-
-      clearTimeout(timeoutId);
 
       let json: any = null;
       try {
         json = await res.json();
       } catch {
-        // Handle non-JSON server responses (e.g., 413, 502, 504 from edge proxy)
         if (res.status === 413) {
           setLoading(false);
-          setError("Document payload is too large for serverless upload (limit 4.5 MB). Please compress your PDF.");
+          setError("Document payload is too large for upload (limit 4.5 MB). Please compress your PDF.");
           return;
         }
         setLoading(false);
@@ -142,13 +147,8 @@ export function ResourceUploadForm() {
 
       setSubmitted(true);
     } catch (err: unknown) {
-      clearTimeout(timeoutId);
       setLoading(false);
-      if (err instanceof Error && err.name === "AbortError") {
-        setError("Upload timed out due to slow mobile network. Please check your connection and retry.");
-        return;
-      }
-      const msg = err instanceof Error ? err.message : "Network error submitting document. Please check your connection and try again.";
+      const msg = err instanceof Error ? err.message : "Failed to upload document. Please check your connection and try again.";
       setError(msg);
     }
   };
