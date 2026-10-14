@@ -1,8 +1,12 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 
 export function Footer() {
+  const pathname = usePathname();
   return (
     <footer className="relative z-20 bg-[var(--brand-primary)] text-black selection:bg-black selection:text-[var(--brand-primary)] transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
@@ -113,7 +117,11 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/login"
+                  href={
+                    pathname && pathname !== "/login"
+                      ? `/login?redirect=${encodeURIComponent(pathname)}`
+                      : "/login"
+                  }
                   className="text-black/80 hover:text-black transition-colors hover:underline"
                 >
                   Student Portal Login

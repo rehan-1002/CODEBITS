@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { LogOut, User as UserIcon } from 'lucide-react'
 import ScrollStackNav from '@/components/navigation/ScrollStackNav'
 import RandomLetterSwapNav from '@/components/ui/m-random-letter-swap-1'
 import { AnimatedThemeToggler } from '@/components/theme/AnimatedThemeToggler'
@@ -62,29 +63,46 @@ export default function Navbar({ onOpenSearch }: NavbarProps = {}) {
 
         {/* Right Actions: Theme Toggler, Admin Badge & Stacked Navigation Trigger */}
         <div className="flex items-center gap-3 shrink-0">
-          {user?.role === 'admin' ? (
+          {user ? (
             <div className="flex items-center space-x-2">
-              <Link
-                href="/vault?tab=moderation"
-                className="hidden sm:inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg border border-amber-400/40 bg-amber-400/10 text-amber-400 text-xs font-mono font-bold hover:bg-amber-400/20 transition-colors"
-                title="Review pending student contributions"
-              >
-                <span>REVIEW QUEUE</span>
-              </Link>
-              <div className="flex items-center space-x-2 px-2.5 py-1 rounded-lg border border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] text-xs font-mono font-bold">
+              {user.role === 'admin' ? (
+                <Link
+                  href="/vault?tab=moderation"
+                  className="hidden sm:inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg border border-amber-400/40 bg-amber-400/10 text-amber-400 text-xs font-mono font-bold hover:bg-amber-400/20 transition-colors"
+                  title="Review pending student contributions"
+                >
+                  <span>REVIEW QUEUE</span>
+                </Link>
+              ) : null}
+
+              <div className="flex items-center space-x-2 px-2.5 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-primary)] text-xs font-mono shadow-sm">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand-primary)] animate-pulse" />
-                <span>ADMIN</span>
+                <span className="font-semibold max-w-[90px] sm:max-w-[120px] truncate">
+                  {user.role === 'admin' ? 'ADMIN' : user.full_name?.split(' ')[0] || 'STUDENT'}
+                </span>
                 <button
                   type="button"
-                  onClick={() => logoutUserApi()}
-                  title="Sign out from Administrator mode"
-                  className="text-[10px] text-[var(--text-muted)] hover:text-red-400 cursor-pointer ml-1 underline decoration-dotted"
+                  onClick={async () => {
+                    await logoutUserApi()
+                    window.location.replace('/login')
+                  }}
+                  title="Sign out of CodeBits"
+                  className="text-[11px] text-[var(--text-muted)] hover:text-red-400 cursor-pointer ml-1 underline decoration-dotted flex items-center space-x-0.5 transition-colors"
                 >
-                  Logout
+                  <LogOut className="w-3 h-3 inline mr-0.5" />
+                  <span>Logout</span>
                 </button>
               </div>
             </div>
-          ) : null}
+          ) : (
+            <Link
+              href="/login"
+              className="hidden sm:inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--brand-primary)] hover:border-[var(--brand-primary)]/40 text-xs font-mono font-medium transition-colors"
+            >
+              <UserIcon className="w-3.5 h-3.5" />
+              <span>LOGIN</span>
+            </Link>
+          )}
 
           <AnimatedThemeToggler className="w-10 h-10 rounded-xl" />
           <ScrollStackNav />

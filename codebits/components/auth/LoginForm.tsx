@@ -12,9 +12,41 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ onSuccess, concurrentReason }: LoginFormProps) {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTarget = searchParams?.get("redirect") || "/vault";
+
+  // Multi-source destination resolver (searchParams -> window.location.search -> cookie)
+  const resolveTargetUrl = (): string => {
+    let raw = searchParams?.get("redirect");
+
+    if (!raw && typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      raw = urlParams.get("redirect");
+    }
+
+    if (!raw && typeof document !== "undefined") {
+      const match = document.cookie.match(/(?:^|;\s*)cb_intended_url=([^;]*)/);
+      if (match && match[1]) {
+        raw = match[1];
+      }
+    }
+
+    if (!raw) return "/vault";
+
+    try {
+      let decoded = decodeURIComponent(raw);
+      if (decoded.startsWith("%2F") || decoded.startsWith("%2f")) {
+        decoded = decodeURIComponent(decoded);
+      }
+      if (decoded.startsWith("/") && !decoded.startsWith("//") && !decoded.startsWith("/login")) {
+        return decoded;
+      }
+    } catch {
+      return "/vault";
+    }
+    return "/vault";
+  };
+
+  const redirectTarget = resolveTargetUrl();
   const isFromViewer = redirectTarget.startsWith("/viewer");
   const isFromUpload = redirectTarget.startsWith("/upload");
 
@@ -42,6 +74,11 @@ export function LoginForm({ onSuccess, concurrentReason }: LoginFormProps) {
       return;
     }
 
+    const finalTarget = resolveTargetUrl();
+    if (typeof document !== "undefined") {
+      document.cookie = "cb_intended_url=; path=/; max-age=0;";
+    }
+
     const isAdmin = res.user?.role === "admin";
     setSuccessMessage(
       isAdmin
@@ -51,14 +88,17 @@ export function LoginForm({ onSuccess, concurrentReason }: LoginFormProps) {
         : "Student session verified. Redirecting..."
     );
 
+    // Keep loading true and trigger a full browser navigation
+    // This purges the Next.js client-side route cache, ensures HttpOnly cookie is attached,
+    // and eliminates loops where cached 307 redirects bounce back to /login.
     setTimeout(() => {
-      setLoading(false);
       if (onSuccess) {
+        setLoading(false);
         onSuccess();
       } else {
-        router.push(redirectTarget);
+        window.location.replace(finalTarget);
       }
-    }, 600);
+    }, 450);
   };
 
   return (
@@ -111,10 +151,11 @@ export function LoginForm({ onSuccess, concurrentReason }: LoginFormProps) {
           <input
             type="text"
             required
+            disabled={loading}
             value={formData.identifier}
             onChange={(e) => setFormData({ ...formData, identifier: e.target.value })}
             placeholder="CODEBITS, 9920336099, or email"
-            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-base)]/80 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]/50 transition-all font-sans"
+            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-base)]/80 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]/50 transition-all font-sans disabled:opacity-50"
           />
         </div>
       </div>
@@ -136,15 +177,17 @@ export function LoginForm({ onSuccess, concurrentReason }: LoginFormProps) {
           <input
             type={showPassword ? "text" : "password"}
             required
+            disabled={loading}
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             placeholder="Enter your security password"
-            className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-base)]/80 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]/50 transition-all font-sans"
+            className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-base)]/80 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]/50 transition-all font-sans disabled:opacity-50"
           />
           <button
             type="button"
+            disabled={loading}
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] focus:outline-none cursor-pointer p-1 transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] focus:outline-none cursor-pointer p-1 transition-colors disabled:opacity-50"
             title={showPassword ? "Hide password" : "Show password"}
           >
             {showPassword ? (
@@ -161,9 +204,10 @@ export function LoginForm({ onSuccess, concurrentReason }: LoginFormProps) {
         <label className="flex items-center space-x-2 cursor-pointer select-none">
           <input
             type="checkbox"
+            disabled={loading}
             checked={formData.rememberSession}
             onChange={(e) => setFormData({ ...formData, rememberSession: e.target.checked })}
-            className="w-3.5 h-3.5 rounded border border-[var(--border-subtle)] bg-[var(--bg-base)] text-[var(--brand-primary)] accent-[var(--brand-primary)] cursor-pointer"
+            className="w-3.5 h-3.5 rounded border border-[var(--border-subtle)] bg-[var(--bg-base)] text-[var(--brand-primary)] accent-[var(--brand-primary)] cursor-pointer disabled:opacity-50"
           />
           <span className="text-xs text-[var(--text-secondary)]">
             Remember me

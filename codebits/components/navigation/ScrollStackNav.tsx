@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   X,
@@ -10,6 +11,7 @@ import {
   BookOpen,
   Upload,
   LogIn,
+  LogOut,
   Compass,
   GraduationCap,
   Sparkles,
@@ -17,6 +19,8 @@ import {
 } from 'lucide-react'
 import ScrollStack, { ScrollStackItem, ScrollStackHandle } from '@/components/ui/ScrollStack'
 import { useTheme } from '@/components/theme/ThemeProvider'
+import { getCurrentUser, logoutUserApi } from '@/lib/auth'
+import { Profile } from '@/types/auth'
 
 export const TripleDashedIcon = ({
   className = 'w-5 h-5',
@@ -123,9 +127,11 @@ const navDeck = [
 ]
 
 export default function ScrollStackNav() {
+  const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
   const [isBtnHovered, setIsBtnHovered] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [user, setUser] = useState<Profile | null>(null)
   const scrollStackRef = useRef<ScrollStackHandle>(null)
 
   const { theme } = useTheme()
@@ -133,6 +139,10 @@ export default function ScrollStackNav() {
 
   useEffect(() => {
     setMounted(true)
+    setUser(getCurrentUser())
+    const handleAuth = () => setUser(getCurrentUser())
+    window.addEventListener('codebits-auth-change', handleAuth)
+    return () => window.removeEventListener('codebits-auth-change', handleAuth)
   }, [])
 
   useEffect(() => {
@@ -153,6 +163,19 @@ export default function ScrollStackNav() {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isOpen])
+
+  const currentNavDeck = navDeck.map((item) => {
+    if (item.href === '/login' && user) {
+      return {
+        ...item,
+        title: 'Logout',
+        desc: `Authenticated as ${user.full_name || 'Student'}. Tap to safely exit your session.`,
+        href: '#logout',
+        icon: LogOut,
+      }
+    }
+    return item
+  })
 
   return (
     <>
@@ -253,9 +276,10 @@ export default function ScrollStackNav() {
                       scaleEndPosition="2%"
                       useWindowScroll={false}
                     >
-                      {navDeck.map((item, idx) => {
+                      {currentNavDeck.map((item, idx) => {
                         const Icon = item.icon
                         const isPrimary = item.isPrimary
+                        const isLogout = item.href === '#logout'
 
                         return (
                           <ScrollStackItem key={item.title}>
@@ -270,9 +294,24 @@ export default function ScrollStackNav() {
                               className="w-full h-full"
                             >
                               <Link
-                                href={item.href}
-                                prefetch={true}
-                                onClick={() => setIsOpen(false)}
+                                href={
+                                  isLogout
+                                    ? '#'
+                                    : item.href === '/login' && pathname && pathname !== '/login'
+                                    ? `/login?redirect=${encodeURIComponent(pathname)}`
+                                    : item.href
+                                }
+                                prefetch={!isLogout}
+                                onClick={async (e) => {
+                                  if (isLogout) {
+                                    e.preventDefault()
+                                    setIsOpen(false)
+                                    await logoutUserApi()
+                                    window.location.replace('/login')
+                                    return
+                                  }
+                                  setIsOpen(false)
+                                }}
                                 className={`group relative flex flex-col justify-between h-[66vh] sm:h-[72vh] min-h-[420px] sm:min-h-[520px] max-h-[720px] w-full rounded-3xl p-6 sm:p-14 md:p-16 transition-[border-color,box-shadow,background-color] duration-200 cursor-pointer ${
                                   isDark
                                     ? isPrimary

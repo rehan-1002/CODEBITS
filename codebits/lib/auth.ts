@@ -156,9 +156,9 @@ export async function loginWithApi(
       setSession(data.user, rememberSession);
     }
     return { success: true, user: data.user };
-  } catch {
-    // Graceful fallback to mock authentication if server is unreachable
-    return authenticateUser(identifier, password, rememberSession);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unable to reach authentication server. Please check your connection.";
+    return { success: false, error: message };
   }
 }
 

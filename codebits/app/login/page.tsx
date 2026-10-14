@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { RegisterForm } from "@/components/auth/RegisterForm";
+import { getCurrentUser, clearSession, fetchCurrentAuthUser } from "@/lib/auth";
 
 function LoginContent() {
   const searchParams = useSearchParams();
@@ -28,6 +29,42 @@ function LoginContent() {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // Only auto-redirect if server confirms active authentication
+  useEffect(() => {
+    if (isConcurrent) {
+      clearSession();
+      return;
+    }
+    fetchCurrentAuthUser().then((user) => {
+      if (user) {
+        let raw = searchParams.get("redirect");
+        if (!raw && typeof window !== "undefined") {
+          raw = new URLSearchParams(window.location.search).get("redirect");
+        }
+        if (!raw && typeof document !== "undefined") {
+          const match = document.cookie.match(/(?:^|;\s*)cb_intended_url=([^;]*)/);
+          if (match && match[1]) raw = match[1];
+        }
+        let target = "/vault";
+        if (raw) {
+          try {
+            let decoded = decodeURIComponent(raw);
+            if (decoded.startsWith("%2F") || decoded.startsWith("%2f")) {
+              decoded = decodeURIComponent(decoded);
+            }
+            if (decoded.startsWith("/") && !decoded.startsWith("//") && !decoded.startsWith("/login")) {
+              target = decoded;
+            }
+          } catch {}
+        }
+        if (typeof document !== "undefined") {
+          document.cookie = "cb_intended_url=; path=/; max-age=0;";
+        }
+        window.location.replace(target);
+      }
+    });
+  }, [searchParams, isConcurrent]);
 
   const isRegister = mode === "register";
 
@@ -249,7 +286,7 @@ function LoginContent() {
                   exit={{ opacity: 0, x: -16 }}
                   transition={{ duration: 0.25 }}
                 >
-                  <RegisterForm onSuccess={() => setMode("login")} />
+                  <RegisterForm />
                 </motion.div>
               )}
             </AnimatePresence>

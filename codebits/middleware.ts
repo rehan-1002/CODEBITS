@@ -9,10 +9,16 @@ export function middleware(request: NextRequest) {
   if (pathname.startsWith('/viewer') || pathname.startsWith('/upload') || pathname.startsWith('/solver')) {
     const token = request.cookies.get('codebits_token')?.value;
     if (!token) {
-      const loginUrl = request.nextUrl.clone();
-      loginUrl.pathname = '/login';
-      loginUrl.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(loginUrl);
+      const fullPath = pathname + (request.nextUrl.search || '');
+      const loginUrl = new URL('/login', request.nextUrl.origin);
+      loginUrl.searchParams.set('redirect', fullPath);
+      const response = NextResponse.redirect(loginUrl);
+      response.cookies.set('cb_intended_url', fullPath, {
+        path: '/',
+        maxAge: 60 * 15, // 15 minutes
+        sameSite: 'lax',
+      });
+      return response;
     }
     return NextResponse.next();
   }

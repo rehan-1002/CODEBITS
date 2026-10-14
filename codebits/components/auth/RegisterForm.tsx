@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Lock, User, Mail, Phone, AlertCircle, ArrowRight, Eye, EyeOff, GraduationCap, CheckCircle2, Loader2 } from "lucide-react";
 import { RegisterFormData } from "@/types/auth";
 import { registerWithApi } from "@/lib/auth";
@@ -19,6 +20,24 @@ const DEPARTMENTS = [
 ];
 
 export function RegisterForm({ onSuccess }: RegisterFormProps) {
+  const searchParams = useSearchParams();
+  const rawRedirect = searchParams?.get("redirect");
+
+  let redirectTarget = "/vault";
+  if (rawRedirect) {
+    try {
+      let decoded = decodeURIComponent(rawRedirect);
+      if (decoded.startsWith("%2F") || decoded.startsWith("%2f")) {
+        decoded = decodeURIComponent(decoded);
+      }
+      if (decoded.startsWith("/") && !decoded.startsWith("//") && !decoded.startsWith("/login")) {
+        redirectTarget = decoded;
+      }
+    } catch {
+      redirectTarget = "/vault";
+    }
+  }
+
   const [formData, setFormData] = useState<RegisterFormData>({
     fullName: "",
     department: "COMPS",
@@ -70,17 +89,22 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
     setLoading(true);
 
     const res = await registerWithApi(formData);
-    setLoading(false);
 
     if (!res.success) {
+      setLoading(false);
       setError(res.error || "Registration failed. Please verify your details.");
       return;
     }
 
-    setSuccess("Account registered in MongoDB! Signing in...");
+    setSuccess("Account successfully created! Redirecting to academic vault...");
     setTimeout(() => {
-      if (onSuccess) onSuccess();
-    }, 1200);
+      if (onSuccess) {
+        setLoading(false);
+        onSuccess();
+      } else {
+        window.location.replace(redirectTarget);
+      }
+    }, 600);
   };
 
   return (
@@ -111,10 +135,11 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
           <input
             type="text"
             required
+            disabled={loading}
             value={formData.fullName}
             onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
             placeholder="Enter your full name"
-            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-base)]/80 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]/50 transition-all font-sans"
+            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-base)]/80 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]/50 transition-all font-sans disabled:opacity-50"
           />
         </div>
       </div>
@@ -131,8 +156,9 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
               <button
                 key={dept.id}
                 type="button"
+                disabled={loading}
                 onClick={() => setFormData({ ...formData, department: dept.id })}
-                className={`py-1.5 px-2 rounded-md border text-center transition-all cursor-pointer ${
+                className={`py-1.5 px-2 rounded-md border text-center transition-all cursor-pointer disabled:opacity-50 ${
                   isSelected
                     ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] font-semibold shadow-sm shadow-[var(--brand-primary)]/10"
                     : "border-[var(--border-subtle)] bg-[var(--bg-base)] text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]"
@@ -158,10 +184,11 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
           <input
             type="email"
             required
+            disabled={loading}
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             placeholder="name@example.com"
-            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-base)]/80 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]/50 transition-all font-sans"
+            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-base)]/80 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]/50 transition-all font-sans disabled:opacity-50"
           />
         </div>
       </div>
@@ -178,10 +205,11 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
           <input
             type="tel"
             required
+            disabled={loading}
             value={formData.phone}
             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
             placeholder="10-digit number (e.g. 9876543210)"
-            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-base)]/80 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]/50 transition-all font-mono"
+            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-base)]/80 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]/50 transition-all font-mono disabled:opacity-50"
           />
         </div>
       </div>
@@ -199,15 +227,17 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
             <input
               type={showPassword ? "text" : "password"}
               required
+              disabled={loading}
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               placeholder="Min 6 chars"
-              className="w-full pl-8 pr-8 py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-base)]/80 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]/50 transition-all font-sans"
+              className="w-full pl-8 pr-8 py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-base)]/80 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]/50 transition-all font-sans disabled:opacity-50"
             />
             <button
               type="button"
+              disabled={loading}
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer p-0.5"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer p-0.5 disabled:opacity-50"
             >
               {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
             </button>
@@ -225,15 +255,17 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
             <input
               type={showConfirmPassword ? "text" : "password"}
               required
+              disabled={loading}
               value={formData.confirmPassword}
               onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
               placeholder="Re-enter password"
-              className="w-full pl-8 pr-8 py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-base)]/80 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]/50 transition-all font-sans"
+              className="w-full pl-8 pr-8 py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-base)]/80 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)]/50 transition-all font-sans disabled:opacity-50"
             />
             <button
               type="button"
+              disabled={loading}
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer p-0.5"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer p-0.5 disabled:opacity-50"
             >
               {showConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
             </button>
