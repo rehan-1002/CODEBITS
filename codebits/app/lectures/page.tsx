@@ -86,22 +86,33 @@ export default function LecturesPage() {
     <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-12">
         {/* Header */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="px-3 py-1 rounded-full bg-[var(--brand-primary)]/15 border border-[var(--brand-primary)]/35 text-[var(--brand-primary)] font-mono text-xs uppercase tracking-wider font-semibold">
-              OFFICIAL VIDEO ARCHIVE
-            </span>
-            <span className="text-xs font-mono text-[var(--text-muted)]">
-              MUMBAI UNIVERSITY SYLLABUS
-            </span>
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 rounded-full bg-[var(--brand-primary)]/15 border border-[var(--brand-primary)]/35 text-[var(--brand-primary)] font-mono text-xs uppercase tracking-wider font-semibold">
+                OFFICIAL VIDEO ARCHIVE
+              </span>
+              <span className="text-xs font-mono text-[var(--text-muted)]">
+                MUMBAI UNIVERSITY SYLLABUS
+              </span>
+            </div>
+
+            <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-[var(--text-primary)]">
+              Lectures &amp; Live Streams
+            </h1>
+            <p className="text-sm text-[var(--text-secondary)] max-w-2xl leading-relaxed">
+              Curated video lectures, formula marathons, and live revision broadcasts by Prof. Rohit Falake (M.R.F) and verified faculty, hosted on the official CodeBits YouTube channel.
+            </p>
           </div>
 
-          <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-[var(--text-primary)]">
-            Lectures &amp; Live Streams
-          </h1>
-          <p className="text-sm text-[var(--text-secondary)] max-w-2xl leading-relaxed">
-            Curated video lectures, formula marathons, and live revision broadcasts by Prof. Rohit Falake (M.R.F) and verified faculty, hosted on the official CodeBits YouTube channel.
-          </p>
+          <div className="flex items-center gap-3 shrink-0">
+            <Link
+              href="/admin/lectures"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[var(--brand-primary)]/30 bg-[var(--brand-primary)]/10 hover:bg-[var(--brand-primary)] hover:text-black text-xs font-mono font-semibold text-[var(--brand-primary)] transition-all shadow-sm"
+            >
+              <span>+ Add Lectures (Admin)</span>
+            </Link>
+          </div>
         </div>
 
         {/* 
