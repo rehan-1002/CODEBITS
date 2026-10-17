@@ -26,9 +26,12 @@ import {
   ChevronRight,
   Maximize2,
   Trash2,
+  ArrowRightLeft,
+  Download,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { SolutionRenderer } from "@/components/ai/SolutionRenderer";
+import { MathRenderer } from "@/components/ai/MathRenderer";
 import { QuestionListSkeleton, SolutionTerminalSkeleton } from "@/components/ai/SolverSkeletons";
 
 interface ExtractedQuestion {
@@ -63,6 +66,10 @@ export default function QuestionBankSolverPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string>("");
+  const [uploadedFileObj, setUploadedFileObj] = useState<File | null>(null);
+  const [targetFormat, setTargetFormat] = useState<"docx" | "pdf">("docx");
+  const [isConvertingDoc, setIsConvertingDoc] = useState(false);
+  const [conversionSuccessMsg, setConversionSuccessMsg] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [paperTitle, setPaperTitle] = useState("");
   const [subject, setSubject] = useState("");
@@ -147,7 +154,18 @@ export default function QuestionBankSolverPage() {
   const handleFileUpload = async (file: File) => {
     if (!file) return;
     setErrorNotice(null);
+    setConversionSuccessMsg(null);
     setFileName(file.name);
+    setUploadedFileObj(file);
+
+    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    const isDocx = file.name.toLowerCase().endsWith(".docx");
+
+    if (isPdf) {
+      setTargetFormat("docx");
+    } else if (isDocx) {
+      setTargetFormat("pdf");
+    }
 
     try {
       setIsScanning(true);
@@ -159,7 +177,7 @@ export default function QuestionBankSolverPage() {
         base64 = processed.base64;
         mimeType = processed.mimeType;
         setFilePreview(base64);
-      } else if (file.type === "application/pdf") {
+      } else if (isPdf) {
         // PDF read as base64
         base64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
@@ -168,8 +186,40 @@ export default function QuestionBankSolverPage() {
           reader.readAsDataURL(file);
         });
         setFilePreview("/file.svg");
+      } else if (isDocx) {
+        setFilePreview("/file.svg");
+        try {
+          const ab = await file.arrayBuffer();
+          const mammoth = await import("mammoth");
+          const extracted = await mammoth.extractRawText({ arrayBuffer: ab });
+          const rawText = extracted.value || "";
+          if (rawText.trim()) {
+            const response = await fetch("/api/ai/extract", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                rawText,
+                fileName: file.name,
+              }),
+            });
+            const data = await response.json();
+            if (response.ok) {
+              setPaperTitle(data.paperTitle);
+              setSubject(data.subject);
+              setQuestions(data.questions);
+              if (data.questions.length > 0) {
+                setSelectedQuestion(data.questions[0]);
+                setSelectedMarks(data.questions[0].defaultMarks || 5);
+              }
+            }
+          }
+        } catch (docxErr) {
+          console.warn("Could not extract questions from docx:", docxErr);
+        }
+        setIsScanning(false);
+        return;
       } else {
-        throw new Error("Unsupported file type. Please upload a PDF or image (PNG, JPG, WEBP).");
+        throw new Error("Unsupported file type. Please upload a PDF, Word document (.docx), or image.");
       }
 
       // Execute AI OCR Scan
@@ -204,6 +254,50 @@ export default function QuestionBankSolverPage() {
       setErrorNotice(cleanMsg);
     } finally {
       setIsScanning(false);
+    }
+  };
+
+  // Convert uploaded PDF to DOCX or DOCX to PDF
+  const handleInlineConvert = async () => {
+    if (!uploadedFileObj) return;
+    setIsConvertingDoc(true);
+    setConversionSuccessMsg(null);
+    setErrorNotice(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", uploadedFileObj);
+      formData.append("targetFormat", targetFormat);
+
+      const res = await fetch("/api/converter", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to convert document.");
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const baseName = uploadedFileObj.name.substring(0, uploadedFileObj.name.lastIndexOf(".")) || uploadedFileObj.name;
+      const finalName = `${baseName}.${targetFormat}`;
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = finalName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      setConversionSuccessMsg(`Downloaded ${finalName}`);
+      setTimeout(() => setConversionSuccessMsg(null), 5000);
+    } catch (err: any) {
+      console.error("Inline conversion error:", err);
+      setErrorNotice(err.message || "Failed to convert document.");
+    } finally {
+      setIsConvertingDoc(false);
     }
   };
 
@@ -347,9 +441,6 @@ export default function QuestionBankSolverPage() {
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-[var(--text-primary)]">
             Question Bank <span className="text-[var(--brand-primary)]">Solver</span>
           </h1>
-          <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-1 max-w-2xl">
-            Upload handwritten notes, question papers, or PYQ PDFs to generate verified Mumbai University step-by-step solutions.
-          </p>
         </div>
 
         {/* Global Error Banner */}
@@ -398,7 +489,7 @@ export default function QuestionBankSolverPage() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*,application/pdf"
+                accept="image/*,application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
@@ -410,10 +501,10 @@ export default function QuestionBankSolverPage() {
                 <div className="py-6 flex flex-col items-center justify-center space-y-3">
                   <RefreshCw className="w-8 h-8 text-[var(--brand-primary)] animate-spin" />
                   <p className="text-xs font-mono font-bold text-[var(--brand-primary)] tracking-wide">
-                    SCANNING HANDWRITTEN & PRINTED PAGES...
+                    SCANNING DOCUMENT...
                   </p>
                   <p className="text-[11px] text-[var(--text-muted)] font-mono">
-                    Deciphering equations, diagrams & Mumbai University questions
+                    Deciphering equations, diagrams & questions
                   </p>
                 </div>
               ) : filePreview && !filePreview.endsWith(".svg") ? (
@@ -431,6 +522,23 @@ export default function QuestionBankSolverPage() {
                     <span className="text-[var(--brand-primary)] font-bold">CLICK TO CHANGE</span>
                   </div>
                 </div>
+              ) : uploadedFileObj ? (
+                <div className="py-4 space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-[var(--brand-primary)]/10 border border-[var(--brand-primary)]/30 text-[var(--brand-primary)] flex items-center justify-center mx-auto">
+                    <FileText className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-[var(--text-primary)] truncate max-w-xs mx-auto">
+                      {fileName}
+                    </p>
+                    <p className="text-xs text-[var(--text-secondary)] mt-0.5 font-mono">
+                      {(uploadedFileObj.size / 1024).toFixed(1)} KB • Document Ready
+                    </p>
+                  </div>
+                  <div className="text-xs font-mono text-[var(--brand-primary)] font-bold">
+                    CLICK TO CHANGE FILE
+                  </div>
+                </div>
               ) : (
                 <div className="py-4 space-y-3">
                   <div className="w-12 h-12 rounded-2xl bg-[var(--brand-primary)]/10 border border-[var(--brand-primary)]/30 text-[var(--brand-primary)] flex items-center justify-center mx-auto transition-transform group-hover:scale-110">
@@ -445,12 +553,67 @@ export default function QuestionBankSolverPage() {
                     </p>
                   </div>
                   <div className="inline-flex items-center space-x-2 text-[10px] font-mono text-[var(--text-muted)] bg-[var(--surface-elevated)] px-2.5 py-1 rounded-full border border-[var(--border-subtle)]">
-                    <span>PDF • PNG • JPG • WEBP</span>
+                    <span>PDF • DOCX • PNG • JPG • WEBP</span>
                     <span>• Auto Client-Compressed</span>
                   </div>
                 </div>
               )}
             </div>
+
+            {/* Inline PDF ⇄ Word Converter Widget in AI Solver */}
+            {uploadedFileObj && (uploadedFileObj.name.toLowerCase().endsWith(".pdf") || uploadedFileObj.name.toLowerCase().endsWith(".docx")) && (
+              <div className="rounded-2xl border border-[var(--brand-primary)]/40 bg-[var(--surface-base)] p-4 flex flex-col gap-3 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] flex items-center justify-center shrink-0">
+                      <ArrowRightLeft className="w-4 h-4" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono font-bold text-[var(--text-primary)] uppercase">
+                        Convert to
+                      </span>
+                      <select
+                        value={targetFormat}
+                        onChange={(e) => setTargetFormat(e.target.value as "docx" | "pdf")}
+                        className="px-2.5 py-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-primary)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--brand-primary)] cursor-pointer"
+                      >
+                        {uploadedFileObj.name.toLowerCase().endsWith(".pdf") ? (
+                          <option value="docx">.docx (Word Document)</option>
+                        ) : (
+                          <option value="pdf">.pdf (PDF Document)</option>
+                        )}
+                      </select>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleInlineConvert}
+                    disabled={isConvertingDoc}
+                    className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/90 text-black text-xs font-mono font-bold transition-all shadow-sm active:scale-95 disabled:opacity-50 cursor-pointer self-start sm:self-auto"
+                  >
+                    {isConvertingDoc ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Converting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Convert &amp; Download</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {conversionSuccessMsg && (
+                  <div className="text-xs font-mono text-emerald-400 font-bold flex items-center gap-1.5 pt-1 border-t border-[var(--border-subtle)]">
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>{conversionSuccessMsg}</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Extracted Questions Panel */}
             <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-base)] backdrop-blur-xl p-4 sm:p-5 flex flex-col gap-3">
@@ -586,9 +749,9 @@ export default function QuestionBankSolverPage() {
                             </div>
                           </div>
                         ) : (
-                          <p className="text-xs text-[var(--text-primary)] leading-relaxed font-sans line-clamp-3">
-                            {q.text}
-                          </p>
+                          <div className="text-xs text-[var(--text-primary)] leading-relaxed font-sans line-clamp-3">
+                            <MathRenderer text={q.text} />
+                          </div>
                         )}
 
                         {/* Diagram badge if figure is detected */}
@@ -669,9 +832,9 @@ export default function QuestionBankSolverPage() {
               {selectedQuestion ? (
                 <div className="space-y-4">
                   <div className="p-3.5 rounded-xl bg-[var(--surface-elevated)] border border-[var(--border-subtle)]">
-                    <p className="text-xs sm:text-sm text-[var(--text-primary)] leading-relaxed font-sans">
-                      {selectedQuestion.text}
-                    </p>
+                    <div className="text-xs sm:text-sm text-[var(--text-primary)] leading-relaxed font-sans">
+                      <MathRenderer text={selectedQuestion.text} />
+                    </div>
                   </div>
 
                   {/* Detected Diagram / Figure Structure */}

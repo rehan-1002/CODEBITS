@@ -81,22 +81,11 @@ function JuniorCollegeContent() {
   return (
     <div className="w-full min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] flex flex-col">
       {/* Top Hero Section */}
-      <section className="pt-8 sm:pt-14 pb-4 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
-        {/* Institutional Status Badge */}
-        <div className="flex items-center gap-2 mb-3">
-          <span className="w-2 h-2 rounded-full bg-[var(--brand-primary)]" />
-          <span className="font-mono text-xs uppercase tracking-widest text-[var(--brand-primary)] font-bold">
-            Academic Year 2026-27 · Entrance &amp; CAP Repository
-          </span>
-        </div>
-
+      <section className="pt-8 sm:pt-12 pb-4 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         {/* Headline */}
         <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-[var(--text-primary)] uppercase">
-          11th &amp; 12th Academic Suite
+          11th &amp; 12th
         </h1>
-        <p className="text-sm sm:text-base font-mono text-[var(--text-secondary)] mt-2 max-w-3xl leading-relaxed">
-          Centralized engineering entrance intelligence for 11th, 12th HSC science, and CET/JEE aspirants. Grounded in official Maharashtra State CET Cell 2025-26 cutoff archives and verified Fee Regulating Authority (FRA) data.
-        </p>
       </section>
 
       {/* Entrance Exams Parquee Ticker */}

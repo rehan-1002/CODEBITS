@@ -117,17 +117,9 @@ export function DocumentsTab() {
       {/* Advisory Header */}
       <div className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-base)] p-5 sm:p-7 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-[var(--border-subtle)]">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[var(--brand-primary)]" />
-              <span className="font-mono text-xs uppercase tracking-wider text-[var(--text-secondary)]">
-                Scrutiny Center Verification Protocol
-              </span>
-            </div>
-            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)] mt-1">
-              Documents Checklist for CAP 2026-27
-            </h2>
-          </div>
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+            Documents Checklist
+          </h2>
 
           <div className="flex items-center gap-2 self-start sm:self-auto">
             <span className="text-xs font-mono text-[var(--brand-primary)] px-3 py-1.5 rounded-lg bg-[var(--brand-primary)]/10 border border-[var(--brand-primary)]/30 font-bold">

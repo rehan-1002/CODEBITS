@@ -175,18 +175,9 @@ export function ReservationsTab() {
     <div className="w-full flex flex-col gap-8">
       {/* 30% Ladies Reservation Spotlight Card */}
       <div className="w-full rounded-xl border border-[var(--brand-primary)]/40 bg-[var(--surface-base)] p-5 sm:p-7 shadow-sm">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[var(--brand-primary)]" />
-          <span className="font-mono text-xs uppercase tracking-wider text-[var(--brand-primary)] font-bold">
-            Statutory Horizontal Quota
-          </span>
-        </div>
-        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)] mt-1">
-          30% Female Horizontal Reservation (Ladies Quota)
+        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+          30% Ladies Reservation
         </h2>
-        <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-2 leading-relaxed font-mono">
-          Governed by Government Resolution No. GEC-1000/(123/2000)/Tech.Edu.-1 dated 17th April 2000. In all engineering colleges across Maharashtra, 30% of seats in each category (Open, OBC, SC, ST, etc.) are horizontally earmarked for female candidates.
-        </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mt-5 p-4 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-base)] text-xs font-mono">
           <div>

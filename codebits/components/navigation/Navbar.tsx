@@ -14,6 +14,15 @@ interface NavbarProps {
   onOpenSearch?: () => void
 }
 
+const NAV_LINKS = [
+  { label: "Home", href: "/?home=1" },
+  { label: "11th & 12th", href: "/11th-12th" },
+  { label: "Vault", href: "/vault" },
+  { label: "AI Solver", href: "/solver" },
+  { label: "Converter", href: "/converter" },
+  { label: "About", href: "/about" },
+];
+
 export default function Navbar({ onOpenSearch }: NavbarProps = {}) {
   const [user, setUser] = useState<Profile | null>(null)
 
@@ -57,8 +66,8 @@ export default function Navbar({ onOpenSearch }: NavbarProps = {}) {
         </Link>
 
         {/* Center: Quick Nav with Random Letter Swap Interaction */}
-        <div className="hidden md:flex items-center justify-center flex-1 mx-6">
-          <RandomLetterSwapNav />
+        <div className="hidden md:flex items-center justify-center flex-1 mx-4 lg:mx-6">
+          <RandomLetterSwapNav links={NAV_LINKS} />
         </div>
 
         {/* Right Actions: Theme Toggler, Admin Badge & Stacked Navigation Trigger */}

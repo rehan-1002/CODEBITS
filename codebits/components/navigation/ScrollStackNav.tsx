@@ -16,6 +16,7 @@ import {
   GraduationCap,
   Sparkles,
   SlidersHorizontal,
+  ArrowRightLeft,
 } from 'lucide-react'
 import ScrollStack, { ScrollStackItem, ScrollStackHandle } from '@/components/ui/ScrollStack'
 import { useTheme } from '@/components/theme/ThemeProvider'
@@ -102,6 +103,14 @@ const navDeck = [
   },
   {
     number: '05',
+    title: 'Document Converter',
+    desc: 'Instant bidirectional conversion between PDF and Word (.docx) documents.',
+    href: '/converter',
+    icon: ArrowRightLeft,
+    isPrimary: true,
+  },
+  {
+    number: '06',
     title: 'About Us',
     desc: 'Institutional mentorship, engineering faculty directory, centers, and student placement records.',
     href: '/about',
@@ -109,7 +118,7 @@ const navDeck = [
     isPrimary: false,
   },
   {
-    number: '06',
+    number: '07',
     title: 'Community Upload',
     desc: 'Contribute exam papers, solutions, and module notes for peer moderation.',
     href: '/upload',
@@ -117,7 +126,7 @@ const navDeck = [
     isPrimary: false,
   },
   {
-    number: '07',
+    number: '08',
     title: 'Login',
     desc: 'Secure student portal with active session protection and submission tracking.',
     href: '/login',

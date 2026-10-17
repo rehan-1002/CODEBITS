@@ -186,13 +186,10 @@ function VaultContent() {
 
       {/* Vault Title Bar */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-[var(--border-subtle)]">
-        <div className="space-y-1.5">
+        <div>
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-[var(--text-primary)]">
             Mumbai University Engineering Catalog
           </h1>
-          <p className="text-xs sm:text-sm text-[var(--text-secondary)] max-w-2xl font-sans">
-            Curated archive of previous-year question papers (PYQs), faculty course notes, and solutions across semesters 1–8.
-          </p>
         </div>
 
         <AntiMetalButton

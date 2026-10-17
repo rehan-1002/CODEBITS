@@ -46,18 +46,9 @@ export function EligibilityTab() {
     <div className="w-full flex flex-col gap-8 max-w-4xl mx-auto">
       {/* Header Banner */}
       <div className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-base)] p-5 sm:p-7 shadow-sm">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[var(--brand-primary)]" />
-          <span className="font-mono text-xs uppercase tracking-wider text-[var(--text-secondary)]">
-            Statutory Rule Compliance
-          </span>
-        </div>
-        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)] mt-1">
-          HSC PCM Eligibility Calculator (CAP 2026-27)
+        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+          PCM Eligibility Calculator
         </h2>
-        <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-1.5 max-w-2xl font-mono">
-          State CET Cell Rule: Physics &amp; Mathematics are mandatory. Chemistry may be replaced by vocational / technical subjects.
-        </p>
 
         {/* Category Threshold Switcher */}
         <div className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
