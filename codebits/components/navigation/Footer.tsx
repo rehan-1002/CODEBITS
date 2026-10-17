@@ -140,9 +140,15 @@ export function Footer() {
         </div>
 
         {/* Bottom Legal / Disclaimer Bar */}
-        <div className="mt-12 pt-6 border-t border-black/15 flex flex-col sm:flex-row items-center justify-between text-[11px] text-black/75 font-mono font-medium">
+        <div className="mt-12 pt-6 border-t border-black/15 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-black/80 font-mono font-medium">
           <div>
             &copy; {new Date().getFullYear()} CODEBITS. ALL RIGHTS RESERVED.
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5 font-semibold text-black tracking-wide">
+            <span>DEVELOPED &amp; MANAGED BY</span>
+            <span className="font-bold underline decoration-black/40 underline-offset-2">REHAN ANSARI</span>
+            <span>&amp;</span>
+            <span className="font-bold">TEAM CODEBITS</span>
           </div>
         </div>
       </div>
