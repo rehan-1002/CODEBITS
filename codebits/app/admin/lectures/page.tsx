@@ -17,7 +17,7 @@ import {
   Lock,
   LogIn,
 } from "lucide-react";
-import { extractYouTubeId, getYouTubeThumbnail } from "@/models/Lecture";
+import { extractYouTubeId, getYouTubeThumbnail } from "@/lib/youtube";
 import { getCurrentUser, loginWithApi, fetchCurrentAuthUser } from "@/lib/auth";
 import { Profile } from "@/types/auth";
 
