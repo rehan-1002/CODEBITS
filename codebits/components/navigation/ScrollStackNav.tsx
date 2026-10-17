@@ -18,10 +18,11 @@ import {
   SlidersHorizontal,
   ArrowRightLeft,
   Video,
+  Radio,
 } from 'lucide-react'
 import ScrollStack, { ScrollStackItem, ScrollStackHandle } from '@/components/ui/ScrollStack'
 import { useTheme } from '@/components/theme/ThemeProvider'
-import { getCurrentUser, logoutUserApi } from '@/lib/auth'
+import { getCurrentUser, logoutUserApi, fetchCurrentAuthUser } from '@/lib/auth'
 import { Profile } from '@/types/auth'
 
 export const TripleDashedIcon = ({
@@ -157,7 +158,10 @@ export default function ScrollStackNav() {
 
   useEffect(() => {
     setMounted(true)
-    setUser(getCurrentUser())
+    fetchCurrentAuthUser().then((u) => {
+      if (u) setUser(u)
+      else setUser(getCurrentUser())
+    })
     const handleAuth = () => setUser(getCurrentUser())
     window.addEventListener('codebits-auth-change', handleAuth)
     return () => window.removeEventListener('codebits-auth-change', handleAuth)
@@ -182,18 +186,34 @@ export default function ScrollStackNav() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isOpen])
 
-  const currentNavDeck = navDeck.map((item) => {
+  let currentNavDeck = navDeck.map((item) => {
     if (item.href === '/login' && user) {
       return {
         ...item,
         title: 'Logout',
-        desc: `Authenticated as ${user.full_name || 'Student'}. Tap to safely exit your session.`,
+        desc: `Authenticated as ${user.full_name || 'Admin'}. Tap to safely exit your session.`,
         href: '#logout',
         icon: LogOut,
       }
     }
     return item
   })
+
+  // Only display Broadcast Console in ScrollStackNav if user is an authenticated Admin
+  if (user?.role === 'admin') {
+    currentNavDeck = [
+      ...currentNavDeck.slice(0, 6),
+      {
+        number: '06B',
+        title: 'Broadcast Console',
+        desc: 'Add YouTube videos and toggle live revision broadcasts on CodeBits (Admin Only).',
+        href: '/admin/lectures',
+        icon: Radio,
+        isPrimary: true,
+      },
+      ...currentNavDeck.slice(6),
+    ]
+  }
 
   return (
     <>

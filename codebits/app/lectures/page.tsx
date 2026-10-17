@@ -14,6 +14,9 @@ import {
   Sparkles,
 } from "lucide-react";
 
+import { getCurrentUser, fetchCurrentAuthUser } from "@/lib/auth";
+import { Profile } from "@/types/auth";
+
 function YouTubeIcon({ className = "w-4 h-4" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -40,9 +43,21 @@ const BRANCHES = ["ALL", "COMPS", "IT", "AI-DS", "EXTC", "MECH", "CIVIL"];
 const SEMESTERS = ["ALL", "1", "2", "3", "4", "5", "6", "7", "8"];
 
 export default function LecturesPage() {
+  const [user, setUser] = useState<Profile | null>(null);
   const [lectures, setLectures] = useState<LectureItem[]>([]);
   const [liveSession, setLiveSession] = useState<LectureItem | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Authentication check
+  useEffect(() => {
+    fetchCurrentAuthUser().then((u) => {
+      if (u) setUser(u);
+      else setUser(getCurrentUser());
+    });
+    const handleAuth = () => setUser(getCurrentUser());
+    window.addEventListener("codebits-auth-change", handleAuth);
+    return () => window.removeEventListener("codebits-auth-change", handleAuth);
+  }, []);
 
   // Filters
   const [selectedBranch, setSelectedBranch] = useState("ALL");
@@ -105,14 +120,17 @@ export default function LecturesPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
-            <Link
-              href="/admin/lectures"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[var(--brand-primary)]/30 bg-[var(--brand-primary)]/10 hover:bg-[var(--brand-primary)] hover:text-black text-xs font-mono font-semibold text-[var(--brand-primary)] transition-all shadow-sm"
-            >
-              <span>+ Add Lectures (Admin)</span>
-            </Link>
-          </div>
+          {user?.role === "admin" && (
+            <div className="flex items-center gap-3 shrink-0">
+              <Link
+                href="/admin/lectures"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-500/40 bg-red-500/15 hover:bg-red-500 hover:text-white text-xs font-mono font-bold text-red-500 dark:text-red-400 transition-all shadow-md group"
+              >
+                <Radio className="w-3.5 h-3.5 animate-pulse text-red-500 group-hover:text-white" />
+                <span>+ Broadcast Console (Admin)</span>
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* 

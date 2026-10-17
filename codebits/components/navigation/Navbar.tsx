@@ -76,13 +76,23 @@ export default function Navbar({ onOpenSearch }: NavbarProps = {}) {
           {user ? (
             <div className="flex items-center space-x-2">
               {user.role === 'admin' ? (
-                <Link
-                  href="/vault?tab=moderation"
-                  className="hidden sm:inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg border border-amber-400/40 bg-amber-400/10 text-amber-400 text-xs font-mono font-bold hover:bg-amber-400/20 transition-colors"
-                  title="Review pending student contributions"
-                >
-                  <span>REVIEW QUEUE</span>
-                </Link>
+                <>
+                  <Link
+                    href="/admin/lectures"
+                    className="hidden sm:inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border border-red-500/40 bg-red-500/10 text-red-500 dark:text-red-400 text-xs font-mono font-bold hover:bg-red-500/20 transition-colors"
+                    title="Broadcast YouTube lectures & live streams"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                    <span>BROADCAST</span>
+                  </Link>
+                  <Link
+                    href="/vault?tab=moderation"
+                    className="hidden sm:inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg border border-amber-400/40 bg-amber-400/10 text-amber-400 text-xs font-mono font-bold hover:bg-amber-400/20 transition-colors"
+                    title="Review pending student contributions"
+                  >
+                    <span>REVIEW QUEUE</span>
+                  </Link>
+                </>
               ) : null}
 
               <div className="flex items-center space-x-2 px-2.5 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-primary)] text-xs font-mono shadow-sm">
