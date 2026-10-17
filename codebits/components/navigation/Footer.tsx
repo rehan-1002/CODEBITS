@@ -84,6 +84,14 @@ export function Footer() {
               </li>
               <li>
                 <Link
+                  href="/lectures"
+                  className="text-black/80 hover:text-black transition-colors hover:underline"
+                >
+                  Video Lectures &amp; Live Streams
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/upload"
                   className="text-black/80 hover:text-black transition-colors hover:underline"
                 >

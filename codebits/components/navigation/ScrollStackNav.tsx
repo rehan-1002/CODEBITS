@@ -17,6 +17,7 @@ import {
   Sparkles,
   SlidersHorizontal,
   ArrowRightLeft,
+  Video,
 } from 'lucide-react'
 import ScrollStack, { ScrollStackItem, ScrollStackHandle } from '@/components/ui/ScrollStack'
 import { useTheme } from '@/components/theme/ThemeProvider'
@@ -111,6 +112,14 @@ const navDeck = [
   },
   {
     number: '06',
+    title: 'Lectures & Live',
+    desc: 'Watch live broadcasts and curated YouTube video lectures by faculty.',
+    href: '/lectures',
+    icon: Video,
+    isPrimary: true,
+  },
+  {
+    number: '07',
     title: 'About Us',
     desc: 'Institutional mentorship, engineering faculty directory, centers, and student placement records.',
     href: '/about',
@@ -118,7 +127,7 @@ const navDeck = [
     isPrimary: false,
   },
   {
-    number: '07',
+    number: '08',
     title: 'Community Upload',
     desc: 'Contribute exam papers, solutions, and module notes for peer moderation.',
     href: '/upload',
@@ -126,7 +135,7 @@ const navDeck = [
     isPrimary: false,
   },
   {
-    number: '08',
+    number: '09',
     title: 'Login',
     desc: 'Secure student portal with active session protection and submission tracking.',
     href: '/login',

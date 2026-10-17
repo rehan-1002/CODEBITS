@@ -20,6 +20,7 @@ const NAV_LINKS = [
   { label: "Vault", href: "/vault" },
   { label: "AI Solver", href: "/solver" },
   { label: "Converter", href: "/converter" },
+  { label: "Lectures", href: "/lectures" },
   { label: "About", href: "/about" },
 ];
 
