@@ -11,6 +11,7 @@ import {
   BorderStyle,
   ShadingType,
   AlignmentType,
+  BuilderElement,
 } from "docx";
 
 // ==========================================
@@ -389,89 +390,314 @@ function replaceFractions(text: string): string {
 }
 
 // ==========================================
-// 4. LATEX MATRIX TO WORD EQUATION CONVERTER
+// 4. NATIVE WORD OMML MATRIX & EQUATION BUILDERS
 // ==========================================
-export function convertLatexMatrixToWordMatrix(raw: string): string {
-  if (!raw) return "";
 
-  // Captures \begin{matrix}, \begin{bmatrix}, \begin{pmatrix}, \begin{vmatrix}, \begin{Vmatrix}, \begin{Bmatrix}, \begin{array}{...}
-  const matrixRegex = /\\begin\{(matrix|bmatrix|pmatrix|vmatrix|Vmatrix|Bmatrix|array)\}(?:\{[lcr| ]+\})?([\s\S]*?)\\end\{\1\}/g;
+export function cleanMathSymbolsForMatrixCell(cell: string): string {
+  if (!cell) return "";
+  let s = repairMojibakeAndHtmlEntities(cell);
+  s = replaceFractions(s);
+  s = replaceBalancedCommand(s, "sqrt", (content) => `√(${cleanMathSymbolsForMatrixCell(content)})`);
+  s = replaceBalancedCommand(s, "cbrt", (content) => `∛(${cleanMathSymbolsForMatrixCell(content)})`);
+  s = replaceBalancedCommand(s, "vec", (content) => `${cleanMathSymbolsForMatrixCell(content)}⃗`);
+  s = replaceBalancedCommand(s, "bar", (content) => `${cleanMathSymbolsForMatrixCell(content)}̄`);
+  s = replaceBalancedCommand(s, "hat", (content) => `${cleanMathSymbolsForMatrixCell(content)}̂`);
 
-  return raw.replace(matrixRegex, (_match, matrixType, content) => {
-    // 1. Split rows by double backslash or \cr (or newline if rows don't have \\)
-    let rawRows = content.split(/(?:\\\\|\\cr)/);
+  s = s
+    .replace(/\\alpha(?![a-zA-Z])/g, "α")
+    .replace(/\\beta(?![a-zA-Z])/g, "β")
+    .replace(/\\gamma(?![a-zA-Z])/g, "γ")
+    .replace(/\\delta(?![a-zA-Z])/g, "δ")
+    .replace(/\\epsilon(?![a-zA-Z])|\\varepsilon(?![a-zA-Z])/g, "ε")
+    .replace(/\\zeta(?![a-zA-Z])/g, "ζ")
+    .replace(/\\eta(?![a-zA-Z])/g, "η")
+    .replace(/\\theta(?![a-zA-Z])|\\vartheta(?![a-zA-Z])/g, "θ")
+    .replace(/\\lambda(?![a-zA-Z])/g, "λ")
+    .replace(/\\mu(?![a-zA-Z])/g, "μ")
+    .replace(/\\pi(?![a-zA-Z])|\\varpi(?![a-zA-Z])/g, "π")
+    .replace(/\\rho(?![a-zA-Z])|\\varrho(?![a-zA-Z])/g, "ρ")
+    .replace(/\\sigma(?![a-zA-Z])|\\varsigma(?![a-zA-Z])/g, "σ")
+    .replace(/\\tau(?![a-zA-Z])/g, "τ")
+    .replace(/\\phi(?![a-zA-Z])|\\varphi(?![a-zA-Z])/g, "φ")
+    .replace(/\\omega(?![a-zA-Z])/g, "ω")
+    .replace(/\\Delta(?![a-zA-Z])/g, "Δ")
+    .replace(/\\Lambda(?![a-zA-Z])/g, "Λ")
+    .replace(/\\Sigma(?![a-zA-Z])/g, "Σ")
+    .replace(/\\Omega(?![a-zA-Z])/g, "Ω");
 
-    // If rows weren't split by \\, check if lines have &
-    if (rawRows.length === 1 && content.includes("\n")) {
-      rawRows = content.split(/\r?\n/).filter((l: string) => l.trim().length > 0);
-    }
+  s = s.replace(/\^\{([^}]+)\}/g, (_, content) => toSuperscript(content));
+  s = s.replace(/\^([0-9a-zA-Z+\-()])/g, (_, char) => toSuperscript(char));
+  s = s.replace(/_\{([^}]+)\}/g, (_, content) => toSubscript(content));
+  s = s.replace(/_([0-9a-zA-Z+\-()])/g, (_, char) => toSubscript(char));
 
-    const cleanedRows: string[] = [];
+  s = s
+    .replace(/\\pm(?![a-zA-Z])/g, "±")
+    .replace(/\\mp(?![a-zA-Z])/g, "∓")
+    .replace(/\\times(?![a-zA-Z])/g, "×")
+    .replace(/\\cdot(?![a-zA-Z])/g, "·")
+    .replace(/\\neq(?![a-zA-Z])|\\ne(?![a-zA-Z])/g, "≠")
+    .replace(/\\leq(?![a-zA-Z])|\\le(?![a-zA-Z])/g, "≤")
+    .replace(/\\geq(?![a-zA-Z])|\\ge(?![a-zA-Z])/g, "≥");
 
-    for (const row of rawRows) {
-      const trimmedRow = row.trim();
-      if (!trimmedRow) continue;
+  s = s.replace(/[{}]/g, "").replace(/\\([a-zA-Z]+)/g, "$1").replace(/\\/g, "");
+  return s.trim();
+}
 
-      // 2. Split columns by &
-      const cols = trimmedRow.split("&").map((col: string) => {
-        let c = col.trim();
-        // Clean inner math expressions without recursive matrix loop
-        c = cleanMathSymbols(c);
-        return c;
+/**
+ * Builds authentic Word OpenXML (OMML) 2D matrix structure using BuilderElement:
+ * <m:d> (delimiter with growing brackets)
+ *   <m:dPr><m:begChr m:val="["/><m:endChr m:val="]"/><m:grow/></m:dPr>
+ *   <m:e>
+ *     <m:m> (matrix)
+ *       <m:mPr><m:baseJc m:val="center"/><m:plcHide m:val="1"/></m:mPr>
+ *       <m:mr><m:e><m:r><m:t>col1</m:t></m:r></m:e>...</m:mr> (rows)
+ *     </m:m>
+ *   </m:e>
+ * </m:d>
+ * Supports ANY dimensions: 2x2, 3x3, 4x4, 5x5, NxM.
+ */
+export function createOmmlMatrixElement(
+  rows: string[][],
+  bracketType: string = "["
+): BuilderElement {
+  let begChr = "[";
+  let endChr = "]";
+
+  const b = bracketType.trim().toLowerCase();
+  if (b === "(" || b === "pmatrix") {
+    begChr = "(";
+    endChr = ")";
+  } else if (b === "|" || b === "vmatrix") {
+    begChr = "|";
+    endChr = "|";
+  } else if (b === "‖" || b === "vmatrix" || b === "||") {
+    begChr = "‖";
+    endChr = "‖";
+  } else if (b === "{" || b === "bmatrix") {
+    begChr = "{";
+    endChr = "}";
+  } else if (b === "none" || b === "matrix") {
+    begChr = "";
+    endChr = "";
+  } else {
+    begChr = "[";
+    endChr = "]";
+  }
+
+  const rowElements = rows.map((row) => {
+    const cellElements = row.map((cell) => {
+      const cleanedCell = cleanMathSymbolsForMatrixCell(cell);
+      return new BuilderElement({
+        name: "m:e",
+        children: [new MathRun(cleanedCell || " ")],
       });
+    });
 
-      cleanedRows.push(cols.join(" & "));
-    }
-
-    if (cleanedRows.length === 0) return "";
-
-    const matrixBody = cleanedRows.join(" @ ");
-
-    switch (matrixType) {
-      case "bmatrix":
-        return `[\\matrix(${matrixBody})]`;
-      case "pmatrix":
-        return `(\\matrix(${matrixBody}))`;
-      case "vmatrix":
-        return `|\\matrix(${matrixBody})|`;
-      case "Vmatrix":
-        return `‖\\matrix(${matrixBody})‖`;
-      case "Bmatrix":
-        return `{\\matrix(${matrixBody})}`;
-      case "matrix":
-      case "array":
-      default:
-        return `\\matrix(${matrixBody})`;
-    }
+    return new BuilderElement({
+      name: "m:mr",
+      children:
+        cellElements.length > 0
+          ? cellElements
+          : [new BuilderElement({ name: "m:e", children: [new MathRun(" ")] })],
+    });
   });
+
+  const matrixBody = new BuilderElement({
+    name: "m:m",
+    children: [
+      new BuilderElement({
+        name: "m:mPr",
+        children: [
+          new BuilderElement({
+            name: "m:baseJc",
+            attributes: { val: { key: "m:val", value: "center" } },
+          }),
+          new BuilderElement({
+            name: "m:plcHide",
+            attributes: { val: { key: "m:val", value: "1" } },
+          }),
+        ],
+      }),
+      ...rowElements,
+    ],
+  });
+
+  if (!begChr && !endChr) {
+    return matrixBody;
+  }
+
+  return new BuilderElement({
+    name: "m:d",
+    children: [
+      new BuilderElement({
+        name: "m:dPr",
+        children: [
+          new BuilderElement({
+            name: "m:begChr",
+            attributes: { val: { key: "m:val", value: begChr } },
+          }),
+          new BuilderElement({
+            name: "m:endChr",
+            attributes: { val: { key: "m:val", value: endChr } },
+          }),
+          new BuilderElement({ name: "m:grow" }),
+        ],
+      }),
+      new BuilderElement({
+        name: "m:e",
+        children: [matrixBody],
+      }),
+    ],
+  });
+}
+
+/**
+ * Parses any mathematical formula string (from $...$ or $$...$$) into DocxMath children,
+ * converting both LaTeX matrix syntax and linear matrix syntax into authentic 2D OMML matrix nodes.
+ */
+export function parseMathFormulaToChildren(
+  formula: string
+): (MathRun | BuilderElement)[] {
+  const children: (MathRun | BuilderElement)[] = [];
+
+  // Matches either LaTeX matrix: \begin{bmatrix} ... \end{bmatrix}
+  // OR Linear format matrix: [matrix(...)] or [\matrix(...)] or (matrix(...)) or |matrix(...)|
+  const matrixRegex =
+    /(?:\\begin\{(matrix|bmatrix|pmatrix|vmatrix|Vmatrix|Bmatrix|array)\}(?:\{[lcr| ]+\})?([\s\S]*?)\\end\{\1\}|(\[|\(|\{|\||‖)?\\?matrix\(([\s\S]*?)\)(\]|\)|\}|\||‖)?)/g;
+
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = matrixRegex.exec(formula)) !== null) {
+    const matchStart = match.index;
+    const matchEnd = match.index + match[0].length;
+
+    // Content before matrix
+    if (matchStart > lastIndex) {
+      const beforeText = formula.slice(lastIndex, matchStart);
+      const cleanedBefore = cleanMathSymbols(beforeText, true);
+      if (cleanedBefore) {
+        children.push(new MathRun(cleanedBefore));
+      }
+    }
+
+    let bracketType = "[";
+    let matrixContent = "";
+
+    if (match[1]) {
+      // LaTeX matrix
+      bracketType = match[1];
+      matrixContent = match[2];
+    } else {
+      // Linear matrix
+      bracketType = match[3] || match[5] || "[";
+      matrixContent = match[4];
+    }
+
+    // Split rows: split by @, \\, \cr, or newline
+    const rawRows = matrixContent
+      .split(/(?:@|\\\\|\\cr|\r?\n)/)
+      .map((r) => r.trim())
+      .filter((r) => r.length > 0);
+
+    const parsedRows = rawRows.map((row) =>
+      row.split("&").map((col) => col.trim())
+    );
+
+    if (parsedRows.length > 0) {
+      const matrixElement = createOmmlMatrixElement(parsedRows, bracketType);
+      children.push(matrixElement);
+    }
+
+    lastIndex = matchEnd;
+  }
+
+  // Content after last matrix
+  if (lastIndex < formula.length) {
+    const afterText = formula.slice(lastIndex);
+    const cleanedAfter = cleanMathSymbols(afterText, true);
+    if (cleanedAfter) {
+      children.push(new MathRun(cleanedAfter));
+    }
+  }
+
+  // If no matrix was found, standard MathRun
+  if (children.length === 0 && formula.trim()) {
+    const cleaned = cleanMathSymbols(formula, true);
+    if (cleaned) {
+      children.push(new MathRun(cleaned));
+    }
+  }
+
+  return children;
+}
+
+/**
+ * Backward compatibility fallback
+ */
+export function convertLatexMatrixToWordMatrix(raw: string): string {
+  return raw;
+}
+
+/**
+ * Un-fuses OCR and PDF extracted words that got jammed against math expressions
+ * (e.g. "IfA" -> "If A", "ofA^3" -> "of A^3", "functionf(z)" -> "function f(z)")
+ */
+export function unfuseWordBoundaries(text: string): string {
+  if (!text) return "";
+  let s = text;
+
+  // 1. Unfuse words fused with dollar signs: e.g. "If$A$" -> "If $A$", "$A$find" -> "$A$ find"
+  s = s.replace(/([a-zA-Z0-9_])\$(?!\$)/g, "$1 $");
+  s = s.replace(/\$(?!\$)([a-zA-Z0-9_])/g, "$ $1");
+
+  // 2. Unfuse common English words fused with math variables or matrices
+  s = s.replace(
+    /\b(If|of|matrix|variable|that|from|to|along|into|with|by|where|function)\s*([A-Za-z])/g,
+    "$1 $2"
+  );
+  s = s.replace(/\bxyfrom([A-Za-z])/gi, "xy from $1");
+  s = s.replace(/\b([A-Za-z]+)follows\b/gi, "$1 follows");
+  s = s.replace(/\bofcos\b/gi, "of cos");
+  s = s.replace(/\boff\b(?=\()/gi, "of f");
+  s = s.replace(/(\]|[\)])([a-zA-Z]{2,})/g, "$1 $2"); // e.g. "]find" -> "] find"
+
+  // 3. Ensure standalone matrices not wrapped in $ get wrapped so they are parsed into OMML
+  s = s.replace(
+    /((?:\[|\(|\{|\||‖)?\\?matrix\([\s\S]*?\)(?:\]|\)|\}|\||‖)?)/g,
+    (m) => ` $${m.trim()}$ `
+  );
+  s = s.replace(
+    /(\\begin\{(?:matrix|bmatrix|pmatrix|vmatrix|Vmatrix|Bmatrix|array)\}(?:\{[lcr| ]+\})?[\s\S]*?\\end\{(?:matrix|bmatrix|pmatrix|vmatrix|Vmatrix|Bmatrix|array)\})/g,
+    (m) => ` $${m.trim()}$ `
+  );
+
+  return s;
 }
 
 // ==========================================
 // 5. CLEAN & STANDARDIZE MATH SYMBOLS
 // ==========================================
-export function cleanMathSymbols(raw: string): string {
+export function cleanMathSymbols(raw: string, preserveWhitespace: boolean = false): string {
   if (!raw) return "";
 
   // Step 1: Repair any mojibake & HTML entities
   let s = repairMojibakeAndHtmlEntities(raw);
-
-  // Step 2: Convert LaTeX matrices BEFORE backslash collapse so \\ row breaks are preserved
-  s = convertLatexMatrixToWordMatrix(s);
 
   // Normalize multiple backslashes (e.g. \\sqrt -> \sqrt)
   s = s.replace(/\\{2,}/g, "\\");
 
   // Step 2: Handle fractions and roots
   s = replaceFractions(s);
-  s = replaceBalancedCommand(s, "sqrt", (content) => `√(${cleanMathSymbols(content)})`);
-  s = replaceBalancedCommand(s, "cbrt", (content) => `∛(${cleanMathSymbols(content)})`);
+  s = replaceBalancedCommand(s, "sqrt", (content) => `√(${cleanMathSymbols(content, false)})`);
+  s = replaceBalancedCommand(s, "cbrt", (content) => `∛(${cleanMathSymbols(content, false)})`);
 
   // Step 3: Handle vectors and accents
-  s = replaceBalancedCommand(s, "vec", (content) => `${cleanMathSymbols(content)}⃗`);
-  s = replaceBalancedCommand(s, "bar", (content) => `${cleanMathSymbols(content)}̄`);
-  s = replaceBalancedCommand(s, "hat", (content) => `${cleanMathSymbols(content)}̂`);
-  s = replaceBalancedCommand(s, "dot", (content) => `${cleanMathSymbols(content)}̇`);
-  s = replaceBalancedCommand(s, "ddot", (content) => `${cleanMathSymbols(content)}̈`);
+  s = replaceBalancedCommand(s, "vec", (content) => `${cleanMathSymbols(content, false)}⃗`);
+  s = replaceBalancedCommand(s, "bar", (content) => `${cleanMathSymbols(content, false)}̄`);
+  s = replaceBalancedCommand(s, "hat", (content) => `${cleanMathSymbols(content, false)}̂`);
+  s = replaceBalancedCommand(s, "dot", (content) => `${cleanMathSymbols(content, false)}̇`);
+  s = replaceBalancedCommand(s, "ddot", (content) => `${cleanMathSymbols(content, false)}̈`);
 
   // Step 4: Greek letters (lowercase)
   s = s
@@ -587,12 +813,10 @@ export function cleanMathSymbols(raw: string): string {
     .replace(/\\min(?![a-zA-Z])/g, "min");
 
   // Step 8: Standard Superscripts with braces: ^{...} or single char: ^x
-  // Matches e.g. ^{-1/2}, ^{1/2}, ^{i\theta}, ^{2}, ^{n+1}, ^2, ^k
   s = s.replace(/\^\{([^}]+)\}/g, (_, content) => toSuperscript(content));
   s = s.replace(/\^([0-9a-zA-Z+\-()])/g, (_, char) => toSuperscript(char));
 
   // Step 9: Standard Subscripts with braces: _{...} or single char: _x
-  // Matches e.g. _{0}, _{n}, _{ij}, _1, _x
   s = s.replace(/_\{([^}]+)\}/g, (_, content) => toSubscript(content));
   s = s.replace(/_([0-9a-zA-Z+\-()])/g, (_, char) => toSubscript(char));
 
@@ -612,7 +836,8 @@ export function cleanMathSymbols(raw: string): string {
     .replace(/\\([a-zA-Z]+)/g, "$1") // Clean any unrecognized LaTeX commands
     .replace(/\\/g, ""); // Clean any stray backslashes
 
-  return s.replace(/\s{2,}/g, " ").trim();
+  s = s.replace(/[ \t]{2,}/g, " ");
+  return preserveWhitespace ? s : s.trim();
 }
 
 // ==========================================
@@ -623,7 +848,10 @@ export function buildMathParagraph(
   headingLevel?: (typeof HeadingLevel)[keyof typeof HeadingLevel]
 ): Paragraph {
   // First clean encoding and mojibake from the entire line
-  const cleanedLine = repairMojibakeAndHtmlEntities(line);
+  let cleanedLine = repairMojibakeAndHtmlEntities(line);
+
+  // Un-fuse word boundaries and wrap standalone matrices in $...$
+  cleanedLine = unfuseWordBoundaries(cleanedLine);
 
   // Check if line represents a Question Number in a Question Bank (e.g. "Q1.", "Q.1", "Question 1:", "1.")
   const questionHeaderMatch = cleanedLine.match(/^(\*{0,2}(?:Q(?:uestion|\.)?\s*\d+[\w.]*|Problem\s*\d+[\w.]*|\d+\.)\*{0,2})(.*)/i);
@@ -633,7 +861,8 @@ export function buildMathParagraph(
   const segments = cleanedLine.split(/(\$\$[\s\S]+?\$\$|\$[^\$\n]+?\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\))/g);
   const children: (TextRun | DocxMath)[] = [];
 
-  for (const seg of segments) {
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i];
     if (!seg) continue;
 
     const isExplicitMath =
@@ -649,23 +878,34 @@ export function buildMathParagraph(
         .replace(/(\$\$|\$|\\\]|\\\))$/, "")
         .trim();
 
-      const cleanedFormula = cleanMathSymbols(rawFormula);
+      const mathChildren = parseMathFormulaToChildren(rawFormula);
 
-      // Add as native Word Office Math (m:oMath) element!
-      children.push(
-        new DocxMath({
-          children: [new MathRun(cleanedFormula)],
-        })
-      );
+      if (mathChildren.length > 0) {
+        children.push(
+          new DocxMath({
+            children: mathChildren,
+          })
+        );
+      }
     } else {
-      // Segment is regular text or inline math without $ delimiters.
-      // Check if it contains mathematical symbols or equations (e.g. θ, √, ∫, ∑, π, ±, ≤, ≥, =, ^, _)
+      // Segment is regular text.
+      // Ensure proper boundary spacing adjacent to math:
+      let text = seg;
+
+      // If preceded by a math block and doesn't start with space or punctuation:
+      if (i > 0 && segments[i - 1]?.startsWith("$") && !/^[\s.,\)\]\}:;?!]/.test(text)) {
+        text = " " + text;
+      }
+      // If followed by a math block and doesn't end with space or opening bracket:
+      if (i < segments.length - 1 && segments[i + 1]?.startsWith("$") && !/[\s\(\[\{]$/.test(text)) {
+        text = text + " ";
+      }
+
       const hasMathSymbols = /[√∛∫∬∭∮∑∏∞∂∇±∓×÷≠≤≥≈≡∼≅∝∈∉⊂⊆∪∩∀∃→←⇒⇔∴∵⊥∥∠°αβγδεζηθικλμνξπρστυφχψωΓΔΘΛΞΠΣΥΦΨΩ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿⁱᶿ₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ᵢⱼ]/.test(
-        seg
+        text
       );
 
-      // Also clean any un-delimited LaTeX commands like \theta, \sqrt, \frac
-      const cleaned = cleanMathSymbols(seg);
+      const cleaned = cleanMathSymbols(text, true);
 
       if (hasMathSymbols) {
         // Render math symbols using Cambria Math font for flawless native rendering in Word
@@ -838,6 +1078,12 @@ export function buildDocumentElements(text: string, title?: string): (Paragraph 
       const flattened = inner.replace(/\r?\n\s*/g, " ").trim();
       return `\\begin{${type}} ${flattened} \\end{${type}}`;
     }
+  );
+
+  // Step 3: Pre-process [matrix(...)] blocks that might span multiple lines
+  normalized = normalized.replace(
+    /((?:\[|\(|\{|\||‖)?\\?matrix\([\s\S]*?\)(?:\]|\)|\}|\||‖)?)/g,
+    (m) => m.replace(/\r?\n\s*/g, " ")
   );
 
   const lines = normalized.split(/\r?\n/);

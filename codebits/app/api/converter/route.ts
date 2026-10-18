@@ -53,23 +53,29 @@ CRITICAL MATHEMATICS, SYMBOLS, MATRICES & TABLES RULES:
 - Preserve every single Greek letter (θ, π, α, β, γ, δ, λ, μ, σ, ω, Δ, etc.), root (√, ∛), fraction (\\frac{a}{b}), exponent/power (e.g. ^2, ^{-1/2}, e^{iθ}), subscript (e.g. x_0, a_n), integral (∫, ∬), summation (∑), limit (\\lim), differential (dy/dx, ∂), matrix, and operator (±, ∓, ×, ÷, ·, ≤, ≥, ≠, ≈, ≡, ∈, ∉, ⊂, ∪, ∩, →, ⇒, ⇔).
 - Enclose all mathematical expressions and formulas in standard dollar signs: $...$ for inline formulas and $$...$$ on their own line for standalone display equations, so they are natively rendered into Word Office Math equation blocks.
 
-2. MATRICES & DETERMINANTS:
-- Reconstruct all matrices and determinants using standard LaTeX matrix notation:
-  - Square bracket matrix: \\begin{bmatrix} a & b \\\\ c & d \\end{bmatrix}
-  - Parenthesis matrix: \\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}
-  - Determinants: \\begin{vmatrix} a & b \\\\ c & d \\end{vmatrix}
-  - Double-bar norm matrix: \\begin{Vmatrix} a & b \\\\ c & d \\end{Vmatrix}
+2. MATRICES & DETERMINANTS (ANY ORDER: 2x2, 3x3, 4x4, etc.):
+- Reconstruct all matrices and determinants of ANY dimension (e.g. 2x2, 3x3, 4x4, NxM) verbatim using standard LaTeX matrix notation:
+  - Square bracket matrix: \\begin{bmatrix} a_1 & b_1 & c_1 \\\\ a_2 & b_2 & c_2 \\\\ a_3 & b_3 & c_3 \\end{bmatrix}
+  - Parenthesis matrix: \\begin{pmatrix} ... \\end{pmatrix}
+  - Determinants: \\begin{vmatrix} ... \\end{vmatrix}
+  - Double-bar norm matrix: \\begin{Vmatrix} ... \\end{Vmatrix}
 - Always separate columns with & and rows with \\\\.
-- Enclose all matrix equations in display math $$...$$ or inline $...$ (e.g. $$A = \\begin{bmatrix} 1 & 2 \\\\ 3 & 4 \\end{bmatrix}$$).
+- For 3x3 or higher order matrices, preserve every single row and column without collapsing or omitting entries.
+- Always enclose matrix equations in display math $$...$$ on their own line or inline $...$ (e.g. $A = \\begin{bmatrix} -1 & 2 & 38 \\\\ 0 & 2 & 37 \\\\ 0 & 0 & -2 \\end{bmatrix}$).
 
-3. TABLES & DATA SHEETS:
+3. CRITICAL WORD AND EQUATION SPACING:
+- Always preserve spaces between regular English words and math formulas!
+  - For example, write "If $A = ...$ find the Eigen values of $A^3 + 5A + 8I$." NEVER fuse words like "If$A$" or "of$A^3$" or ")find".
+  - Write "variable $X$ follows", "function $f(z)$", "along $y = x^2$", "matrix $A$".
+
+4. TABLES & DATA SHEETS:
 - Format all tables using standard Markdown table syntax with a header row, separator row, and data rows:
   | Column 1 | Column 2 | Column 3 |
   |---|---|---|
   | Cell 1 | Cell 2 | Cell 3 |
 - Never convert a table into loose unformatted text.
 
-4. QUESTION BANK & EXAM PAPER STRUCTURE:
+5. QUESTION BANK & EXAM PAPER STRUCTURE:
 - If handwriting is present, transcribe it accurately without omitting steps.
 - Preserve all Question numbers verbatim (e.g. "Q.1", "Question 1:", "1.", "2(a)", "Problem 4:").
 - Preserve marks/weightage indicators (e.g. "[4 Marks]", "[5 M]").
