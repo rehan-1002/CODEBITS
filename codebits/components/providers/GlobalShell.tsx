@@ -6,6 +6,8 @@ import { Navbar } from "@/components/navigation/Navbar";
 import { Footer } from "@/components/navigation/Footer";
 import { CbAiDrawer } from "@/components/ai/CbAiDrawer";
 
+import { StudentWhatsAppButton } from "@/components/navigation/StudentWhatsAppButton";
+
 export function GlobalShell({ children }: { children: React.ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const pathname = usePathname();
@@ -30,6 +32,7 @@ export function GlobalShell({ children }: { children: React.ReactNode }) {
       <main className="flex-1 flex flex-col">{children}</main>
       {!isCustomLayout && <Footer />}
       <CbAiDrawer isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+      <StudentWhatsAppButton />
     </div>
   );
 }
