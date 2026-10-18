@@ -203,9 +203,12 @@ export async function fetchCurrentAuthUser(): Promise<Profile | null> {
         setSession(data.user, true);
         return data.user;
       }
+    } else if (res.status === 401) {
+      clearSession();
+      return null;
     }
   } catch {
-    // Fall back to localStorage session
+    // Network offline error: fall back to cached session
   }
   return getCurrentUser();
 }

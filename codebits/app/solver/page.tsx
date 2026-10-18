@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -61,7 +62,9 @@ interface SolvedResult {
   diagramDescription?: string;
 }
 
-export default function QuestionBankSolverPage() {
+function QuestionBankSolverContent() {
+  const searchParams = useSearchParams();
+  const autoLoadedRef = useRef(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [filePreview, setFilePreview] = useState<string | null>(null);
@@ -256,6 +259,37 @@ export default function QuestionBankSolverPage() {
       setIsScanning(false);
     }
   };
+
+  // Auto-scan document if redirected from Academic Vault or Canvas Viewer with ?docId=...
+  useEffect(() => {
+    const docId = searchParams?.get("docId") || searchParams?.get("resourceId");
+    if (!docId || autoLoadedRef.current) return;
+    autoLoadedRef.current = true;
+
+    async function loadVaultDoc() {
+      try {
+        setIsScanning(true);
+        setErrorNotice(null);
+        const titleParam = searchParams?.get("title");
+        const docName = titleParam ? `${titleParam}.pdf` : `vault-document-${docId}.pdf`;
+        setFileName(docName);
+
+        const res = await fetch(`/api/resources/${docId}/file`);
+        if (!res.ok) {
+          throw new Error("Could not retrieve document from Academic Vault.");
+        }
+        const blob = await res.blob();
+        const file = new File([blob], docName, { type: "application/pdf" });
+        await handleFileUpload(file);
+      } catch (err: any) {
+        console.error("Vault doc load error:", err);
+        setErrorNotice(err?.message || "Failed to load document from Vault.");
+        setIsScanning(false);
+      }
+    }
+
+    loadVaultDoc();
+  }, [searchParams]);
 
   // Convert uploaded PDF to DOCX or DOCX to PDF
   const handleInlineConvert = async () => {
@@ -989,5 +1023,20 @@ export default function QuestionBankSolverPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function QuestionBankSolverPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full max-w-7xl mx-auto px-4 py-24 flex flex-col items-center justify-center space-y-4 font-mono text-xs text-[var(--brand-primary)]">
+          <div className="w-8 h-8 rounded-full border-2 border-[var(--brand-primary)] border-t-transparent animate-spin" />
+          <p>Initializing cbAI Question Bank Engine...</p>
+        </div>
+      }
+    >
+      <QuestionBankSolverContent />
+    </Suspense>
   );
 }

@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { FileText, Eye, ShieldCheck, User, ArrowUpRight } from "lucide-react";
+import { FileText, Eye, ShieldCheck, User, ArrowUpRight, Sparkles } from "lucide-react";
 import { Resource } from "@/types/resources";
 
 interface ResourceCardProps {
@@ -145,15 +145,26 @@ export function ResourceCard({ resource, index = 0 }: ResourceCardProps) {
               </span>
             </div>
 
-            {/* Kinetic HUD Study Action Link */}
-            <Link
-              href={`/viewer/${resource.id}`}
-              className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold text-[#05130D] bg-[var(--brand-primary)] hover:bg-[var(--brand-ambient,#34EE99)] shadow-[0_0_16px_rgba(0,194,105,0.3)] hover:shadow-[0_0_24px_rgba(0,194,105,0.55)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-200 cursor-pointer"
-            >
-              <FileText className="w-3.5 h-3.5" />
-              <span>STUDY</span>
-              <ArrowUpRight className="w-3 h-3 opacity-70 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-            </Link>
+            {/* Kinetic HUD Actions: Solve with cbAI + Study Document */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Link
+                href={`/solver?docId=${resource.id}&title=${encodeURIComponent(resource.title)}`}
+                title="Extract and solve questions with cbAI"
+                className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold text-[var(--brand-primary)] bg-[var(--brand-primary)]/10 hover:bg-[var(--brand-primary)]/20 border border-[var(--brand-primary)]/35 hover:border-[var(--brand-primary)]/70 shadow-xs hover:scale-[1.03] active:scale-[0.98] transition-all duration-200 cursor-pointer"
+              >
+                <Sparkles className="w-3 h-3 text-[var(--brand-primary)]" />
+                <span>cbAI</span>
+              </Link>
+
+              <Link
+                href={`/viewer/${resource.id}`}
+                className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-mono font-bold text-[#05130D] bg-[var(--brand-primary)] hover:bg-[var(--brand-ambient,#34EE99)] shadow-[0_0_16px_rgba(0,194,105,0.3)] hover:shadow-[0_0_24px_rgba(0,194,105,0.55)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-200 cursor-pointer"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>STUDY</span>
+                <ArrowUpRight className="w-3 h-3 opacity-70 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+              </Link>
+            </div>
           </div>
         </div>
       </div>

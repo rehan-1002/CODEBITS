@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Loader2,
   FileX,
+  Sparkles,
 } from "lucide-react";
 
 interface ProtectedCanvasViewerProps {
@@ -317,6 +318,16 @@ export function ProtectedCanvasViewer({
           >
             <ZoomIn className="w-4 h-4" />
           </button>
+
+          <Link
+            href={`/solver?docId=${documentId}&title=${encodeURIComponent(documentTitle || 'Exam Paper')}`}
+            className="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/20 font-mono text-xs font-bold transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
+            title="Extract questions and solve with cbAI"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">SOLVE WITH</span>
+            <span>cbAI</span>
+          </Link>
 
           <div className="hidden lg:flex items-center space-x-1.5 px-2.5 py-1 rounded bg-[var(--surface-elevated)] border border-[var(--border-subtle)] font-mono text-[10px] text-[var(--brand-primary)]">
             <ShieldCheck className="w-3.5 h-3.5" />
