@@ -40,9 +40,95 @@ function extractRawTextFromPdfBuffer(buffer: Buffer): string {
 
 export async function POST(req: NextRequest) {
   try {
+    // Check if request is JSON (e.g. for docx assembly)
+    const contentType = req.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      const jsonBody = await req.json();
+      if (jsonBody.mode === "assemble") {
+        const title = (jsonBody.title || "Document").trim();
+        const sections: Array<{ pageRange?: string; text: string }> = jsonBody.sections || [];
+        const fullText = (jsonBody.text || "").trim();
+
+        const paragraphs: Paragraph[] = [
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: title,
+                bold: true,
+                size: 36, // 18pt
+                color: "00C269", // CodeBits Emerald
+                font: "Calibri",
+              }),
+            ],
+            spacing: { after: 280 },
+          }),
+        ];
+
+        const textToProcess = sections.length > 0 
+          ? sections.map((s) => s.text).join("\n\n")
+          : fullText;
+
+        if (!textToProcess.trim()) {
+          return NextResponse.json({ error: "No text content provided for assembly." }, { status: 400 });
+        }
+
+        const rawLines = textToProcess.split(/\r?\n/);
+        for (let i = 0; i < rawLines.length; i++) {
+          const line = rawLines[i].trim();
+          if (!line) continue;
+
+          if (line.startsWith("# ")) {
+            paragraphs.push(buildMathParagraph(line.replace(/^#\s+/, ""), HeadingLevel.HEADING_1));
+          } else if (line.startsWith("## ")) {
+            paragraphs.push(buildMathParagraph(line.replace(/^##\s+/, ""), HeadingLevel.HEADING_2));
+          } else if (line.startsWith("### ")) {
+            paragraphs.push(buildMathParagraph(line.replace(/^###\s+/, ""), HeadingLevel.HEADING_3));
+          } else if (/^[-*•]\s+/.test(line)) {
+            paragraphs.push(buildMathParagraph(line.replace(/^[-*•]\s+/, "")));
+          } else {
+            paragraphs.push(buildMathParagraph(line));
+          }
+        }
+
+        const doc = new Document({
+          sections: [
+            {
+              properties: {
+                page: {
+                  margin: {
+                    top: 1440,
+                    bottom: 1440,
+                    left: 1440,
+                    right: 1440,
+                  },
+                },
+              },
+              children: paragraphs,
+            },
+          ],
+        });
+
+        const docxBuffer = await Packer.toBuffer(doc);
+        const downloadName = `${title}.docx`;
+
+        return new Response(docxBuffer as any, {
+          status: 200,
+          headers: {
+            "Content-Type":
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "Content-Disposition": `attachment; filename="${encodeURIComponent(downloadName)}"`,
+            "Content-Length": docxBuffer.length.toString(),
+          },
+        });
+      }
+    }
+
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const targetFormat = (formData.get("targetFormat") as string || "").toLowerCase();
+    const mode = (formData.get("mode") as string || "").toLowerCase();
+    const chunkIndex = formData.get("chunkIndex") as string | null;
+    const pageRange = formData.get("pageRange") as string | null;
 
     if (!file) {
       return NextResponse.json({ error: "No file was uploaded." }, { status: 400 });
@@ -54,7 +140,71 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
 
     // ==========================================
-    // 1. PDF TO DOCX (High-Fidelity AI + Fallback)
+    // 1. PDF CHUNK EXTRACTION (Micro-batch mode)
+    // ==========================================
+    if (mode === "extract") {
+      let extractedText = "";
+
+      try {
+        const base64 = buffer.toString("base64");
+        const rangeLabel = pageRange ? ` for ${pageRange}` : "";
+        const aiResult = await generateContentWithFailover({
+          contents: [
+            {
+              role: "user",
+              parts: [
+                {
+                  inlineData: {
+                    mimeType: "application/pdf",
+                    data: base64,
+                  },
+                },
+                {
+                  text: `You are a master academic document and mathematical question bank reconstruction engine. Reconstruct all text, sections, questions, and mathematical equations from this document chunk${rangeLabel} verbatim.
+
+CRITICAL MATHEMATICS, SYMBOLS & QUESTION BANK RULES:
+1. MATHEMATICAL SYMBOLS & EQUATIONS:
+- Never substitute or alter any mathematical symbol with corrupted characters, approximations, or placeholders.
+- Preserve every single Greek letter (θ, π, α, β, γ, δ, λ, μ, σ, ω, Δ, etc.), root (√, ∛), fraction (\\frac{a}{b}), exponent/power (e.g. ^2, ^{-1/2}, e^{iθ}), subscript (e.g. x_0, a_n), integral (∫, ∬), summation (∑), limit (\\lim), differential (dy/dx, ∂), matrix, and operator (±, ∓, ×, ÷, ·, ≤, ≥, ≠, ≈, ≡, ∈, ∉, ⊂, ∪, ∩, →, ⇒, ⇔).
+- Enclose all mathematical expressions and formulas in standard dollar signs: $...$ for inline formulas and $$...$$ on their own line for standalone display equations, so they are natively rendered into Word Office Math equation blocks.
+
+2. QUESTION BANK & EXAM PAPER STRUCTURE:
+- Preserve all Question numbers verbatim (e.g. "Q.1", "Question 1:", "1.", "2(a)", "Problem 4:").
+- Preserve marks/weightage indicators (e.g. "[4 Marks]", "[5 M]").
+- For multiple-choice questions, keep each option on its own line or clearly labeled: (A), (B), (C), (D).
+- Preserve table structures, sub-questions (i, ii, iii), and module headings.
+- Format document sections with Markdown headers (# for Document Title, ## for Sections/Modules, ### for Question Headers).
+- Do not add any introductory or conversational remarks; output only the reconstructed document.`,
+                },
+              ],
+            },
+          ],
+        });
+
+        if (aiResult?.text && aiResult.text.trim().length > 0) {
+          extractedText = aiResult.text.trim();
+        }
+      } catch (aiErr: any) {
+        console.warn("AI PDF chunk extraction failed, attempting stream fallback:", aiErr?.message || aiErr);
+      }
+
+      if (!extractedText.trim()) {
+        const fallbackText = extractRawTextFromPdfBuffer(buffer);
+        if (fallbackText.trim()) {
+          extractedText = fallbackText;
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        text: extractedText,
+        chunkIndex: chunkIndex !== null ? parseInt(chunkIndex, 10) : undefined,
+        pageRange: pageRange || undefined,
+      });
+    }
+
+    // ==========================================
+    // 2. PDF TO DOCX (High-Fidelity AI + Fallback)
     // ==========================================
     if (
       targetFormat === "docx" ||
