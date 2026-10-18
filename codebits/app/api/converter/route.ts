@@ -3,7 +3,7 @@ import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
 import mammoth from "mammoth";
 import { jsPDF } from "jspdf";
 import { generateContentWithFailover } from "@/lib/ai/gemini";
-import { buildMathParagraph, cleanMathSymbols } from "@/lib/converter/mathDocxFormatter";
+import { buildMathParagraph, cleanMathSymbols, buildDocumentElements } from "@/lib/converter/mathDocxFormatter";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60; // Extended timeout for AI document analysis
@@ -38,6 +38,46 @@ function extractRawTextFromPdfBuffer(buffer: Buffer): string {
   }
 }
 
+function getAcademicReconstructionPrompt(options: { isImage: boolean; rangeLabel?: string }) {
+  const { isImage, rangeLabel } = options;
+  const label = rangeLabel ? ` for ${rangeLabel}` : "";
+  const intro = isImage
+    ? `You are an elite academic document, handwritten notes, and mathematical problem scanner. Reconstruct all text, handwritten equations, questions, diagrams explanations, matrices, and tables from this image${label} verbatim.`
+    : `You are a master academic document and mathematical question bank reconstruction engine. Reconstruct all text, sections, questions, matrices, and tables from this document${label} verbatim.`;
+
+  return `${intro}
+
+CRITICAL MATHEMATICS, SYMBOLS, MATRICES & TABLES RULES:
+1. MATHEMATICAL SYMBOLS & EQUATIONS:
+- Never substitute or alter any mathematical symbol with corrupted characters, approximations, or placeholders.
+- Preserve every single Greek letter (θ, π, α, β, γ, δ, λ, μ, σ, ω, Δ, etc.), root (√, ∛), fraction (\\frac{a}{b}), exponent/power (e.g. ^2, ^{-1/2}, e^{iθ}), subscript (e.g. x_0, a_n), integral (∫, ∬), summation (∑), limit (\\lim), differential (dy/dx, ∂), matrix, and operator (±, ∓, ×, ÷, ·, ≤, ≥, ≠, ≈, ≡, ∈, ∉, ⊂, ∪, ∩, →, ⇒, ⇔).
+- Enclose all mathematical expressions and formulas in standard dollar signs: $...$ for inline formulas and $$...$$ on their own line for standalone display equations, so they are natively rendered into Word Office Math equation blocks.
+
+2. MATRICES & DETERMINANTS:
+- Reconstruct all matrices and determinants using standard LaTeX matrix notation:
+  - Square bracket matrix: \\begin{bmatrix} a & b \\\\ c & d \\end{bmatrix}
+  - Parenthesis matrix: \\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}
+  - Determinants: \\begin{vmatrix} a & b \\\\ c & d \\end{vmatrix}
+  - Double-bar norm matrix: \\begin{Vmatrix} a & b \\\\ c & d \\end{Vmatrix}
+- Always separate columns with & and rows with \\\\.
+- Enclose all matrix equations in display math $$...$$ or inline $...$ (e.g. $$A = \\begin{bmatrix} 1 & 2 \\\\ 3 & 4 \\end{bmatrix}$$).
+
+3. TABLES & DATA SHEETS:
+- Format all tables using standard Markdown table syntax with a header row, separator row, and data rows:
+  | Column 1 | Column 2 | Column 3 |
+  |---|---|---|
+  | Cell 1 | Cell 2 | Cell 3 |
+- Never convert a table into loose unformatted text.
+
+4. QUESTION BANK & EXAM PAPER STRUCTURE:
+- If handwriting is present, transcribe it accurately without omitting steps.
+- Preserve all Question numbers verbatim (e.g. "Q.1", "Question 1:", "1.", "2(a)", "Problem 4:").
+- Preserve marks/weightage indicators (e.g. "[4 Marks]", "[5 M]").
+- For multiple-choice questions, keep each option on its own line: (A), (B), (C), (D).
+- Format document sections with Markdown headers (# for Document Title, ## for Sections, ### for Questions).
+- Do not add any conversational remarks, commentary, or summaries; output only the reconstructed document.`;
+}
+
 export async function POST(req: NextRequest) {
   try {
     // Check if request is JSON (e.g. for docx assembly)
@@ -49,21 +89,6 @@ export async function POST(req: NextRequest) {
         const sections: Array<{ pageRange?: string; text: string }> = jsonBody.sections || [];
         const fullText = (jsonBody.text || "").trim();
 
-        const paragraphs: Paragraph[] = [
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: title,
-                bold: true,
-                size: 36, // 18pt
-                color: "00C269", // CodeBits Emerald
-                font: "Calibri",
-              }),
-            ],
-            spacing: { after: 280 },
-          }),
-        ];
-
         const textToProcess = sections.length > 0 
           ? sections.map((s) => s.text).join("\n\n")
           : fullText;
@@ -72,23 +97,7 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: "No text content provided for assembly." }, { status: 400 });
         }
 
-        const rawLines = textToProcess.split(/\r?\n/);
-        for (let i = 0; i < rawLines.length; i++) {
-          const line = rawLines[i].trim();
-          if (!line) continue;
-
-          if (line.startsWith("# ")) {
-            paragraphs.push(buildMathParagraph(line.replace(/^#\s+/, ""), HeadingLevel.HEADING_1));
-          } else if (line.startsWith("## ")) {
-            paragraphs.push(buildMathParagraph(line.replace(/^##\s+/, ""), HeadingLevel.HEADING_2));
-          } else if (line.startsWith("### ")) {
-            paragraphs.push(buildMathParagraph(line.replace(/^###\s+/, ""), HeadingLevel.HEADING_3));
-          } else if (/^[-*•]\s+/.test(line)) {
-            paragraphs.push(buildMathParagraph(line.replace(/^[-*•]\s+/, "")));
-          } else {
-            paragraphs.push(buildMathParagraph(line));
-          }
-        }
+        const docElements = buildDocumentElements(textToProcess, title);
 
         const doc = new Document({
           sections: [
@@ -103,7 +112,7 @@ export async function POST(req: NextRequest) {
                   },
                 },
               },
-              children: paragraphs,
+              children: docElements,
             },
           ],
         });
@@ -161,11 +170,8 @@ export async function POST(req: NextRequest) {
 
       try {
         const base64 = buffer.toString("base64");
-        const rangeLabel = pageRange ? ` for ${pageRange}` : "";
         const mimeType = isImage ? getImageMimeType(originalName, file.type) : "application/pdf";
-        const promptIntro = isImage
-          ? `You are an elite academic document, handwritten notes, and mathematical problem scanner. Reconstruct all text, handwritten equations, questions, diagrams explanations, and tables from this image${rangeLabel} verbatim.`
-          : `You are a master academic document and mathematical question bank reconstruction engine. Reconstruct all text, sections, questions, and mathematical equations from this document chunk${rangeLabel} verbatim.`;
+        const promptText = getAcademicReconstructionPrompt({ isImage, rangeLabel: pageRange || undefined });
 
         const aiResult = await generateContentWithFailover({
           contents: [
@@ -179,22 +185,7 @@ export async function POST(req: NextRequest) {
                   },
                 },
                 {
-                  text: `${promptIntro}
-
-CRITICAL MATHEMATICS, SYMBOLS & QUESTION BANK RULES:
-1. MATHEMATICAL SYMBOLS & EQUATIONS:
-- Never substitute or alter any mathematical symbol with corrupted characters, approximations, or placeholders.
-- Preserve every single Greek letter (θ, π, α, β, γ, δ, λ, μ, σ, ω, Δ, etc.), root (√, ∛), fraction (\\frac{a}{b}), exponent/power (e.g. ^2, ^{-1/2}, e^{iθ}), subscript (e.g. x_0, a_n), integral (∫, ∬), summation (∑), limit (\\lim), differential (dy/dx, ∂), matrix, and operator (±, ∓, ×, ÷, ·, ≤, ≥, ≠, ≈, ≡, ∈, ∉, ⊂, ∪, ∩, →, ⇒, ⇔).
-- Enclose all mathematical expressions and formulas in standard dollar signs: $...$ for inline formulas and $$...$$ on their own line for standalone display equations, so they are natively rendered into Word Office Math equation blocks.
-
-2. QUESTION BANK & EXAM PAPER STRUCTURE:
-- If handwritten notes or whiteboard, transcribe completely and accurately.
-- Preserve all Question numbers verbatim (e.g. "Q.1", "Question 1:", "1.", "2(a)", "Problem 4:").
-- Preserve marks/weightage indicators (e.g. "[4 Marks]", "[5 M]").
-- For multiple-choice questions, keep each option on its own line or clearly labeled: (A), (B), (C), (D).
-- Preserve table structures, sub-questions (i, ii, iii), and module headings.
-- Format document sections with Markdown headers (# for Document Title, ## for Sections/Modules, ### for Question Headers).
-- Do not add any introductory or conversational remarks; output only the reconstructed document.`,
+                  text: promptText,
                 },
               ],
             },
@@ -244,21 +235,7 @@ CRITICAL MATHEMATICS, SYMBOLS & QUESTION BANK RULES:
                   },
                 },
                 {
-                  text: `You are an elite academic document, handwritten notes, and mathematical problem scanner. Reconstruct all text, handwritten equations, questions, diagrams explanations, and tables from this image verbatim.
-
-CRITICAL MATHEMATICS, SYMBOLS & QUESTION BANK RULES:
-1. MATHEMATICAL SYMBOLS & EQUATIONS:
-- Never substitute or alter any mathematical symbol with corrupted characters, approximations, or placeholders.
-- Preserve every single Greek letter (θ, π, α, β, γ, δ, λ, μ, σ, ω, Δ, etc.), root (√, ∛), fraction (\\frac{a}{b}), exponent/power (e.g. ^2, ^{-1/2}, e^{iθ}), subscript (e.g. x_0, a_n), integral (∫, ∬), summation (∑), limit (\\lim), differential (dy/dx, ∂), matrix, and operator (±, ∓, ×, ÷, ·, ≤, ≥, ≠, ≈, ≡, ∈, ∉, ⊂, ∪, ∩, →, ⇒, ⇔).
-- Enclose all mathematical expressions and formulas in standard dollar signs: $...$ for inline formulas and $$...$$ on their own line for standalone display equations, so they are natively rendered into Word Office Math equation blocks.
-
-2. DOCUMENT STRUCTURE & HANDWRITING:
-- If handwriting is present, transcribe it accurately without omitting steps.
-- Preserve all Question numbers verbatim (e.g. "Q.1", "Question 1:", "1.", "2(a)", "Problem 4:").
-- Preserve marks/weightage indicators (e.g. "[4 Marks]", "[5 M]").
-- For multiple-choice questions, keep each option on its own line: (A), (B), (C), (D).
-- Format document sections with Markdown headers (# for Document Title, ## for Sections, ### for Questions).
-- Do not add any conversational remarks, commentary, or summaries; output only the reconstructed document.`,
+                  text: getAcademicReconstructionPrompt({ isImage: true }),
                 },
               ],
             },
@@ -282,39 +259,8 @@ CRITICAL MATHEMATICS, SYMBOLS & QUESTION BANK RULES:
         );
       }
 
-      // Build formatted Word (.docx) document with native Math equations
-      const rawLines = extractedText.split(/\r?\n/);
-      const paragraphs: Paragraph[] = [
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: baseName,
-              bold: true,
-              size: 36, // 18pt
-              color: "00C269", // CodeBits Emerald
-              font: "Calibri",
-            }),
-          ],
-          spacing: { after: 280 },
-        }),
-      ];
-
-      for (let i = 0; i < rawLines.length; i++) {
-        const line = rawLines[i].trim();
-        if (!line) continue;
-
-        if (line.startsWith("# ")) {
-          paragraphs.push(buildMathParagraph(line.replace(/^#\s+/, ""), HeadingLevel.HEADING_1));
-        } else if (line.startsWith("## ")) {
-          paragraphs.push(buildMathParagraph(line.replace(/^##\s+/, ""), HeadingLevel.HEADING_2));
-        } else if (line.startsWith("### ")) {
-          paragraphs.push(buildMathParagraph(line.replace(/^###\s+/, ""), HeadingLevel.HEADING_3));
-        } else if (/^[-*•]\s+/.test(line)) {
-          paragraphs.push(buildMathParagraph(line.replace(/^[-*•]\s+/, "")));
-        } else {
-          paragraphs.push(buildMathParagraph(line));
-        }
-      }
+      // Build formatted Word (.docx) document with native Math equations, Matrices, and Tables
+      const docElements = buildDocumentElements(extractedText, baseName);
 
       const doc = new Document({
         sections: [
@@ -329,7 +275,7 @@ CRITICAL MATHEMATICS, SYMBOLS & QUESTION BANK RULES:
                 },
               },
             },
-            children: paragraphs,
+            children: docElements,
           },
         ],
       });
@@ -423,21 +369,7 @@ CRITICAL MATHEMATICS, SYMBOLS & QUESTION BANK RULES:
                   },
                 },
                 {
-                  text: `You are a master academic document and mathematical question bank reconstruction engine. Reconstruct all text, sections, questions, and mathematical equations from this document verbatim.
-
-CRITICAL MATHEMATICS, SYMBOLS & QUESTION BANK RULES:
-1. MATHEMATICAL SYMBOLS & EQUATIONS:
-- Never substitute or alter any mathematical symbol with corrupted characters, approximations, or placeholders.
-- Preserve every single Greek letter (θ, π, α, β, γ, δ, λ, μ, σ, ω, Δ, etc.), root (√, ∛), fraction (\\frac{a}{b}), exponent/power (e.g. ^2, ^{-1/2}, e^{iθ}), subscript (e.g. x_0, a_n), integral (∫, ∬), summation (∑), limit (\\lim), differential (dy/dx, ∂), matrix, and operator (±, ∓, ×, ÷, ·, ≤, ≥, ≠, ≈, ≡, ∈, ∉, ⊂, ∪, ∩, →, ⇒, ⇔).
-- Enclose all mathematical expressions and formulas in standard dollar signs: $...$ for inline formulas (e.g. $\\sqrt{1 + \\csc(\\theta/2)} = (1 - e^{i\\theta})^{-1/2} + (1 - e^{-i\\theta})^{-1/2}$) and $$...$$ on their own line for standalone display equations, so they are natively rendered into Word Office Math equation blocks.
-
-2. QUESTION BANK & EXAM PAPER STRUCTURE:
-- Preserve all Question numbers verbatim (e.g. "Q.1", "Question 1:", "1.", "2(a)", "Problem 4:").
-- Preserve marks/weightage indicators (e.g. "[4 Marks]", "[5 M]").
-- For multiple-choice questions, keep each option on its own line or clearly labeled: (A), (B), (C), (D).
-- Preserve table structures, sub-questions (i, ii, iii), and module headings.
-- Format document sections with Markdown headers (# for Document Title, ## for Sections/Modules, ### for Question Headers).
-- Do not add any introductory or conversational remarks; output only the reconstructed document.`,
+                  text: getAcademicReconstructionPrompt({ isImage: false }),
                 },
               ],
             },
@@ -469,51 +401,8 @@ CRITICAL MATHEMATICS, SYMBOLS & QUESTION BANK RULES:
         );
       }
 
-      // Step C: Build formatted Word (.docx) document with native Math equations
-      const rawLines = extractedText.split(/\r?\n/);
-      const paragraphs: Paragraph[] = [];
-
-      // Document Title
-      paragraphs.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: baseName,
-              bold: true,
-              size: 36, // 18pt
-              color: "00C269", // CodeBits Emerald
-              font: "Calibri",
-            }),
-          ],
-          spacing: { after: 280 },
-        })
-      );
-
-      for (let i = 0; i < rawLines.length; i++) {
-        const line = rawLines[i].trim();
-        if (!line) continue;
-
-        // Heading 1: # Title
-        if (line.startsWith("# ")) {
-          paragraphs.push(buildMathParagraph(line.replace(/^#\s+/, ""), HeadingLevel.HEADING_1));
-        }
-        // Heading 2: ## Subtitle / Section
-        else if (line.startsWith("## ")) {
-          paragraphs.push(buildMathParagraph(line.replace(/^##\s+/, ""), HeadingLevel.HEADING_2));
-        }
-        // Heading 3: ### Subheading / Question Header
-        else if (line.startsWith("### ")) {
-          paragraphs.push(buildMathParagraph(line.replace(/^###\s+/, ""), HeadingLevel.HEADING_3));
-        }
-        // Bullet List item
-        else if (/^[-*•]\s+/.test(line)) {
-          paragraphs.push(buildMathParagraph(line.replace(/^[-*•]\s+/, "")));
-        }
-        // Standard Paragraph or Equation Line
-        else {
-          paragraphs.push(buildMathParagraph(line));
-        }
-      }
+      // Step C: Build formatted Word (.docx) document with native Math equations, Matrices, and Tables
+      const docElements = buildDocumentElements(extractedText, baseName);
 
       const doc = new Document({
         sections: [
@@ -528,7 +417,7 @@ CRITICAL MATHEMATICS, SYMBOLS & QUESTION BANK RULES:
                 },
               },
             },
-            children: paragraphs,
+            children: docElements,
           },
         ],
       });

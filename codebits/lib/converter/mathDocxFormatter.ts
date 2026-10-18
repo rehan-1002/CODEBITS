@@ -4,6 +4,13 @@ import {
   HeadingLevel,
   Math as DocxMath,
   MathRun,
+  Table,
+  TableRow,
+  TableCell,
+  WidthType,
+  BorderStyle,
+  ShadingType,
+  AlignmentType,
 } from "docx";
 
 // ==========================================
@@ -382,13 +389,74 @@ function replaceFractions(text: string): string {
 }
 
 // ==========================================
-// 4. CLEAN & STANDARDIZE MATH SYMBOLS
+// 4. LATEX MATRIX TO WORD EQUATION CONVERTER
+// ==========================================
+export function convertLatexMatrixToWordMatrix(raw: string): string {
+  if (!raw) return "";
+
+  // Captures \begin{matrix}, \begin{bmatrix}, \begin{pmatrix}, \begin{vmatrix}, \begin{Vmatrix}, \begin{Bmatrix}, \begin{array}{...}
+  const matrixRegex = /\\begin\{(matrix|bmatrix|pmatrix|vmatrix|Vmatrix|Bmatrix|array)\}(?:\{[lcr| ]+\})?([\s\S]*?)\\end\{\1\}/g;
+
+  return raw.replace(matrixRegex, (_match, matrixType, content) => {
+    // 1. Split rows by double backslash or \cr (or newline if rows don't have \\)
+    let rawRows = content.split(/(?:\\\\|\\cr)/);
+
+    // If rows weren't split by \\, check if lines have &
+    if (rawRows.length === 1 && content.includes("\n")) {
+      rawRows = content.split(/\r?\n/).filter((l: string) => l.trim().length > 0);
+    }
+
+    const cleanedRows: string[] = [];
+
+    for (const row of rawRows) {
+      const trimmedRow = row.trim();
+      if (!trimmedRow) continue;
+
+      // 2. Split columns by &
+      const cols = trimmedRow.split("&").map((col: string) => {
+        let c = col.trim();
+        // Clean inner math expressions without recursive matrix loop
+        c = cleanMathSymbols(c);
+        return c;
+      });
+
+      cleanedRows.push(cols.join(" & "));
+    }
+
+    if (cleanedRows.length === 0) return "";
+
+    const matrixBody = cleanedRows.join(" @ ");
+
+    switch (matrixType) {
+      case "bmatrix":
+        return `[\\matrix(${matrixBody})]`;
+      case "pmatrix":
+        return `(\\matrix(${matrixBody}))`;
+      case "vmatrix":
+        return `|\\matrix(${matrixBody})|`;
+      case "Vmatrix":
+        return `‖\\matrix(${matrixBody})‖`;
+      case "Bmatrix":
+        return `{\\matrix(${matrixBody})}`;
+      case "matrix":
+      case "array":
+      default:
+        return `\\matrix(${matrixBody})`;
+    }
+  });
+}
+
+// ==========================================
+// 5. CLEAN & STANDARDIZE MATH SYMBOLS
 // ==========================================
 export function cleanMathSymbols(raw: string): string {
   if (!raw) return "";
 
   // Step 1: Repair any mojibake & HTML entities
   let s = repairMojibakeAndHtmlEntities(raw);
+
+  // Step 2: Convert LaTeX matrices BEFORE backslash collapse so \\ row breaks are preserved
+  s = convertLatexMatrixToWordMatrix(s);
 
   // Normalize multiple backslashes (e.g. \\sqrt -> \sqrt)
   s = s.replace(/\\{2,}/g, "\\");
@@ -640,4 +708,189 @@ export function buildMathParagraph(
       : { after: 140, line: 280 },
     indent: isOptionLine ? { left: 720 } : undefined, // Half-inch indent for options
   });
+}
+
+// ==========================================
+// 6. NATIVE WORD TABLE BUILDER
+// ==========================================
+export function buildWordTable(lines: string[]): Table {
+  // Filter and trim table lines
+  const cleanLines = lines.map((l) => l.trim()).filter((l) => l.startsWith("|") && l.includes("|"));
+  if (cleanLines.length === 0) {
+    return new Table({ rows: [] });
+  }
+
+  const parsedRows: string[][] = [];
+  let hasSeparator = false;
+
+  for (const line of cleanLines) {
+    // Check if line is a delimiter like |---|---| or |:---|---:|
+    if (/^\|(?:\s*:?-+:?\s*\|)+$/.test(line)) {
+      hasSeparator = true;
+      continue;
+    }
+
+    // Split cells by pipe '|'
+    const rawCells = line.split("|");
+    // Strip leading and trailing empty items from outer pipes
+    const cells = rawCells.slice(1, line.endsWith("|") ? -1 : undefined).map((c) => c.trim());
+    if (cells.length > 0) {
+      parsedRows.push(cells);
+    }
+  }
+
+  if (parsedRows.length === 0) {
+    return new Table({ rows: [] });
+  }
+
+  const maxCols = Math.max(...parsedRows.map((r) => r.length));
+  const colWidthPct = Math.floor(100 / Math.max(maxCols, 1));
+
+  const tableRows: TableRow[] = [];
+
+  for (let rIdx = 0; rIdx < parsedRows.length; rIdx++) {
+    const isHeader = rIdx === 0 && hasSeparator;
+    const cells = parsedRows[rIdx];
+    const tableCells: TableCell[] = [];
+
+    for (let cIdx = 0; cIdx < maxCols; cIdx++) {
+      const cellText = cells[cIdx] || "";
+      const cellParagraph = buildMathParagraph(cellText);
+
+      tableCells.push(
+        new TableCell({
+          children: [cellParagraph],
+          width: { size: colWidthPct, type: WidthType.PERCENTAGE },
+          shading: isHeader
+            ? { fill: "F3F4F6", type: ShadingType.CLEAR } // Clean academic header tint
+            : undefined,
+          margins: {
+            top: 140, // ~7pt padding
+            bottom: 140,
+            left: 180, // ~9pt padding
+            right: 180,
+          },
+          borders: {
+            top: { style: BorderStyle.SINGLE, size: 1, color: "D1D5DB" },
+            bottom: { style: BorderStyle.SINGLE, size: isHeader ? 2 : 1, color: isHeader ? "9CA3AF" : "D1D5DB" },
+            left: { style: BorderStyle.SINGLE, size: 1, color: "D1D5DB" },
+            right: { style: BorderStyle.SINGLE, size: 1, color: "D1D5DB" },
+          },
+        })
+      );
+    }
+
+    tableRows.push(
+      new TableRow({
+        children: tableCells,
+        tableHeader: isHeader,
+      })
+    );
+  }
+
+  return new Table({
+    rows: tableRows,
+    width: {
+      size: 100,
+      type: WidthType.PERCENTAGE,
+    },
+    alignment: AlignmentType.CENTER,
+  });
+}
+
+// ==========================================
+// 7. UNIFIED DOCUMENT ELEMENTS PARSER
+// ==========================================
+// Transforms reconstructed document markdown into native Word Paragraphs and Tables
+// while preserving multiline matrices, display equations, questions, and headers.
+export function buildDocumentElements(text: string, title?: string): (Paragraph | Table)[] {
+  const elements: (Paragraph | Table)[] = [];
+
+  if (title && title.trim()) {
+    elements.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: title.trim(),
+            bold: true,
+            size: 36, // 18pt
+            color: "00C269", // CodeBits Emerald
+            font: "Calibri",
+          }),
+        ],
+        spacing: { after: 280 },
+      })
+    );
+  }
+
+  if (!text || !text.trim()) return elements;
+
+  // Step 1: Pre-process multiline $$ ... $$ blocks so matrices are not broken across paragraphs
+  let normalized = text.replace(/\$\$([\s\S]*?)\$\$/g, (_m, inner) => {
+    const flattened = inner.replace(/\r?\n\s*/g, " ").trim();
+    return `$$${flattened}$$`;
+  });
+
+  // Step 2: Pre-process \begin{...matrix} ... \end{...matrix} blocks that might not be in $$
+  normalized = normalized.replace(
+    /\\begin\{(matrix|bmatrix|pmatrix|vmatrix|Vmatrix|Bmatrix|array)\}(?:\{[lcr| ]+\})?([\s\S]*?)\\end\{\1\}/g,
+    (_m, type, inner) => {
+      const flattened = inner.replace(/\r?\n\s*/g, " ").trim();
+      return `\\begin{${type}} ${flattened} \\end{${type}}`;
+    }
+  );
+
+  const lines = normalized.split(/\r?\n/);
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+
+    // Check if line is the start of a Markdown table: starts with | and contains |
+    if (line.startsWith("|") && line.includes("|")) {
+      const tableLines: string[] = [line];
+      let j = i + 1;
+      while (j < lines.length) {
+        const nextLine = lines[j].trim();
+        if (nextLine.startsWith("|") && nextLine.includes("|")) {
+          tableLines.push(nextLine);
+          j++;
+        } else {
+          break;
+        }
+      }
+
+      // If we found at least 2 table lines (e.g. header + separator or data row)
+      if (tableLines.length >= 2) {
+        elements.push(buildWordTable(tableLines));
+        // Add subtle spacing after table
+        elements.push(new Paragraph({ children: [], spacing: { after: 140 } }));
+        i = j - 1; // Advance loop past the table!
+        continue;
+      }
+    }
+
+    // Heading 1: # Title
+    if (line.startsWith("# ")) {
+      elements.push(buildMathParagraph(line.replace(/^#\s+/, ""), HeadingLevel.HEADING_1));
+    }
+    // Heading 2: ## Subtitle / Section
+    else if (line.startsWith("## ")) {
+      elements.push(buildMathParagraph(line.replace(/^##\s+/, ""), HeadingLevel.HEADING_2));
+    }
+    // Heading 3: ### Subheading / Question Header
+    else if (line.startsWith("### ")) {
+      elements.push(buildMathParagraph(line.replace(/^###\s+/, ""), HeadingLevel.HEADING_3));
+    }
+    // Bullet List item
+    else if (/^[-*•]\s+/.test(line)) {
+      elements.push(buildMathParagraph(line.replace(/^[-*•]\s+/, "")));
+    }
+    // Standard Paragraph or Equation / Matrix Line
+    else {
+      elements.push(buildMathParagraph(line));
+    }
+  }
+
+  return elements;
 }
