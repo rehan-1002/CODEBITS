@@ -47,35 +47,51 @@ function getAcademicReconstructionPrompt(options: { isImage: boolean; rangeLabel
 
   return `${intro}
 
-CRITICAL MATHEMATICS, SYMBOLS, MATRICES & TABLES RULES:
-1. MATHEMATICAL SYMBOLS & EQUATIONS:
-- Never substitute or alter any mathematical symbol with corrupted characters, approximations, or placeholders.
-- Preserve every single Greek letter (θ, π, α, β, γ, δ, λ, μ, σ, ω, Δ, etc.), root (√, ∛), fraction (\\frac{a}{b}), exponent/power (e.g. ^2, ^{-1/2}, e^{iθ}), subscript (e.g. x_0, a_n), integral (∫, ∬), summation (∑), limit (\\lim), differential (dy/dx, ∂), matrix, and operator (±, ∓, ×, ÷, ·, ≤, ≥, ≠, ≈, ≡, ∈, ∉, ⊂, ∪, ∩, →, ⇒, ⇔).
-- Enclose all mathematical expressions and formulas in standard dollar signs: $...$ for inline formulas and $$...$$ on their own line for standalone display equations, so they are natively rendered into Word Office Math equation blocks.
+CRITICAL MATHEMATICS, PHYSICS, CHEMISTRY & EQUATION RULES:
+1. MATHEMATICAL SYMBOLS & ADVANCED CALCULUS:
+- Preserve all calculus operations verbatim:
+  - Integration: single (\\int), double (\\iint), triple (\\iiint), contour/surface (\\oint), with limits (e.g. \\int_{0}^{\\infty} f(x) dx, \\int_{a}^{b}).
+  - Differentiation: ordinary derivatives (\\frac{dy}{dx}, \\frac{d^2 y}{dx^2}), partial derivatives (\\frac{\\partial u}{\\partial t}, \\frac{\\partial^2 u}{\\partial x^2}), gradients/divergence/curl (\\nabla, \\nabla \\cdot \\vec{F}, \\nabla \\times \\vec{F}, \\nabla^2).
+  - Summations (\\sum_{i=1}^n), products (\\prod), limits (\\lim_{x \\to 0}), and roots (\\sqrt{x}, \\sqrt[n]{x}).
+- Enclose all mathematical expressions in standard dollar signs: $...$ for inline and $$...$$ for display equations.
 
-2. MATRICES & DETERMINANTS (ANY ORDER: 2x2, 3x3, 4x4, etc.):
-- Reconstruct all matrices and determinants of ANY dimension (e.g. 2x2, 3x3, 4x4, NxM) verbatim using standard LaTeX matrix notation:
+2. PHYSICS EQUATIONS & VECTORS:
+- Reconstruct all physical laws and equations (Mechanics, Electrodynamics, Thermodynamics, Quantum, Optics, Relativity):
+  - Vectors with arrows: \\vec{v}, \\vec{F}, \\vec{E}, \\vec{B}, \\vec{a}, \\vec{p}
+  - Unit vectors with hats: \\hat{i}, \\hat{j}, \\hat{k}, \\hat{n}
+  - Time derivatives: \\dot{x}, \\ddot{x}, \\dot{\\theta}
+  - Quantum & atomic symbols: \\hbar (reduced Planck constant), \\lambda (wavelength), \\nu (frequency), \\psi/\\Psi (wavefunction), \\rho, \\sigma, \\tau, \\mu_0, \\epsilon_0.
+
+3. CHEMISTRY EQUATIONS & REACTION MECHANISMS:
+- Reconstruct all chemical formulas, stoichiometry, ionic charges, and reactions verbatim:
+  - Molecular formulas with subscripts: H_2O, H_2SO_4, CaCO_3, KMnO_4, C_6H_{12}O_6
+  - Ions & oxidation states with superscripts: H^+, Na^+, Ca^{2+}, Fe^{3+}, SO_4^{2-}, OH^-, e^-
+  - Reaction arrows: forward reaction (\\rightarrow), equilibrium (\\rightleftharpoons), resonance (\\leftrightarrow)
+  - States & indicators: gas evolved (\\uparrow or (g)), precipitate (\\downarrow or (s)), (aq), (l)
+  - Reaction conditions over arrows: \\xrightarrow{\\Delta} (heat), \\xrightarrow{\\text{catalyst}}
+  - Isotopes: ^{14}_6 C, ^{235}_{92}U
+
+4. MATRICES & DETERMINANTS (ANY ORDER: 2x2, 3x3, 4x4, NxM):
+- Reconstruct all matrices and determinants of ANY dimension verbatim using standard LaTeX matrix notation:
   - Square bracket matrix: \\begin{bmatrix} a_1 & b_1 & c_1 \\\\ a_2 & b_2 & c_2 \\\\ a_3 & b_3 & c_3 \\end{bmatrix}
   - Parenthesis matrix: \\begin{pmatrix} ... \\end{pmatrix}
   - Determinants: \\begin{vmatrix} ... \\end{vmatrix}
   - Double-bar norm matrix: \\begin{Vmatrix} ... \\end{Vmatrix}
-- Always separate columns with & and rows with \\\\.
-- For 3x3 or higher order matrices, preserve every single row and column without collapsing or omitting entries.
-- Always enclose matrix equations in display math $$...$$ on their own line or inline $...$ (e.g. $A = \\begin{bmatrix} -1 & 2 & 38 \\\\ 0 & 2 & 37 \\\\ 0 & 0 & -2 \\end{bmatrix}$).
+- Always separate columns with & and rows with \\\\. Preserve every single row and column without collapsing entries.
 
-3. CRITICAL WORD AND EQUATION SPACING:
-- Always preserve spaces between regular English words and math formulas!
+5. CRITICAL WORD AND EQUATION SPACING:
+- Always preserve spaces between regular English words and formulas!
   - For example, write "If $A = ...$ find the Eigen values of $A^3 + 5A + 8I$." NEVER fuse words like "If$A$" or "of$A^3$" or ")find".
   - Write "variable $X$ follows", "function $f(z)$", "along $y = x^2$", "matrix $A$".
 
-4. TABLES & DATA SHEETS:
+6. TABLES & DATA SHEETS:
 - Format all tables using standard Markdown table syntax with a header row, separator row, and data rows:
   | Column 1 | Column 2 | Column 3 |
   |---|---|---|
   | Cell 1 | Cell 2 | Cell 3 |
 - Never convert a table into loose unformatted text.
 
-5. QUESTION BANK & EXAM PAPER STRUCTURE:
+7. QUESTION BANK & EXAM PAPER STRUCTURE:
 - If handwriting is present, transcribe it accurately without omitting steps.
 - Preserve all Question numbers verbatim (e.g. "Q.1", "Question 1:", "1.", "2(a)", "Problem 4:").
 - Preserve marks/weightage indicators (e.g. "[4 Marks]", "[5 M]").

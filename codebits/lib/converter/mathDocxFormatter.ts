@@ -675,6 +675,37 @@ export function unfuseWordBoundaries(text: string): string {
   return s;
 }
 
+/**
+ * Standardizes chemical formulas and reaction equations:
+ * - Reaction arrows: -> to →, <=> to ⇌
+ * - Precipitate and gas evolution: v to ↓, ^ to ↑
+ * - Subscripts for stoichiometry: H2O to H₂O, CaCO3 to CaCO₃
+ * - Superscripts for ionic charges: Fe^3+ to Fe³⁺, SO4^2- to SO₄²⁻
+ */
+export function cleanChemistryFormula(raw: string): string {
+  if (!raw) return "";
+  let s = raw;
+  // 1. Superscript charges: e.g. ^2+, ^+, ^3-, ^{2+}, ^-, e^-
+  s = s.replace(/\^\{?([0-9]*[\+\-])\}?/g, (_, charge) => toSuperscript(charge));
+  s = s.replace(/e\^\{?-\}?/g, "e⁻");
+  // 2. Reversible / equilibrium arrows
+  s = s.replace(/<=+>|<->|\\rightleftharpoons/g, "⇌");
+  // 3. Standard reaction arrows
+  s = s.replace(/-+>|\\rightarrow/g, "→");
+  // 4. Standalone gas / precipitate markers
+  s = s.replace(/\s\^(\s|$)/g, " ↑$1");
+  s = s.replace(/\sv(\s|$)/g, " ↓$1");
+  // 5. Chemical stoichiometry subscripts following element letters or brackets
+  const subMap: Record<string, string> = {
+    "0": "₀", "1": "₁", "2": "₂", "3": "₃", "4": "₄",
+    "5": "₅", "6": "₆", "7": "₇", "8": "₈", "9": "₉"
+  };
+  s = s.replace(/([A-Za-z\)])([0-9]+)/g, (_, prefix, nums) => {
+    return prefix + nums.split("").map((n: string) => subMap[n] || n).join("");
+  });
+  return s;
+}
+
 // ==========================================
 // 5. CLEAN & STANDARDIZE MATH SYMBOLS
 // ==========================================
@@ -698,6 +729,9 @@ export function cleanMathSymbols(raw: string, preserveWhitespace: boolean = fals
   s = replaceBalancedCommand(s, "hat", (content) => `${cleanMathSymbols(content, false)}̂`);
   s = replaceBalancedCommand(s, "dot", (content) => `${cleanMathSymbols(content, false)}̇`);
   s = replaceBalancedCommand(s, "ddot", (content) => `${cleanMathSymbols(content, false)}̈`);
+
+  // Step 3.5: Chemistry \ce{...} (mhchem) equations
+  s = replaceBalancedCommand(s, "ce", (content) => cleanChemistryFormula(content));
 
   // Step 4: Greek letters (lowercase)
   s = s
@@ -778,6 +812,15 @@ export function cleanMathSymbols(raw: string, preserveWhitespace: boolean = fals
     .replace(/\\Rightarrow(?![a-zA-Z])|\\implies(?![a-zA-Z])/g, "⇒")
     .replace(/\\Leftarrow(?![a-zA-Z])/g, "⇐")
     .replace(/\\Leftrightarrow(?![a-zA-Z])|\\iff(?![a-zA-Z])/g, "⇔")
+    .replace(/\\rightleftharpoons(?![a-zA-Z])/g, "⇌")
+    .replace(/\\leftrightarrow(?![a-zA-Z])/g, "↔")
+    .replace(/\\uparrow(?![a-zA-Z])/g, "↑")
+    .replace(/\\downarrow(?![a-zA-Z])/g, "↓")
+    .replace(/\\hbar(?![a-zA-Z])/g, "ħ")
+    .replace(/\\ell(?![a-zA-Z])/g, "ℓ")
+    .replace(/\\AA(?![a-zA-Z])|\\angstrom(?![a-zA-Z])/g, "Å")
+    .replace(/\\xrightarrow\[(.*?)\]\{(.*?)\}/g, "⎯⎯[$1 / $2]⎯→")
+    .replace(/\\xrightarrow\{(.*?)\}/g, "⎯⎯[$1]⎯→")
     .replace(/\\therefore(?![a-zA-Z])/g, "∴")
     .replace(/\\because(?![a-zA-Z])/g, "∵")
     .replace(/\\perp(?![a-zA-Z])/g, "⊥")
