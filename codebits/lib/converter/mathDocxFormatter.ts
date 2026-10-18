@@ -1189,6 +1189,35 @@ export function buildDocumentElements(text: string, title?: string): (Paragraph 
       }
     }
 
+    // Code Block or Schematic Diagram (e.g. ASCII electrical circuits): ``` ... ```
+    if (line.startsWith("```")) {
+      const codeLines: string[] = [];
+      let j = i + 1;
+      while (j < lines.length && !lines[j].trim().startsWith("```")) {
+        codeLines.push(lines[j]);
+        j++;
+      }
+      i = j; // Advance past the closing ```
+
+      for (const cl of codeLines) {
+        elements.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: cl || " ",
+                font: "Consolas",
+                size: 19, // ~9.5pt
+                color: "111827",
+              }),
+            ],
+            spacing: { before: 10, after: 10, line: 220 },
+          })
+        );
+      }
+      elements.push(new Paragraph({ children: [], spacing: { after: 120 } }));
+      continue;
+    }
+
     // Heading 1: # Title
     if (line.startsWith("# ")) {
       elements.push(buildMathParagraph(line.replace(/^#\s+/, ""), HeadingLevel.HEADING_1));

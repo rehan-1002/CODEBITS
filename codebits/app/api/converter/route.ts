@@ -62,7 +62,14 @@ CRITICAL MATHEMATICS, PHYSICS, CHEMISTRY & EQUATION RULES:
   - Time derivatives: \\dot{x}, \\ddot{x}, \\dot{\\theta}
   - Quantum & atomic symbols: \\hbar (reduced Planck constant), \\lambda (wavelength), \\nu (frequency), \\psi/\\Psi (wavefunction), \\rho, \\sigma, \\tau, \\mu_0, \\epsilon_0.
 
-3. CHEMISTRY EQUATIONS & REACTION MECHANISMS:
+3. ELECTRICAL & ELECTRONICS CIRCUITS (BEEE):
+- When a circuit schematic is present in the document or problem:
+  - Reconstruct all component values and ratings verbatim: Resistances (R, \\Omega, k\\Omega), Inductances (L, mH, H), Capacitances (C, \\mu F), DC/AC Voltage & Current Sources (V, I, \\omega, 50\\text{ Hz}, \\angle\\theta).
+  - Reconstruct the circuit topology: nodes, loops, branches, and ground (\\perp).
+  - Provide an ASCII/text schematic diagram inside a \`\`\` code block illustrating the component layout, loops, and terminal labels (e.g. A, B).
+  - Reconstruct all circuit equations (KVL, KCL, mesh current matrices, nodal admittance matrices, Thévenin V_{th} / R_{th}, Norton, Star-Delta, AC impedance Z = R + jX) into standard equation blocks ($...$).
+
+4. CHEMISTRY EQUATIONS & REACTION MECHANISMS:
 - Reconstruct all chemical formulas, stoichiometry, ionic charges, and reactions verbatim:
   - Molecular formulas with subscripts: H_2O, H_2SO_4, CaCO_3, KMnO_4, C_6H_{12}O_6
   - Ions & oxidation states with superscripts: H^+, Na^+, Ca^{2+}, Fe^{3+}, SO_4^{2-}, OH^-, e^-
@@ -71,7 +78,7 @@ CRITICAL MATHEMATICS, PHYSICS, CHEMISTRY & EQUATION RULES:
   - Reaction conditions over arrows: \\xrightarrow{\\Delta} (heat), \\xrightarrow{\\text{catalyst}}
   - Isotopes: ^{14}_6 C, ^{235}_{92}U
 
-4. MATRICES & DETERMINANTS (ANY ORDER: 2x2, 3x3, 4x4, NxM):
+5. MATRICES & DETERMINANTS (ANY ORDER: 2x2, 3x3, 4x4, NxM):
 - Reconstruct all matrices and determinants of ANY dimension verbatim using standard LaTeX matrix notation:
   - Square bracket matrix: \\begin{bmatrix} a_1 & b_1 & c_1 \\\\ a_2 & b_2 & c_2 \\\\ a_3 & b_3 & c_3 \\end{bmatrix}
   - Parenthesis matrix: \\begin{pmatrix} ... \\end{pmatrix}
@@ -79,7 +86,7 @@ CRITICAL MATHEMATICS, PHYSICS, CHEMISTRY & EQUATION RULES:
   - Double-bar norm matrix: \\begin{Vmatrix} ... \\end{Vmatrix}
 - Always separate columns with & and rows with \\\\. Preserve every single row and column without collapsing entries.
 
-5. CRITICAL WORD AND EQUATION SPACING:
+6. CRITICAL WORD AND EQUATION SPACING:
 - Always preserve spaces between regular English words and formulas!
   - For example, write "If $A = ...$ find the Eigen values of $A^3 + 5A + 8I$." NEVER fuse words like "If$A$" or "of$A^3$" or ")find".
   - Write "variable $X$ follows", "function $f(z)$", "along $y = x^2$", "matrix $A$".
