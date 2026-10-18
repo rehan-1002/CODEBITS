@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun, AlignmentType } from "docx";
 import mammoth from "mammoth";
 import { jsPDF } from "jspdf";
 import { generateContentWithFailover } from "@/lib/ai/gemini";
@@ -63,11 +63,13 @@ CRITICAL MATHEMATICS, PHYSICS, CHEMISTRY & EQUATION RULES:
   - Quantum & atomic symbols: \\hbar (reduced Planck constant), \\lambda (wavelength), \\nu (frequency), \\psi/\\Psi (wavefunction), \\rho, \\sigma, \\tau, \\mu_0, \\epsilon_0.
 
 3. ELECTRICAL & ELECTRONICS CIRCUITS (BEEE):
-- When a circuit schematic is present in the document or problem:
-  - Reconstruct all component values and ratings verbatim: Resistances (R, \\Omega, k\\Omega), Inductances (L, mH, H), Capacitances (C, \\mu F), DC/AC Voltage & Current Sources (V, I, \\omega, 50\\text{ Hz}, \\angle\\theta).
-  - Reconstruct the circuit topology: nodes, loops, branches, and ground (\\perp).
-  - Provide an ASCII/text schematic diagram inside a \`\`\` code block illustrating the component layout, loops, and terminal labels (e.g. A, B).
-  - Reconstruct all circuit equations (KVL, KCL, mesh current matrices, nodal admittance matrices, Thévenin V_{th} / R_{th}, Norton, Star-Delta, AC impedance Z = R + jX) into standard equation blocks ($...$).
+- When a circuit diagram or schematic is present:
+  - NEVER output long, wordy verbal descriptions of wire connections (NEVER write: "A 1A current source connects between node F and node A... A 2 ohm resistor connects between node A and node C..."). This looks awful and unreadable in academic papers.
+  - Draw a visual ASCII circuit diagram using box-drawing lines inside a \`\`\` code block (e.g., using +, -, |, [ R = 2\\Omega ], (1A ↑), (+ 4V -)) so that students can see the actual schematic structure visually.
+  - Summarize the component parameters cleanly and compactly:
+    - Independent Sources: $I_1 = 1\\text{ A}$, $I_2 = 2\\text{ A}$, $V_1 = 4\\text{ V}$
+    - Branch Resistors: $R_1 = 2\\,\\Omega$, $R_2 = 6\\,\\Omega$, etc.
+  - Reconstruct all circuit equations (KVL, KCL, mesh current matrices, nodal admittance matrices, Thévenin $V_{th} / R_{th}$, Norton, Star-Delta, AC impedance $Z = R + jX$) in standard equation blocks ($...$).
 
 4. CHEMISTRY EQUATIONS & REACTION MECHANISMS:
 - Reconstruct all chemical formulas, stoichiometry, ionic charges, and reactions verbatim:
@@ -290,6 +292,43 @@ export async function POST(req: NextRequest) {
 
       // Build formatted Word (.docx) document with native Math equations, Matrices, and Tables
       const docElements = buildDocumentElements(extractedText, baseName);
+
+      // Embed the source image (diagrams, circuits, handwriting) directly into the Word document
+      try {
+        const ext = (originalName.split(".").pop() || "").toLowerCase();
+        const imgType: "jpg" | "png" | "gif" | "bmp" =
+          ext === "png" ? "png" : ext === "gif" ? "gif" : ext === "bmp" ? "bmp" : "jpg";
+
+        const imageParagraph = new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 240, after: 120 },
+          children: [
+            new ImageRun({
+              data: buffer,
+              type: imgType,
+              transformation: {
+                width: 520,
+                height: 320,
+              },
+            }),
+          ],
+        });
+        const captionParagraph = new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 240 },
+          children: [
+            new TextRun({
+              text: "Figure: Source Reference & Schematic Diagram",
+              italics: true,
+              size: 18,
+              color: "666666",
+            }),
+          ],
+        });
+        docElements.push(imageParagraph, captionParagraph);
+      } catch (imgErr) {
+        console.warn("Could not embed image into docx:", imgErr);
+      }
 
       const doc = new Document({
         sections: [
