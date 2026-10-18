@@ -463,23 +463,26 @@ export function createOmmlMatrixElement(
   let begChr = "[";
   let endChr = "]";
 
-  const b = bracketType.trim().toLowerCase();
-  if (b === "(" || b === "pmatrix") {
-    begChr = "(";
-    endChr = ")";
-  } else if (b === "|" || b === "vmatrix") {
-    begChr = "|";
-    endChr = "|";
-  } else if (b === "‖" || b === "vmatrix" || b === "||") {
-    begChr = "‖";
-    endChr = "‖";
-  } else if (b === "{" || b === "bmatrix") {
+  const rawB = bracketType.trim();
+  const lowerB = rawB.toLowerCase();
+
+  if (rawB === "Bmatrix" || rawB === "{") {
     begChr = "{";
     endChr = "}";
-  } else if (b === "none" || b === "matrix") {
+  } else if (rawB === "Vmatrix" || rawB === "‖" || rawB === "||") {
+    begChr = "‖";
+    endChr = "‖";
+  } else if (lowerB === "pmatrix" || rawB === "(") {
+    begChr = "(";
+    endChr = ")";
+  } else if (lowerB === "vmatrix" || rawB === "|") {
+    begChr = "|";
+    endChr = "|";
+  } else if (lowerB === "none" || lowerB === "matrix") {
     begChr = "";
     endChr = "";
   } else {
+    // Default (bmatrix, array, [, etc.) -> Square brackets!
     begChr = "[";
     endChr = "]";
   }
@@ -552,6 +555,43 @@ export function createOmmlMatrixElement(
 }
 
 /**
+ * Parses raw matrix content into rows and cells, supporting:
+ * - Rows separated by \\, \cr, @, or newlines
+ * - Rows where \ was stripped into spaces (e.g. "2 & 2 & -3 2 & 1 & -6 1 & -1 & -2")
+ */
+export function parseMatrixContent(content: string): string[][] {
+  let rawRows = content
+    .split(/(?:@|\\\\|\\cr|\r?\n)/)
+    .map((r) => r.trim())
+    .filter((r) => r.length > 0);
+
+  // If row delimiters were collapsed to whitespace by previous processing
+  if (rawRows.length === 1) {
+    const parts = rawRows[0].split("&").map((p) => p.trim());
+    const rowList: string[][] = [];
+    let currentRow: string[] = [];
+    for (const part of parts) {
+      const subTokens = part.trim().split(/\s+/);
+      if (subTokens.length >= 2 && currentRow.length >= 1) {
+        currentRow.push(subTokens[0]);
+        rowList.push(currentRow);
+        currentRow = [subTokens.slice(1).join(" ")];
+      } else {
+        currentRow.push(part);
+      }
+    }
+    if (currentRow.length > 0) {
+      rowList.push(currentRow);
+    }
+    if (rowList.length > 1) {
+      return rowList;
+    }
+  }
+
+  return rawRows.map((row) => row.split("&").map((col) => col.trim()));
+}
+
+/**
  * Parses any mathematical formula string (from $...$ or $$...$$) into DocxMath children,
  * converting both LaTeX matrix syntax and linear matrix syntax into authentic 2D OMML matrix nodes.
  */
@@ -560,10 +600,10 @@ export function parseMathFormulaToChildren(
 ): (MathRun | BuilderElement)[] {
   const children: (MathRun | BuilderElement)[] = [];
 
-  // Matches either LaTeX matrix: \begin{bmatrix} ... \end{bmatrix}
+  // Matches either LaTeX matrix (with or without backslash): \begin{bmatrix} ... \end{bmatrix} OR beginbmatrix ... endbmatrix
   // OR Linear format matrix: [matrix(...)] or [\matrix(...)] or (matrix(...)) or |matrix(...)|
   const matrixRegex =
-    /(?:\\begin\{(matrix|bmatrix|pmatrix|vmatrix|Vmatrix|Bmatrix|array)\}(?:\{[lcr| ]+\})?([\s\S]*?)\\end\{\1\}|(\[|\(|\{|\||‖)?\\?matrix\(([\s\S]*?)\)(\]|\)|\}|\||‖)?)/g;
+    /(?:\\?begin\{?(matrix|bmatrix|pmatrix|vmatrix|Vmatrix|Bmatrix|array)\}?(?:\{[lcr| ]+\})?([\s\S]*?)\\?end\{?\1\}?|((?:\[|\(|\{|\||‖)?\\?matrix\(([\s\S]*?)\)(?:\]|\)|\}|\||‖)?))/g;
 
   let lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -576,7 +616,7 @@ export function parseMathFormulaToChildren(
     if (matchStart > lastIndex) {
       const beforeText = formula.slice(lastIndex, matchStart);
       const cleanedBefore = cleanMathSymbols(beforeText, true);
-      if (cleanedBefore) {
+      if (cleanedBefore.trim()) {
         children.push(new MathRun(cleanedBefore));
       }
     }
@@ -585,25 +625,14 @@ export function parseMathFormulaToChildren(
     let matrixContent = "";
 
     if (match[1]) {
-      // LaTeX matrix
       bracketType = match[1];
       matrixContent = match[2];
     } else {
-      // Linear matrix
-      bracketType = match[3] || match[5] || "[";
-      matrixContent = match[4];
+      bracketType = match[4] || match[6] || "[";
+      matrixContent = match[5];
     }
 
-    // Split rows: split by @, \\, \cr, or newline
-    const rawRows = matrixContent
-      .split(/(?:@|\\\\|\\cr|\r?\n)/)
-      .map((r) => r.trim())
-      .filter((r) => r.length > 0);
-
-    const parsedRows = rawRows.map((row) =>
-      row.split("&").map((col) => col.trim())
-    );
-
+    const parsedRows = parseMatrixContent(matrixContent);
     if (parsedRows.length > 0) {
       const matrixElement = createOmmlMatrixElement(parsedRows, bracketType);
       children.push(matrixElement);
@@ -616,7 +645,7 @@ export function parseMathFormulaToChildren(
   if (lastIndex < formula.length) {
     const afterText = formula.slice(lastIndex);
     const cleanedAfter = cleanMathSymbols(afterText, true);
-    if (cleanedAfter) {
+    if (cleanedAfter.trim()) {
       children.push(new MathRun(cleanedAfter));
     }
   }
@@ -661,16 +690,6 @@ export function unfuseWordBoundaries(text: string): string {
   s = s.replace(/\bofcos\b/gi, "of cos");
   s = s.replace(/\boff\b(?=\()/gi, "of f");
   s = s.replace(/(\]|[\)])([a-zA-Z]{2,})/g, "$1 $2"); // e.g. "]find" -> "] find"
-
-  // 3. Ensure standalone matrices not wrapped in $ get wrapped so they are parsed into OMML
-  s = s.replace(
-    /((?:\[|\(|\{|\||‖)?\\?matrix\([\s\S]*?\)(?:\]|\)|\}|\||‖)?)/g,
-    (m) => ` $${m.trim()}$ `
-  );
-  s = s.replace(
-    /(\\begin\{(?:matrix|bmatrix|pmatrix|vmatrix|Vmatrix|Bmatrix|array)\}(?:\{[lcr| ]+\})?[\s\S]*?\\end\{(?:matrix|bmatrix|pmatrix|vmatrix|Vmatrix|Bmatrix|array)\})/g,
-    (m) => ` $${m.trim()}$ `
-  );
 
   return s;
 }
@@ -892,88 +911,99 @@ export function buildMathParagraph(
 ): Paragraph {
   // First clean encoding and mojibake from the entire line
   let cleanedLine = repairMojibakeAndHtmlEntities(line);
-
-  // Un-fuse word boundaries and wrap standalone matrices in $...$
   cleanedLine = unfuseWordBoundaries(cleanedLine);
 
   // Check if line represents a Question Number in a Question Bank (e.g. "Q1.", "Q.1", "Question 1:", "1.")
   const questionHeaderMatch = cleanedLine.match(/^(\*{0,2}(?:Q(?:uestion|\.)?\s*\d+[\w.]*|Problem\s*\d+[\w.]*|\d+\.)\*{0,2})(.*)/i);
   const isQuestionHeader = !headingLevel && !!questionHeaderMatch;
 
-  // Split by LaTeX math markers: $$...$$, $...$, \[...\], \(...\)
-  const segments = cleanedLine.split(/(\$\$[\s\S]+?\$\$|\$[^\$\n]+?\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\))/g);
+  // Robust math token matcher:
+  // 1. $$...$$
+  // 2. \[...\]
+  // 3. $...$
+  // 4. \(...\)
+  // 5. LaTeX / unbackslashed matrix: \begin{bmatrix}... OR beginbmatrix...
+  // 6. Linear matrix: [matrix(...)] or [\matrix(...)]
+  const mathTokenRegex = /(?:\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|(\$([^\$\n]+?)\$)|\\\(([\s\S]+?)\\\)|((?:\\?begin\{?(matrix|bmatrix|pmatrix|vmatrix|Vmatrix|Bmatrix|array)\}?(?:\{[lcr| ]+\})?([\s\S]*?)\\?end\{?\7\}?))|((?:\[|\(|\{|\||‖)?\\?matrix\(([\s\S]*?)\)(?:\]|\)|\}|\||‖)?))/g;
+
   const children: (TextRun | DocxMath)[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
 
-  for (let i = 0; i < segments.length; i++) {
-    const seg = segments[i];
-    if (!seg) continue;
+  while ((match = mathTokenRegex.exec(cleanedLine)) !== null) {
+    const matchStart = match.index;
+    const matchEnd = match.index + match[0].length;
 
-    const isExplicitMath =
-      (seg.startsWith("$$") && seg.endsWith("$$")) ||
-      (seg.startsWith("$") && seg.endsWith("$")) ||
-      (seg.startsWith("\\[") && seg.endsWith("\\]")) ||
-      (seg.startsWith("\\(") && seg.endsWith("\\)"));
-
-    if (isExplicitMath) {
-      // Strip outer delimiter markers
-      const rawFormula = seg
-        .replace(/^(\$\$|\$|\\\[|\\\()/, "")
-        .replace(/(\$\$|\$|\\\]|\\\))$/, "")
-        .trim();
-
-      const mathChildren = parseMathFormulaToChildren(rawFormula);
-
-      if (mathChildren.length > 0) {
-        children.push(
-          new DocxMath({
-            children: mathChildren,
-          })
-        );
-      }
-    } else {
-      // Segment is regular text.
-      // Ensure proper boundary spacing adjacent to math:
-      let text = seg;
-
-      // If preceded by a math block and doesn't start with space or punctuation:
-      if (i > 0 && segments[i - 1]?.startsWith("$") && !/^[\s.,\)\]\}:;?!]/.test(text)) {
-        text = " " + text;
-      }
-      // If followed by a math block and doesn't end with space or opening bracket:
-      if (i < segments.length - 1 && segments[i + 1]?.startsWith("$") && !/[\s\(\[\{]$/.test(text)) {
-        text = text + " ";
-      }
-
-      const hasMathSymbols = /[√∛∫∬∭∮∑∏∞∂∇±∓×÷≠≤≥≈≡∼≅∝∈∉⊂⊆∪∩∀∃→←⇒⇔∴∵⊥∥∠°αβγδεζηθικλμνξπρστυφχψωΓΔΘΛΞΠΣΥΦΨΩ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿⁱᶿ₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ᵢⱼ]/.test(
-        text
-      );
-
+    // Text before math block
+    if (matchStart > lastIndex) {
+      let text = cleanedLine.slice(lastIndex, matchStart);
+      if (!/[\s\(\[\{]$/.test(text)) text += " ";
       const cleaned = cleanMathSymbols(text, true);
-
-      if (hasMathSymbols) {
-        // Render math symbols using Cambria Math font for flawless native rendering in Word
-        children.push(
-          new TextRun({
-            text: cleaned,
-            font: "Cambria Math",
-            size: headingLevel ? 28 : isQuestionHeader ? 24 : 22,
-            bold: !!headingLevel || isQuestionHeader,
-            color: headingLevel ? "111827" : "1F2937",
-          })
-        );
-      } else {
-        // Standard text
+      if (cleaned) {
         children.push(
           new TextRun({
             text: cleaned,
             font: "Calibri",
             size: headingLevel ? 28 : isQuestionHeader ? 24 : 22,
-            bold: !!headingLevel || (isQuestionHeader && seg === questionHeaderMatch?.[1]),
+            bold: !!headingLevel || (isQuestionHeader && text.includes(questionHeaderMatch?.[1] || "")),
             color: headingLevel ? "111827" : isQuestionHeader ? "007038" : "1F2937",
           })
         );
       }
     }
+
+    // Determine formula
+    let formula = match[0];
+    if (match[1]) formula = match[1];
+    else if (match[2]) formula = match[2];
+    else if (match[4]) formula = match[4];
+    else if (match[5]) formula = match[5];
+
+    const mathChildren = parseMathFormulaToChildren(formula);
+    if (mathChildren.length > 0) {
+      children.push(
+        new DocxMath({
+          children: mathChildren,
+        })
+      );
+    }
+
+    lastIndex = matchEnd;
+  }
+
+  // Text after last math block
+  if (lastIndex < cleanedLine.length) {
+    let text = cleanedLine.slice(lastIndex);
+    if (children.length > 0 && !/^[\s.,\)\]\}:;?!]/.test(text)) text = " " + text;
+    const cleaned = cleanMathSymbols(text, true);
+    if (cleaned) {
+      children.push(
+        new TextRun({
+          text: cleaned,
+          font: "Calibri",
+          size: headingLevel ? 28 : isQuestionHeader ? 24 : 22,
+          bold: !!headingLevel,
+          color: headingLevel ? "111827" : isQuestionHeader ? "007038" : "1F2937",
+        })
+      );
+    }
+  }
+
+  // If no math tokens matched at all, render as standard paragraph
+  if (children.length === 0) {
+    const hasMathSymbols = /[√∛∫∬∭∮∑∏∞∂∇±∓×÷≠≤≥≈≡∼≅∝∈∉⊂⊆∪∩∀∃→←⇒⇔∴∵⊥∥∠°αβγδεζηθικλμνξπρστυφχψωΓΔΘΛΞΠΣΥΦΨΩ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿⁱᶿ₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ᵢⱼ]/.test(
+      cleanedLine
+    );
+    const cleaned = cleanMathSymbols(cleanedLine, true);
+    children.push(
+      new TextRun({
+        text: cleaned,
+        font: hasMathSymbols ? "Cambria Math" : "Calibri",
+        size: headingLevel ? 28 : isQuestionHeader ? 24 : 22,
+        bold: !!headingLevel,
+        color: headingLevel ? "111827" : isQuestionHeader ? "007038" : "1F2937",
+      })
+    );
   }
 
   // Question option formatting: e.g. (A) ... (B) ... (C) ... (D) ...
