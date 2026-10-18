@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { PDFDocument } from "pdf-lib";
 import {
   FileText,
@@ -16,7 +16,8 @@ import {
   Layers,
   Sparkles,
   StopCircle,
-  FileCheck2,
+  ImageIcon,
+  Images,
 } from "lucide-react";
 
 const CHUNK_SIZE = 8; // Optimal pages per micro-batch (prevents AI token limit & timeouts)
@@ -27,8 +28,9 @@ interface ExtractedSection {
 }
 
 export default function DocumentConverterPage() {
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [pdfPageCount, setPdfPageCount] = useState<number | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [isInspecting, setIsInspecting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [targetFormat, setTargetFormat] = useState<"docx" | "pdf">("docx");
@@ -44,7 +46,20 @@ export default function DocumentConverterPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const handleFileSelection = async (selectedFile: File) => {
+  // Clean up object URLs on unmount or file change
+  useEffect(() => {
+    return () => {
+      if (imagePreviewUrl) {
+        URL.revokeObjectURL(imagePreviewUrl);
+      }
+    };
+  }, [imagePreviewUrl]);
+
+  const isImageFile = (filename: string) => {
+    return /\.(png|jpe?g|webp|bmp|gif|tiff)$/i.test(filename);
+  };
+
+  const handleFilesSelection = async (selectedFiles: FileList | File[]) => {
     setErrorMessage(null);
     setDownloadUrl(null);
     setDownloadFileName(null);
@@ -54,21 +69,39 @@ export default function DocumentConverterPage() {
     setCurrentChunkIndex(0);
     setTotalChunks(0);
 
-    const name = selectedFile.name.toLowerCase();
-    if (!name.endsWith(".pdf") && !name.endsWith(".docx")) {
-      setErrorMessage("Please upload a valid .pdf or .docx file.");
+    if (imagePreviewUrl) {
+      URL.revokeObjectURL(imagePreviewUrl);
+      setImagePreviewUrl(null);
+    }
+
+    const fileArray = Array.from(selectedFiles);
+    if (fileArray.length === 0) return;
+
+    // Validate supported extensions: pdf, docx, or images
+    const validFiles = fileArray.filter((f) => {
+      const name = f.name.toLowerCase();
+      return name.endsWith(".pdf") || name.endsWith(".docx") || isImageFile(name);
+    });
+
+    if (validFiles.length === 0) {
+      setErrorMessage("Please upload a valid .pdf, .docx, or image file (.png, .jpg, .webp).");
       return;
     }
 
-    setFile(selectedFile);
+    setFiles(validFiles);
+    const firstFile = validFiles[0];
+    const firstName = firstFile.name.toLowerCase();
 
-    // Auto set target interchange format
-    if (name.endsWith(".pdf")) {
+    // Configure target interchange format
+    if (isImageFile(firstName)) {
+      setTargetFormat("docx"); // Default image to Word
+      setImagePreviewUrl(URL.createObjectURL(firstFile));
+    } else if (firstName.endsWith(".pdf")) {
       setTargetFormat("docx");
       // Read page count client-side with pdf-lib
       setIsInspecting(true);
       try {
-        const buffer = await selectedFile.arrayBuffer();
+        const buffer = await firstFile.arrayBuffer();
         const doc = await PDFDocument.load(buffer, { ignoreEncryption: true });
         const count = doc.getPageCount();
         setPdfPageCount(count);
@@ -77,7 +110,7 @@ export default function DocumentConverterPage() {
       } finally {
         setIsInspecting(false);
       }
-    } else if (name.endsWith(".docx")) {
+    } else if (firstName.endsWith(".docx")) {
       setTargetFormat("pdf");
     }
   };
@@ -85,8 +118,8 @@ export default function DocumentConverterPage() {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileSelection(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFilesSelection(e.dataTransfer.files);
     }
   };
 
@@ -99,6 +132,113 @@ export default function DocumentConverterPage() {
     setStatusMessage("");
     setProgress(0);
     setErrorMessage("Conversion was cancelled by user.");
+  };
+
+  const executeMultiImageConversion = async (imageFiles: File[], baseName: string) => {
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    setTotalChunks(imageFiles.length);
+    setCurrentChunkIndex(0);
+
+    const extractedSections: ExtractedSection[] = [];
+
+    for (let i = 0; i < imageFiles.length; i++) {
+      if (controller.signal.aborted) {
+        throw new Error("Conversion aborted.");
+      }
+
+      setCurrentChunkIndex(i + 1);
+      const img = imageFiles[i];
+      const rangeLabel = `Image ${i + 1} of ${imageFiles.length} (${img.name})`;
+
+      setStatusMessage(`Extracting Text & Math from ${rangeLabel}...`);
+      const chunkPct = Math.round((i / (imageFiles.length + 1)) * 90);
+      setProgress(Math.max(chunkPct, 5));
+
+      let chunkExtractedText = "";
+      let attempts = 0;
+      const maxAttempts = 2;
+
+      while (attempts < maxAttempts) {
+        try {
+          const formData = new FormData();
+          formData.append("file", img);
+          formData.append("mode", "extract");
+          formData.append("chunkIndex", i.toString());
+          formData.append("pageRange", rangeLabel);
+
+          const res = await fetch("/api/converter", {
+            method: "POST",
+            body: formData,
+            signal: controller.signal,
+          });
+
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || `Image ${i + 1} extraction failed.`);
+          }
+
+          const resData = await res.json();
+          chunkExtractedText = resData.text || "";
+          break;
+        } catch (fetchErr: any) {
+          if (controller.signal.aborted) throw fetchErr;
+          attempts++;
+          if (attempts >= maxAttempts) {
+            console.warn(`Extraction image ${i + 1} failed:`, fetchErr);
+            chunkExtractedText = `\n\n[Section: ${rangeLabel}]\n\n`;
+          } else {
+            await new Promise((r) => setTimeout(r, 1200));
+          }
+        }
+      }
+
+      extractedSections.push({
+        pageRange: rangeLabel,
+        text: chunkExtractedText,
+      });
+
+      const updatedPct = Math.round(((i + 1) / (imageFiles.length + 1)) * 90);
+      setProgress(updatedPct);
+    }
+
+    // Assembly stage
+    setStatusMessage("Assembling unified Word document with math equation blocks...");
+    setProgress(93);
+
+    const assembleRes = await fetch("/api/converter", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mode: "assemble",
+        title: baseName,
+        sections: extractedSections,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!assembleRes.ok) {
+      const errData = await assembleRes.json().catch(() => ({}));
+      throw new Error(errData.error || "Failed to assemble Word document.");
+    }
+
+    const docxBlob = await assembleRes.blob();
+    const finalUrl = window.URL.createObjectURL(docxBlob);
+    const finalName = `${baseName}.docx`;
+
+    setProgress(100);
+    setStatusMessage("Conversion complete!");
+    setDownloadUrl(finalUrl);
+    setDownloadFileName(finalName);
+
+    // Auto download
+    const a = document.createElement("a");
+    a.href = finalUrl;
+    a.download = finalName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   };
 
   const executeChunkedPdfConversion = async (
@@ -171,7 +311,6 @@ export default function DocumentConverterPage() {
           attempts++;
           if (attempts >= maxAttempts) {
             console.warn(`Extraction chunk ${i + 1} failed after ${maxAttempts} attempts:`, fetchErr);
-            // Fallback: don't crash whole book if one chunk had an OCR error; continue with empty or partial
             chunkExtractedText = `\n\n[Section: ${rangeLabel}]\n\n`;
           } else {
             await new Promise((r) => setTimeout(r, 1200));
@@ -227,7 +366,7 @@ export default function DocumentConverterPage() {
   };
 
   const handleConvert = async () => {
-    if (!file) return;
+    if (files.length === 0) return;
 
     setIsConverting(true);
     setErrorMessage(null);
@@ -235,67 +374,78 @@ export default function DocumentConverterPage() {
     setProgress(5);
     setStatusMessage("Initializing document pipeline...");
 
-    const baseName = file.name.substring(0, file.name.lastIndexOf(".")) || file.name;
+    const primaryFile = files[0];
+    const baseName = primaryFile.name.substring(0, primaryFile.name.lastIndexOf(".")) || primaryFile.name;
 
     try {
-      // If PDF has more than 8 pages or is larger than 4 MB, use the Automated Chunking Pipeline
+      // Case 1: Multiple images uploaded together
+      if (files.length > 1 && files.every((f) => isImageFile(f.name))) {
+        await executeMultiImageConversion(files, `${baseName}_merged`);
+        return;
+      }
+
+      // Case 2: Large PDF with auto-chunking
       const isLargePdf =
-        file.name.toLowerCase().endsWith(".pdf") &&
+        primaryFile.name.toLowerCase().endsWith(".pdf") &&
         targetFormat === "docx" &&
-        ((pdfPageCount && pdfPageCount > CHUNK_SIZE) || file.size > 4 * 1024 * 1024);
+        ((pdfPageCount && pdfPageCount > CHUNK_SIZE) || primaryFile.size > 4 * 1024 * 1024);
 
       if (isLargePdf && pdfPageCount && pdfPageCount > 0) {
-        await executeChunkedPdfConversion(file, pdfPageCount, baseName);
-      } else {
-        // Standard single conversion (e.g. DOCX -> PDF or small PDF <= 8 pages)
-        const controller = new AbortController();
-        abortControllerRef.current = controller;
-
-        const timer = setInterval(() => {
-          setProgress((prev) => {
-            if (prev >= 88) return prev;
-            return prev + 5;
-          });
-        }, 400);
-
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("targetFormat", targetFormat);
-
-        setStatusMessage("Converting document...");
-
-        const res = await fetch("/api/converter", {
-          method: "POST",
-          body: formData,
-          signal: controller.signal,
-        });
-
-        clearInterval(timer);
-
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => ({}));
-          throw new Error(errorData.error || "Failed to convert document.");
-        }
-
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const finalName = `${baseName}.${targetFormat}`;
-
-        setProgress(100);
-        setStatusMessage("Conversion complete!");
-        setDownloadUrl(url);
-        setDownloadFileName(finalName);
-
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = finalName;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
+        await executeChunkedPdfConversion(primaryFile, pdfPageCount, baseName);
+        return;
       }
+
+      // Case 3: Single file conversion (Image to DOCX/PDF, DOCX to PDF, or single small PDF)
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      const timer = setInterval(() => {
+        setProgress((prev) => {
+          if (prev >= 88) return prev;
+          return prev + 5;
+        });
+      }, 400);
+
+      const formData = new FormData();
+      formData.append("file", primaryFile);
+      formData.append("targetFormat", targetFormat);
+
+      setStatusMessage(
+        isImageFile(primaryFile.name)
+          ? "Reconstructing text & math formulas with AI Vision..."
+          : "Converting document..."
+      );
+
+      const res = await fetch("/api/converter", {
+        method: "POST",
+        body: formData,
+        signal: controller.signal,
+      });
+
+      clearInterval(timer);
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to convert document.");
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const finalName = `${baseName}.${targetFormat}`;
+
+      setProgress(100);
+      setStatusMessage("Conversion complete!");
+      setDownloadUrl(url);
+      setDownloadFileName(finalName);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = finalName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
     } catch (err: any) {
       if (err.name === "AbortError" || err.message?.includes("aborted")) {
-        // Handled in handleCancel
         return;
       }
       console.error("Conversion error:", err);
@@ -316,7 +466,11 @@ export default function DocumentConverterPage() {
     if (isConverting) {
       handleCancel();
     }
-    setFile(null);
+    if (imagePreviewUrl) {
+      URL.revokeObjectURL(imagePreviewUrl);
+      setImagePreviewUrl(null);
+    }
+    setFiles([]);
     setPdfPageCount(null);
     setDownloadUrl(null);
     setDownloadFileName(null);
@@ -330,10 +484,15 @@ export default function DocumentConverterPage() {
     }
   };
 
+  const firstFile = files[0];
+  const isImageSelection = files.length > 0 && files.every((f) => isImageFile(f.name));
   const isBookDocument =
-    file?.name.toLowerCase().endsWith(".pdf") &&
+    firstFile &&
+    firstFile.name.toLowerCase().endsWith(".pdf") &&
     pdfPageCount !== null &&
-    (pdfPageCount > CHUNK_SIZE || (file && file.size > 4 * 1024 * 1024));
+    (pdfPageCount > CHUNK_SIZE || firstFile.size > 4 * 1024 * 1024);
+
+  const totalBytes = files.reduce((acc, f) => acc + f.size, 0);
 
   return (
     <div className="w-full min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] flex flex-col">
@@ -345,19 +504,19 @@ export default function DocumentConverterPage() {
               Document Converter
             </h1>
             <p className="text-xs font-mono text-[var(--text-muted)]">
-              High-Fidelity AI Reconstruction &amp; Large Book Chunking Engine
+              PDF ⇄ Word • Image to DOCX • Book Chunking &amp; Math Equation Engine
             </p>
           </div>
 
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-base)] text-xs font-mono text-[var(--brand-primary)] w-fit">
             <ArrowRightLeft className="w-3.5 h-3.5" />
-            <span className="font-bold">PDF ⇄ DOCX</span>
+            <span className="font-bold">PDF • DOCX • IMAGE</span>
           </div>
         </div>
 
         {/* Upload & Conversion Card */}
         <div className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-base)] p-6 sm:p-8 shadow-sm flex flex-col gap-6">
-          {!file ? (
+          {files.length === 0 ? (
             /* Drag & Drop Upload Zone */
             <div
               onDragOver={(e) => {
@@ -376,25 +535,31 @@ export default function DocumentConverterPage() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf,.docx"
+                multiple
+                accept=".pdf,.docx,.png,.jpg,.jpeg,.webp,.bmp"
                 className="hidden"
                 onChange={(e) => {
-                  if (e.target.files && e.target.files[0]) {
-                    handleFileSelection(e.target.files[0]);
+                  if (e.target.files && e.target.files.length > 0) {
+                    handleFilesSelection(e.target.files);
                   }
                 }}
               />
 
-              <div className="w-14 h-14 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] flex items-center justify-center text-[var(--brand-primary)] shadow-sm">
-                <UploadCloud className="w-7 h-7" />
+              <div className="flex items-center gap-2">
+                <div className="w-12 h-12 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] flex items-center justify-center text-[var(--brand-primary)] shadow-sm">
+                  <UploadCloud className="w-6 h-6" />
+                </div>
+                <div className="w-12 h-12 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] flex items-center justify-center text-emerald-400 shadow-sm">
+                  <ImageIcon className="w-6 h-6" />
+                </div>
               </div>
 
               <div className="space-y-1">
                 <p className="text-sm sm:text-base font-bold text-[var(--text-primary)]">
-                  Drag and drop your file here, or browse
+                  Drag and drop files here, or browse
                 </p>
                 <p className="text-xs font-mono text-[var(--text-muted)]">
-                  Supports small papers, textbooks, exam question banks, and multi-page books
+                  Supports PDF books, Word documents, &amp; Photos / Scans (.png, .jpg, .webp)
                 </p>
               </div>
             </div>
@@ -403,21 +568,38 @@ export default function DocumentConverterPage() {
             <div className="flex flex-col gap-6">
               <div className="flex items-center justify-between p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-base)]">
                 <div className="flex items-center gap-3.5 overflow-hidden">
-                  <div className="w-11 h-11 rounded-xl bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] flex items-center justify-center shrink-0 font-mono font-bold text-xs uppercase">
-                    {file.name.split(".").pop()}
-                  </div>
+                  {imagePreviewUrl ? (
+                    <div className="w-12 h-12 rounded-xl overflow-hidden border border-[var(--border-subtle)] shrink-0 bg-black/40">
+                      <img
+                        src={imagePreviewUrl}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-11 h-11 rounded-xl bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] flex items-center justify-center shrink-0 font-mono font-bold text-xs uppercase">
+                      {files.length > 1 ? (
+                        <Images className="w-5 h-5" />
+                      ) : (
+                        firstFile.name.split(".").pop()
+                      )}
+                    </div>
+                  )}
+
                   <div className="overflow-hidden">
                     <p className="text-sm font-bold text-[var(--text-primary)] truncate max-w-sm sm:max-w-md">
-                      {file.name}
+                      {files.length === 1 ? firstFile.name : `${files.length} Images Selected`}
                     </p>
                     <div className="flex items-center gap-2 text-xs font-mono text-[var(--text-muted)]">
-                      <span>{formatFileSize(file.size)}</span>
+                      <span>{formatFileSize(totalBytes)}</span>
                       {isInspecting ? (
                         <span className="text-[var(--brand-primary)] animate-pulse">
                           • Scanning pages...
                         </span>
                       ) : pdfPageCount !== null ? (
                         <span>• {pdfPageCount} {pdfPageCount === 1 ? "page" : "pages"}</span>
+                      ) : isImageSelection ? (
+                        <span className="text-emerald-400">• Photo / Scan</span>
                       ) : null}
                     </div>
                   </div>
@@ -432,6 +614,37 @@ export default function DocumentConverterPage() {
                   <X className="w-4 h-4" />
                 </button>
               </div>
+
+              {/* Image to Doc Banner */}
+              {isImageSelection && (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 text-emerald-400">
+                  <div className="flex items-start sm:items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+                      <Sparkles className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono font-bold uppercase tracking-wider text-emerald-300">
+                          AI Optical Math &amp; Handwriting Engine
+                        </span>
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-[10px] font-mono font-bold">
+                          Active
+                        </span>
+                      </div>
+                      <p className="text-[11px] font-mono text-emerald-400/80 mt-0.5">
+                        {files.length > 1
+                          ? `All ${files.length} images will be transcribed and merged into a single clean Word (.docx) document.`
+                          : "Transcribing handwriting, printed text, question banks, and mathematical equations verbatim into editable Word (.docx)."}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-xs font-mono text-emerald-400/90 shrink-0 self-end sm:self-center">
+                    <ImageIcon className="w-3.5 h-3.5" />
+                    <span>{files.length} {files.length === 1 ? "Image" : "Images"}</span>
+                  </div>
+                </div>
+              )}
 
               {/* Large Document / Book Pipeline Banner */}
               {isBookDocument && (
@@ -475,7 +688,12 @@ export default function DocumentConverterPage() {
                     disabled={isConverting}
                     className="px-3 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-base)] text-[var(--text-primary)] text-sm font-mono font-bold focus:outline-none focus:border-[var(--brand-primary)] cursor-pointer disabled:opacity-50"
                   >
-                    {file.name.toLowerCase().endsWith(".pdf") ? (
+                    {isImageSelection ? (
+                      <>
+                        <option value="docx">.docx (Word Document with Math Equations)</option>
+                        <option value="pdf">.pdf (PDF Document)</option>
+                      </>
+                    ) : firstFile?.name.toLowerCase().endsWith(".pdf") ? (
                       <option value="docx">.docx (Word Document with Math Equations)</option>
                     ) : (
                       <option value="pdf">.pdf (PDF Document)</option>
@@ -542,8 +760,8 @@ export default function DocumentConverterPage() {
 
                   {totalChunks > 0 && (
                     <div className="flex items-center justify-between text-[11px] font-mono text-[var(--text-muted)] pt-1">
-                      <span>Chunk {currentChunkIndex} of {totalChunks}</span>
-                      <span>Batch size: {CHUNK_SIZE} pages</span>
+                      <span>{isImageSelection ? `Image ${currentChunkIndex} of ${totalChunks}` : `Chunk ${currentChunkIndex} of ${totalChunks}`}</span>
+                      <span>{isImageSelection ? "Merged into 1 Document" : `Batch size: ${CHUNK_SIZE} pages`}</span>
                     </div>
                   )}
                 </div>
@@ -556,7 +774,7 @@ export default function DocumentConverterPage() {
                     <CheckCircle2 className="w-5 h-5 shrink-0" />
                     <span className="text-xs font-mono font-bold">
                       Conversion Complete: {downloadFileName}
-                      {pdfPageCount ? ` (${pdfPageCount} pages)` : ""}
+                      {pdfPageCount ? ` (${pdfPageCount} pages)` : files.length > 1 ? ` (${files.length} images)` : ""}
                     </span>
                   </div>
                   <a
