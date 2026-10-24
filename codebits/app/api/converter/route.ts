@@ -38,12 +38,26 @@ function extractRawTextFromPdfBuffer(buffer: Buffer): string {
   }
 }
 
+const VERBATIM_SYSTEM_INSTRUCTION =
+  "You are a strict verbatim OCR document scanner and transcriber. Under NO circumstances should you solve, calculate, or answer any questions or circuits. DO NOT write solutions, derivations, circuit analyses, or answers. Transcribe ONLY the printed questions, formulas, numbers, and options verbatim like a photocopier.";
+
+function stripAiGeneratedSolutions(text: string): string {
+  if (!text) return "";
+  let cleaned = text;
+  // Guard against AI hallucinated solutions and derivations
+  cleaned = cleaned.replace(/\n+\s*(?:\*\*|###?\s*)\s*Circuit Component Summary:?[\s\S]*$/i, "");
+  cleaned = cleaned.replace(/\n+\s*(?:\*\*|###?\s*)\s*Circuit Analysis:?[\s\S]*$/i, "");
+  cleaned = cleaned.replace(/\n+\s*(?:\*\*|###?\s*)\s*Step-by-Step Solution:?[\s\S]*$/i, "");
+  cleaned = cleaned.replace(/\n+\s*(?:\*\*|###?\s*)\s*Solution:?\s*\n+[\s\S]*$/i, "");
+  return cleaned.trim();
+}
+
 function getAcademicReconstructionPrompt(options: { isImage: boolean; rangeLabel?: string }) {
   const { isImage, rangeLabel } = options;
   const label = rangeLabel ? ` for ${rangeLabel}` : "";
   const intro = isImage
-    ? `You are an elite academic document, handwritten notes, and mathematical problem scanner. Reconstruct all text, handwritten equations, questions, diagrams explanations, matrices, and tables from this image${label} verbatim.`
-    : `You are a master academic document and mathematical question bank reconstruction engine. Reconstruct all text, sections, questions, matrices, and tables from this document${label} verbatim.`;
+    ? `You are an elite academic document and mathematical question scanner. Reconstruct all printed text, handwritten equations, questions, matrices, and tables from this image${label} verbatim like a photocopier. DO NOT SOLVE OR ANSWER ANY QUESTIONS.`
+    : `You are a master academic document and mathematical question bank reconstruction engine. Reconstruct all text, sections, questions, matrices, and tables from this document${label} verbatim like a photocopier. DO NOT SOLVE OR ANSWER ANY QUESTIONS.`;
 
   return `${intro}
 
@@ -227,10 +241,14 @@ export async function POST(req: NextRequest) {
               ],
             },
           ],
+          config: {
+            systemInstruction: VERBATIM_SYSTEM_INSTRUCTION,
+            temperature: 0.0,
+          },
         });
 
         if (aiResult?.text && aiResult.text.trim().length > 0) {
-          extractedText = aiResult.text.trim();
+          extractedText = stripAiGeneratedSolutions(aiResult.text.trim());
         }
       } catch (aiErr: any) {
         console.warn("AI chunk extraction failed, attempting fallback:", aiErr?.message || aiErr);
@@ -277,10 +295,14 @@ export async function POST(req: NextRequest) {
               ],
             },
           ],
+          config: {
+            systemInstruction: VERBATIM_SYSTEM_INSTRUCTION,
+            temperature: 0.0,
+          },
         });
 
         if (aiResult?.text && aiResult.text.trim().length > 0) {
-          extractedText = aiResult.text.trim();
+          extractedText = stripAiGeneratedSolutions(aiResult.text.trim());
         }
       } catch (aiErr: any) {
         console.error("AI Image-to-DOCX extraction failed:", aiErr);
@@ -455,10 +477,14 @@ export async function POST(req: NextRequest) {
               ],
             },
           ],
+          config: {
+            systemInstruction: VERBATIM_SYSTEM_INSTRUCTION,
+            temperature: 0.0,
+          },
         });
 
         if (aiResult?.text && aiResult.text.trim().length > 0) {
-          extractedText = aiResult.text.trim();
+          extractedText = stripAiGeneratedSolutions(aiResult.text.trim());
         }
       } catch (aiErr: any) {
         console.warn("AI PDF extraction failed, falling back to local text extraction:", aiErr?.message || aiErr);
