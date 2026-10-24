@@ -12,7 +12,9 @@ import {
   ShadingType,
   AlignmentType,
   BuilderElement,
+  ImageRun,
 } from "docx";
+import sharp from "sharp";
 
 // ==========================================
 // 1. MOJIBAKE & CORRUPTED CHARACTER REPAIR
@@ -1112,11 +1114,95 @@ export function buildWordTable(lines: string[]): Table {
 }
 
 // ==========================================
-// 7. UNIFIED DOCUMENT ELEMENTS PARSER
+// 7. SVG SCHEMATIC TO WORD IMAGE RENDERER
+// ==========================================
+// Renders vector SVG electrical circuits, graphs, and academic diagrams into
+// razor-sharp 300-DPI PNG ImageRuns embedded natively into Microsoft Word documents.
+export async function renderSvgToDocxElements(svgString: string): Promise<Paragraph[]> {
+  try {
+    let cleanSvg = svgString.trim();
+
+    // Ensure xmlns attribute exists for valid SVG processing
+    if (!cleanSvg.includes("xmlns=")) {
+      cleanSvg = cleanSvg.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"');
+    }
+
+    // Default dimensions
+    let width = 480;
+    let height = 240;
+
+    // Determine aspect ratio from viewBox or explicit width/height
+    const viewBoxMatch = cleanSvg.match(/viewBox=["']\s*([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s*["']/i);
+    if (viewBoxMatch) {
+      const vbW = parseFloat(viewBoxMatch[3]);
+      const vbH = parseFloat(viewBoxMatch[4]);
+      if (vbW > 0 && vbH > 0) {
+        width = 480;
+        height = Math.round(480 * (vbH / vbW));
+        // Bound height between 100 and 420 for optimal Word page layout
+        height = Math.max(100, Math.min(420, height));
+      }
+    } else {
+      const wMatch = cleanSvg.match(/width=["'](\d+(?:\.\d+)?)(?:px)?["']/i);
+      const hMatch = cleanSvg.match(/height=["'](\d+(?:\.\d+)?)(?:px)?["']/i);
+      if (wMatch && hMatch) {
+        const parsedW = parseFloat(wMatch[1]);
+        const parsedH = parseFloat(hMatch[1]);
+        if (parsedW > 0 && parsedH > 0) {
+          width = 480;
+          height = Math.round(480 * (parsedH / parsedW));
+          height = Math.max(100, Math.min(420, height));
+        }
+      }
+    }
+
+    // Rasterize vector SVG into high-DPI (300 DPI) PNG buffer
+    const pngBuffer = await sharp(Buffer.from(cleanSvg), { density: 300 })
+      .png()
+      .toBuffer();
+
+    const imageParagraph = new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 240, after: 100 },
+      children: [
+        new ImageRun({
+          data: pngBuffer,
+          type: "png",
+          transformation: {
+            width,
+            height,
+          },
+        }),
+      ],
+    });
+
+    const captionParagraph = new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 200 },
+      children: [
+        new TextRun({
+          text: "Figure: Schematic Circuit Diagram",
+          italics: true,
+          size: 18, // 9pt
+          color: "666666",
+          font: "Calibri",
+        }),
+      ],
+    });
+
+    return [imageParagraph, captionParagraph];
+  } catch (err) {
+    console.warn("Could not render SVG to Word image, falling back:", err);
+    return [];
+  }
+}
+
+// ==========================================
+// 8. UNIFIED DOCUMENT ELEMENTS PARSER
 // ==========================================
 // Transforms reconstructed document markdown into native Word Paragraphs and Tables
-// while preserving multiline matrices, display equations, questions, and headers.
-export function buildDocumentElements(text: string, title?: string): (Paragraph | Table)[] {
+// while preserving multiline matrices, display equations, questions, headers, and vector diagrams.
+export async function buildDocumentElements(text: string, title?: string): Promise<(Paragraph | Table)[]> {
   const elements: (Paragraph | Table)[] = [];
 
   if (title && title.trim()) {
@@ -1189,7 +1275,7 @@ export function buildDocumentElements(text: string, title?: string): (Paragraph 
       }
     }
 
-    // Code Block or Schematic Diagram (e.g. ASCII electrical circuits): ``` ... ```
+    // Code Block or Schematic Diagram (e.g. SVG circuits or code snippets): ``` ... ```
     if (line.startsWith("```")) {
       const codeLines: string[] = [];
       let j = i + 1;
@@ -1199,6 +1285,23 @@ export function buildDocumentElements(text: string, title?: string): (Paragraph 
       }
       i = j; // Advance past the closing ```
 
+      const fullBlock = codeLines.join("\n");
+      const trimmedBlock = fullBlock.trim();
+
+      // Check if this code block contains an SVG diagram
+      if (trimmedBlock.includes("<svg") && trimmedBlock.includes("</svg>")) {
+        const svgStartIdx = trimmedBlock.indexOf("<svg");
+        const svgEndIdx = trimmedBlock.lastIndexOf("</svg>") + 6;
+        const svgContent = trimmedBlock.substring(svgStartIdx, svgEndIdx);
+
+        const svgElements = await renderSvgToDocxElements(svgContent);
+        if (svgElements.length > 0) {
+          elements.push(...svgElements);
+          continue;
+        }
+      }
+
+      // Regular text / code block fallback
       for (const cl of codeLines) {
         elements.push(
           new Paragraph({
@@ -1216,6 +1319,31 @@ export function buildDocumentElements(text: string, title?: string): (Paragraph 
       }
       elements.push(new Paragraph({ children: [], spacing: { after: 120 } }));
       continue;
+    }
+
+    // Direct raw SVG element outside code blocks
+    if (line.startsWith("<svg") || (line.includes("<svg") && !line.startsWith("$$"))) {
+      const svgLines: string[] = [line];
+      let j = i + 1;
+      let hasSvgEnd = line.includes("</svg>");
+      while (j < lines.length && !hasSvgEnd) {
+        const nextLine = lines[j];
+        svgLines.push(nextLine);
+        if (nextLine.includes("</svg>")) {
+          hasSvgEnd = true;
+        }
+        j++;
+      }
+
+      if (hasSvgEnd) {
+        const svgContent = svgLines.join("\n");
+        const svgElements = await renderSvgToDocxElements(svgContent);
+        if (svgElements.length > 0) {
+          elements.push(...svgElements);
+          i = j - 1;
+          continue;
+        }
+      }
     }
 
     // Heading 1: # Title
