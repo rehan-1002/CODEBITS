@@ -47,6 +47,12 @@ function getAcademicReconstructionPrompt(options: { isImage: boolean; rangeLabel
 
   return `${intro}
 
+CRITICAL INSTRUCTION - NEVER SOLVE OR ANSWER QUESTIONS:
+- YOU ARE A VERBATIM DOCUMENT RECONSTRUCTION ENGINE, NOT A HOMEWORK SOLVER.
+- DO NOT solve, calculate, answer, or derive solutions to any question or circuit.
+- DO NOT write "Circuit Analysis", step-by-step derivations, KVL/KCL solutions, or answers unless they are ALREADY explicitly written out verbatim in the user's source paper.
+- Reconstruct ONLY the question statement, question number, given parameters, and options verbatim as an unsolved assignment/question paper.
+
 CRITICAL MATHEMATICS, PHYSICS, CHEMISTRY & EQUATION RULES:
 1. MATHEMATICAL SYMBOLS & ADVANCED CALCULUS:
 - Preserve all calculus operations verbatim:
@@ -63,27 +69,13 @@ CRITICAL MATHEMATICS, PHYSICS, CHEMISTRY & EQUATION RULES:
   - Quantum & atomic symbols: \\hbar (reduced Planck constant), \\lambda (wavelength), \\nu (frequency), \\psi/\\Psi (wavefunction), \\rho, \\sigma, \\tau, \\mu_0, \\epsilon_0.
 
 3. ELECTRICAL & ELECTRONICS CIRCUITS (BEEE):
-- When a circuit diagram, network topology, or schematic is present:
-  - NEVER output long, wordy verbal descriptions of wire connections.
-  - DO NOT output primitive ASCII text circuits with dashes or plus signs (+, -, |).
-  - GENERATE A CLEAN, CONTINUOUS VECTOR SVG SCHEMATIC enclosed inside a \`\`\`xml ... \`\`\` or \`\`\`svg ... \`\`\` code block:
-    * Background: Use pure white background (<rect width="100%" height="100%" fill="#ffffff"/> or style="background:#ffffff;").
-    * Continuous Solid Wires: Use unbroken <polyline> or <path> elements with stroke="#000000" stroke-width="2.5" stroke-linejoin="round" fill="none". Crucial: Ensure wires connect continuously to all component terminals with ZERO pixel gaps, disconnects, or dashed breaks.
-    * Standard IEEE Components:
-      - Resistors: Standard zigzag path (<path d="..."/>) or clean IEC box (<rect width="60" height="18" fill="#ffffff" stroke="#000000" stroke-width="2.5"/>) with terminal leads.
-      - DC Voltage/Current Sources: Circle with clear "+" and "−" polarity signs or battery plates (long thin plate and short thick plate).
-      - AC Sources: Circle with an internal sine wave "~" path.
-      - Inductors: Series curved arcs (<path d="..."/>).
-      - Capacitors: Parallel plates with terminal leads.
-      - Junction Nodes: Solid filled circles (<circle cx="..." cy="..." r="4.5" fill="#000000"/>) at every wire intersection.
-      - Ground: Standard 3-tier horizontal ground symbol (⏚).
-    * Typography & Labels:
-      - Component values, labels, and currents must use clear <text> tags with font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#000000".
-      - Use standard engineering units: \\Omega (Ω), V, A, \\mu F, mH.
-  - Summarize the component parameters cleanly and compactly:
-    - Independent Sources: $I_1 = 1\\text{ A}$, $I_2 = 2\\text{ A}$, $V_1 = 4\\text{ V}$
-    - Branch Resistors: $R_1 = 2\\,\\Omega$, $R_2 = 6\\,\\Omega$, etc.
-  - Reconstruct all circuit equations (KVL, KCL, mesh current matrices, nodal admittance matrices, Thévenin $V_{th} / R_{th}$, Norton, Star-Delta, AC impedance $Z = R + jX$) in standard equation blocks ($...$).
+- Reconstruct the verbatim question text and any given parameters (e.g. "If $I = 2\\text{ A}$, find the value of the battery voltage $V$").
+- If the question refers to a figure or circuit diagram:
+  - DO NOT solve or derive the circuit solution.
+  - DO NOT invent component summaries or node voltage derivations.
+  - DO NOT draw inaccurate approximations or ASCII circuits.
+  - The authentic source schematic is automatically embedded directly with the question.
+  - Output ONLY the question statement, sub-parts, given parameters, and multiple-choice options verbatim.
 
 4. CHEMISTRY EQUATIONS & REACTION MECHANISMS:
 - Reconstruct all chemical formulas, stoichiometry, ionic charges, and reactions verbatim:
@@ -339,7 +331,14 @@ export async function POST(req: NextRequest) {
             }),
           ],
         });
-        docElements.push(imageParagraph, captionParagraph);
+        // Place the source reference image right below the question header so it looks like an authentic exam sheet
+        if (docElements.length > 2) {
+          docElements.splice(2, 0, imageParagraph, captionParagraph);
+        } else if (docElements.length > 1) {
+          docElements.splice(1, 0, imageParagraph, captionParagraph);
+        } else {
+          docElements.push(imageParagraph, captionParagraph);
+        }
       } catch (imgErr) {
         console.warn("Could not embed image into docx:", imgErr);
       }
