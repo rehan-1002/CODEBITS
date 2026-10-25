@@ -73,6 +73,9 @@ CRITICAL MATHEMATICS, PHYSICS, CHEMISTRY & EQUATION RULES:
   - Integration: single (\\int), double (\\iint), triple (\\iiint), contour/surface (\\oint), with limits (e.g. \\int_{0}^{\\infty} f(x) dx, \\int_{a}^{b}).
   - Differentiation: ordinary derivatives (\\frac{dy}{dx}, \\frac{d^2 y}{dx^2}), partial derivatives (\\frac{\\partial u}{\\partial t}, \\frac{\\partial^2 u}{\\partial x^2}), gradients/divergence/curl (\\nabla, \\nabla \\cdot \\vec{F}, \\nabla \\times \\vec{F}, \\nabla^2).
   - Summations (\\sum_{i=1}^n), products (\\prod), limits (\\lim_{x \\to 0}), and roots (\\sqrt{x}, \\sqrt[n]{x}).
+- PROPER FRACTIONS & RATIONAL EXPRESSIONS (MANDATORY):
+  - ALWAYS format every fraction, rational function, or division as vertical LaTeX \\frac{numerator}{denominator} (or \\dfrac{...}{...}), e.g.: \\frac{1}{2}, \\frac{\\sqrt{3}}{2}, \\frac{1}{8}, \\frac{x}{2}, \\frac{y}{2}, \\frac{\\pi}{10}, \\frac{4x}{x^2+y^2}, \\frac{5\\tan\\theta - 10\\tan^3\\theta + \\tan^5\\theta}{1 - 10\\tan^2\\theta + 5\\tan^4\\theta}, \\frac{x^2}{\\cosh^2\\beta}.
+  - NEVER output linear slash fractions like (1 / 2), 1/2, or (a / b) - ALWAYS use \\frac{...}{...}!
 - Enclose all mathematical expressions in standard dollar signs: $...$ for inline and $$...$$ for display equations.
 
 2. PHYSICS EQUATIONS & VECTORS:

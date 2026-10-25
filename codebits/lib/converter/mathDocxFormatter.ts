@@ -317,88 +317,246 @@ function replaceBalancedCommand(
   return result;
 }
 
-// Convert \frac{num}{den} and \dfrac{num}{den} with balanced braces
-function replaceFractions(text: string): string {
-  const prefixes = ["\\frac", "\\dfrac"];
-  let s = text;
-
-  for (const prefix of prefixes) {
-    let result = "";
-    let remaining = s;
-
-    while (true) {
-      const idx = remaining.indexOf(prefix);
-      if (idx === -1) {
-        result += remaining;
-        break;
-      }
-
-      result += remaining.slice(0, idx);
-      let afterPrefix = remaining.slice(idx + prefix.length).trimStart();
-
-      if (afterPrefix.startsWith("{")) {
-        // Find numerator
-        let depth = 0;
-        let endIdx1 = -1;
-
-        for (let i = 0; i < afterPrefix.length; i++) {
-          if (afterPrefix[i] === "{") depth++;
-          else if (afterPrefix[i] === "}") {
-            depth--;
-            if (depth === 0) {
-              endIdx1 = i;
-              break;
-            }
-          }
-        }
-
-        if (endIdx1 !== -1) {
-          const num = afterPrefix.slice(1, endIdx1);
-          let afterNum = afterPrefix.slice(endIdx1 + 1).trimStart();
-
-          if (afterNum.startsWith("{")) {
-            // Find denominator
-            depth = 0;
-            let endIdx2 = -1;
-
-            for (let j = 0; j < afterNum.length; j++) {
-              if (afterNum[j] === "{") depth++;
-              else if (afterNum[j] === "}") {
-                depth--;
-                if (depth === 0) {
-                  endIdx2 = j;
-                  break;
-                }
-              }
-            }
-
-            if (endIdx2 !== -1) {
-              const den = afterNum.slice(1, endIdx2);
-              result += `(${cleanMathSymbols(num)} / ${cleanMathSymbols(den)})`;
-              remaining = afterNum.slice(endIdx2 + 1);
-              continue;
-            }
-          }
-        }
-      }
-
-      result += prefix;
-      remaining = remaining.slice(idx + prefix.length);
+// ==========================================
+// 4. BALANCED DELIMITER & BRACE RESOLUTION
+// ==========================================
+export function findMatchingBrace(str: string, openIdx: number): number {
+  let depth = 0;
+  for (let i = openIdx; i < str.length; i++) {
+    if (str[i] === "{") depth++;
+    else if (str[i] === "}") {
+      depth--;
+      if (depth === 0) return i;
     }
-    s = result;
   }
+  return -1;
+}
 
-  return s;
+export function findMatchingDelim(
+  str: string,
+  openIdx: number,
+  openCmd: string,
+  closeCmd: string
+): number {
+  let depth = 0;
+  let i = openIdx;
+  while (i < str.length) {
+    if (str.startsWith(openCmd, i)) {
+      depth++;
+      i += openCmd.length;
+    } else if (str.startsWith(closeCmd, i)) {
+      depth--;
+      if (depth === 0) return i;
+      i += closeCmd.length;
+    } else {
+      i++;
+    }
+  }
+  return -1;
+}
+
+/**
+ * Normalizes linear / slash fractions like (1 / 2), (x / 2), (4x / x^2 + y^2), \pi / 10
+ * into standard LaTeX \\frac{num}{den} before building native Word OMML equations.
+ */
+export function normalizeLinearFractionsToLatex(s: string): string {
+  if (!s) return "";
+
+  let result = s;
+
+  // 1. Convert parenthesized rational expressions with slash: e.g. (1 / 2), (x / 2), (4x / x^2 + y^2), (x^2 / cosh^2 \beta)
+  let prev = "";
+  do {
+    prev = result;
+    result = result.replace(
+      /\(\s*([^()\/]+?)\s*\/\s*([^()\/]+?)\s*\)/g,
+      (_m, num, den) => `\\frac{${num.trim()}}{${den.trim()}}`
+    );
+  } while (result !== prev);
+
+  // 2. Standalone numeric & simple variable fractions: e.g. 1/2, 3/4, 1/8, \pi/10, \pi / 10
+  result = result.replace(
+    /\b(\\pi|\d+|[a-zA-Z])\s*\/\s*(\d+)\b/g,
+    (_m, num, den) => `\\frac{${num.trim()}}{${den.trim()}}`
+  );
+
+  // 3. Clean redundant double parentheses around fractions: e.g. (( \frac{...}{...} ) -> ( \frac{...}{...}
+  result = result.replace(
+    /\(\s*\(\s*(\\frac\{[^{}]+\}\{[^{}]+\})\s*\)/g,
+    "($1)"
+  );
+
+  return result;
+}
+
+/**
+ * Fallback fraction replacer for non-equation plain text runs
+ */
+export function fallbackReplaceFractions(text: string): string {
+  if (!text) return "";
+  let s = text;
+  s = s.replace(/\\frac\{1\}\{2\}|\\dfrac\{1\}\{2\}/g, "½");
+  s = s.replace(/\\frac\{1\}\{4\}|\\dfrac\{1\}\{4\}/g, "¼");
+  s = s.replace(/\\frac\{3\}\{4\}|\\dfrac\{3\}\{4\}/g, "¾");
+  return replaceBalancedCommand(s, "frac", (inner) => inner);
 }
 
 // ==========================================
-// 4. NATIVE WORD OMML MATRIX & EQUATION BUILDERS
+// 5. NATIVE WORD OMML BUILDERS (Word Math XML)
 // ==========================================
+
+/**
+ * Builds authentic Word OpenXML (OMML) vertical fraction structure (<m:f>):
+ * <m:f>
+ *   <m:fPr><m:type m:val="bar"/></m:fPr>
+ *   <m:num>...</m:num>
+ *   <m:den>...</m:den>
+ * </m:f>
+ */
+export function createOmmlFractionElement(
+  numChildren: (MathRun | BuilderElement)[],
+  denChildren: (MathRun | BuilderElement)[]
+): BuilderElement {
+  return new BuilderElement({
+    name: "m:f",
+    children: [
+      new BuilderElement({
+        name: "m:fPr",
+        children: [
+          new BuilderElement({
+            name: "m:type",
+            attributes: { val: { key: "m:val", value: "bar" } },
+          }),
+        ],
+      }),
+      new BuilderElement({
+        name: "m:num",
+        children: numChildren.length > 0 ? numChildren : [new MathRun(" ")],
+      }),
+      new BuilderElement({
+        name: "m:den",
+        children: denChildren.length > 0 ? denChildren : [new MathRun(" ")],
+      }),
+    ],
+  });
+}
+
+/**
+ * Builds authentic Word OpenXML (OMML) radical / square root (<m:rad>):
+ * <m:rad>
+ *   <m:radPr><m:degHide m:val="1"/></m:radPr>
+ *   <m:deg/>
+ *   <m:e>...</m:e>
+ * </m:rad>
+ */
+export function createOmmlRadicalElement(
+  contentChildren: (MathRun | BuilderElement)[],
+  degChildren: (MathRun | BuilderElement)[] = []
+): BuilderElement {
+  const prChildren: BuilderElement[] = [];
+  if (!degChildren || degChildren.length === 0) {
+    prChildren.push(
+      new BuilderElement({
+        name: "m:degHide",
+        attributes: { val: { key: "m:val", value: "1" } },
+      })
+    );
+  }
+
+  return new BuilderElement({
+    name: "m:rad",
+    children: [
+      new BuilderElement({ name: "m:radPr", children: prChildren }),
+      new BuilderElement({ name: "m:deg", children: degChildren }),
+      new BuilderElement({
+        name: "m:e",
+        children: contentChildren.length > 0 ? contentChildren : [new MathRun(" ")],
+      }),
+    ],
+  });
+}
+
+/**
+ * Builds authentic Word OpenXML (OMML) growing delimiter bracket (<m:d>):
+ * <m:d>
+ *   <m:dPr><m:begChr m:val="("/><m:endChr m:val=")"/><m:grow/></m:dPr>
+ *   <m:e>...</m:e>
+ * </m:d>
+ */
+export function createOmmlDelimiterElement(
+  children: (MathRun | BuilderElement)[],
+  begChr: string = "(",
+  endChr: string = ")"
+): BuilderElement {
+  return new BuilderElement({
+    name: "m:d",
+    children: [
+      new BuilderElement({
+        name: "m:dPr",
+        children: [
+          new BuilderElement({
+            name: "m:begChr",
+            attributes: { val: { key: "m:val", value: begChr } },
+          }),
+          new BuilderElement({
+            name: "m:endChr",
+            attributes: { val: { key: "m:val", value: endChr } },
+          }),
+          new BuilderElement({ name: "m:grow" }),
+        ],
+      }),
+      new BuilderElement({
+        name: "m:e",
+        children: children.length > 0 ? children : [new MathRun(" ")],
+      }),
+    ],
+  });
+}
+
+/**
+ * Builds authentic Word OpenXML (OMML) superscript element (<m:sSup>):
+ */
+export function createOmmlSuperscriptElement(
+  base: MathRun | BuilderElement,
+  supChildren: (MathRun | BuilderElement)[]
+): BuilderElement {
+  return new BuilderElement({
+    name: "m:sSup",
+    children: [
+      new BuilderElement({ name: "m:sSupPr", children: [] }),
+      new BuilderElement({ name: "m:e", children: [base] }),
+      new BuilderElement({
+        name: "m:sup",
+        children: supChildren.length > 0 ? supChildren : [new MathRun(" ")],
+      }),
+    ],
+  });
+}
+
+/**
+ * Builds authentic Word OpenXML (OMML) subscript element (<m:sSub>):
+ */
+export function createOmmlSubscriptElement(
+  base: MathRun | BuilderElement,
+  subChildren: (MathRun | BuilderElement)[]
+): BuilderElement {
+  return new BuilderElement({
+    name: "m:sSub",
+    children: [
+      new BuilderElement({ name: "m:sSubPr", children: [] }),
+      new BuilderElement({ name: "m:e", children: [base] }),
+      new BuilderElement({
+        name: "m:sub",
+        children: subChildren.length > 0 ? subChildren : [new MathRun(" ")],
+      }),
+    ],
+  });
+}
 
 export function cleanMathSymbolsForMatrixCell(cell: string): string {
   if (!cell) return "";
   let s = repairMojibakeAndHtmlEntities(cell);
-  s = replaceFractions(s);
+  s = fallbackReplaceFractions(s);
   s = replaceBalancedCommand(s, "sqrt", (content) => `√(${cleanMathSymbolsForMatrixCell(content)})`);
   s = replaceBalancedCommand(s, "cbrt", (content) => `∛(${cleanMathSymbolsForMatrixCell(content)})`);
   s = replaceBalancedCommand(s, "vec", (content) => `${cleanMathSymbolsForMatrixCell(content)}⃗`);
@@ -447,15 +605,6 @@ export function cleanMathSymbolsForMatrixCell(cell: string): string {
 
 /**
  * Builds authentic Word OpenXML (OMML) 2D matrix structure using BuilderElement:
- * <m:d> (delimiter with growing brackets)
- *   <m:dPr><m:begChr m:val="["/><m:endChr m:val="]"/><m:grow/></m:dPr>
- *   <m:e>
- *     <m:m> (matrix)
- *       <m:mPr><m:baseJc m:val="center"/><m:plcHide m:val="1"/></m:mPr>
- *       <m:mr><m:e><m:r><m:t>col1</m:t></m:r></m:e>...</m:mr> (rows)
- *     </m:m>
- *   </m:e>
- * </m:d>
  * Supports ANY dimensions: 2x2, 3x3, 4x4, 5x5, NxM.
  */
 export function createOmmlMatrixElement(
@@ -484,17 +633,16 @@ export function createOmmlMatrixElement(
     begChr = "";
     endChr = "";
   } else {
-    // Default (bmatrix, array, [, etc.) -> Square brackets!
     begChr = "[";
     endChr = "]";
   }
 
   const rowElements = rows.map((row) => {
     const cellElements = row.map((cell) => {
-      const cleanedCell = cleanMathSymbolsForMatrixCell(cell);
+      const cellChildren = parseMathTokens(cell);
       return new BuilderElement({
         name: "m:e",
-        children: [new MathRun(cleanedCell || " ")],
+        children: cellChildren.length > 0 ? cellChildren : [new MathRun(" ")],
       });
     });
 
@@ -557,9 +705,7 @@ export function createOmmlMatrixElement(
 }
 
 /**
- * Parses raw matrix content into rows and cells, supporting:
- * - Rows separated by \\, \cr, @, or newlines
- * - Rows where \ was stripped into spaces (e.g. "2 & 2 & -3 2 & 1 & -6 1 & -1 & -2")
+ * Parses raw matrix content into rows and cells
  */
 export function parseMatrixContent(content: string): string[][] {
   let rawRows = content
@@ -567,7 +713,6 @@ export function parseMatrixContent(content: string): string[][] {
     .map((r) => r.trim())
     .filter((r) => r.length > 0);
 
-  // If row delimiters were collapsed to whitespace by previous processing
   if (rawRows.length === 1) {
     const parts = rawRows[0].split("&").map((p) => p.trim());
     const rowList: string[][] = [];
@@ -594,16 +739,256 @@ export function parseMatrixContent(content: string): string[][] {
 }
 
 /**
+ * Recursively parses LaTeX / math tokens into authentic Word OMML children
+ * (Fractions, Radicals, Delimiters, Superscripts, Subscripts, and clean MathRuns).
+ */
+export function parseMathTokens(rawFormula: string): (MathRun | BuilderElement)[] {
+  if (!rawFormula || !rawFormula.trim()) return [];
+
+  // Normalize linear fractions like (1 / 2) -> \frac{1}{2} first
+  const formula = normalizeLinearFractionsToLatex(rawFormula.trim());
+  const children: (MathRun | BuilderElement)[] = [];
+  let i = 0;
+  let textBuf = "";
+
+  function flushText() {
+    if (textBuf) {
+      const cleaned = cleanMathSymbols(textBuf, true);
+      if (cleaned) {
+        children.push(new MathRun(cleaned));
+      }
+      textBuf = "";
+    }
+  }
+
+  while (i < formula.length) {
+    // 1. Delimiters with \left( ... \right) / \left[ ... \right] / \left\{ ... \right\} / \left| ... \right|
+    if (
+      formula.startsWith("\\left(", i) ||
+      formula.startsWith("\\left[", i) ||
+      formula.startsWith("\\left\\{", i) ||
+      formula.startsWith("\\left|", i) ||
+      formula.startsWith("\\left.", i)
+    ) {
+      const isBracket = formula.startsWith("\\left[", i);
+      const isBrace = formula.startsWith("\\left\\{", i);
+      const isBar = formula.startsWith("\\left|", i);
+      const isDot = formula.startsWith("\\left.", i);
+
+      const openCmd = isBracket
+        ? "\\left["
+        : isBrace
+        ? "\\left\\{"
+        : isBar
+        ? "\\left|"
+        : isDot
+        ? "\\left."
+        : "\\left(";
+      const closeCmd = isBracket
+        ? "\\right]"
+        : isBrace
+        ? "\\right\\}"
+        : isBar
+        ? "\\right|"
+        : isDot
+        ? "\\right."
+        : "\\right)";
+      const begChr = isDot ? "" : isBracket ? "[" : isBrace ? "{" : isBar ? "|" : "(";
+      const endChr = isDot ? "" : isBracket ? "]" : isBrace ? "}" : isBar ? "|" : ")";
+
+      const closeIdx = findMatchingDelim(formula, i, openCmd, closeCmd);
+      if (closeIdx !== -1) {
+        flushText();
+        const inner = formula.slice(i + openCmd.length, closeIdx);
+        const innerChildren = parseMathTokens(inner);
+        let node: BuilderElement | MathRun = createOmmlDelimiterElement(
+          innerChildren,
+          begChr,
+          endChr
+        );
+        i = closeIdx + closeCmd.length;
+
+        // Check if immediately followed by superscript e.g. ^{3/4} or ^2
+        if (i < formula.length && formula[i] === "^") {
+          let supAfter = i + 1;
+          while (supAfter < formula.length && /\s/.test(formula[supAfter])) supAfter++;
+          if (formula[supAfter] === "{") {
+            const supEnd = findMatchingBrace(formula, supAfter);
+            if (supEnd !== -1) {
+              const supStr = formula.slice(supAfter + 1, supEnd);
+              const supChildren = parseMathTokens(supStr);
+              node = createOmmlSuperscriptElement(node, supChildren);
+              i = supEnd + 1;
+            }
+          } else if (supAfter < formula.length) {
+            node = createOmmlSuperscriptElement(node, [new MathRun(formula[supAfter])]);
+            i = supAfter + 1;
+          }
+        }
+
+        children.push(node);
+        continue;
+      }
+    }
+
+    // 2. Standard parentheses enclosing fractions: ( ... )
+    // E.g. ((1 / 2) + i (\sqrt(3) / 2))^{3/4} which normalized to (\frac{1}{2} + i \frac{\sqrt{3}}{2})^{3/4}
+    if (formula[i] === "(") {
+      let depth = 0;
+      let closeParen = -1;
+      for (let k = i; k < formula.length; k++) {
+        if (formula[k] === "(") depth++;
+        else if (formula[k] === ")") {
+          depth--;
+          if (depth === 0) {
+            closeParen = k;
+            break;
+          }
+        }
+      }
+
+      if (closeParen !== -1) {
+        const inner = formula.slice(i + 1, closeParen);
+        // If inner contains fraction or radical, wrap with growing delimiter!
+        if (inner.includes("\\frac") || inner.includes("\\sqrt")) {
+          flushText();
+          const innerChildren = parseMathTokens(inner);
+          let node: BuilderElement | MathRun = createOmmlDelimiterElement(
+            innerChildren,
+            "(",
+            ")"
+          );
+          i = closeParen + 1;
+
+          if (i < formula.length && formula[i] === "^") {
+            let supAfter = i + 1;
+            while (supAfter < formula.length && /\s/.test(formula[supAfter])) supAfter++;
+            if (formula[supAfter] === "{") {
+              const supEnd = findMatchingBrace(formula, supAfter);
+              if (supEnd !== -1) {
+                const supStr = formula.slice(supAfter + 1, supEnd);
+                const supChildren = parseMathTokens(supStr);
+                node = createOmmlSuperscriptElement(node, supChildren);
+                i = supEnd + 1;
+              }
+            } else if (supAfter < formula.length) {
+              node = createOmmlSuperscriptElement(node, [new MathRun(formula[supAfter])]);
+              i = supAfter + 1;
+            }
+          }
+
+          children.push(node);
+          continue;
+        }
+      }
+    }
+
+    // 3. \frac{num}{den} or \dfrac{num}{den}
+    if (formula.startsWith("\\frac", i) || formula.startsWith("\\dfrac", i)) {
+      const isDfrac = formula.startsWith("\\dfrac", i);
+      const cmdLen = isDfrac ? 6 : 5;
+      let after = i + cmdLen;
+      while (after < formula.length && /\s/.test(formula[after])) after++;
+
+      if (formula[after] === "{") {
+        const numEnd = findMatchingBrace(formula, after);
+        if (numEnd !== -1) {
+          const numStr = formula.slice(after + 1, numEnd);
+          let denStart = numEnd + 1;
+          while (denStart < formula.length && /\s/.test(formula[denStart])) denStart++;
+
+          if (formula[denStart] === "{") {
+            const denEnd = findMatchingBrace(formula, denStart);
+            if (denEnd !== -1) {
+              const denStr = formula.slice(denStart + 1, denEnd);
+              flushText();
+              const numChildren = parseMathTokens(numStr);
+              const denChildren = parseMathTokens(denStr);
+              let node: BuilderElement = createOmmlFractionElement(numChildren, denChildren);
+              i = denEnd + 1;
+
+              // Check if followed by superscript e.g. (\frac{a}{b})^2
+              if (i < formula.length && formula[i] === "^") {
+                let supAfter = i + 1;
+                while (supAfter < formula.length && /\s/.test(formula[supAfter])) supAfter++;
+                if (formula[supAfter] === "{") {
+                  const supEnd = findMatchingBrace(formula, supAfter);
+                  if (supEnd !== -1) {
+                    const supStr = formula.slice(supAfter + 1, supEnd);
+                    node = createOmmlSuperscriptElement(node, parseMathTokens(supStr));
+                    i = supEnd + 1;
+                  }
+                } else if (supAfter < formula.length) {
+                  node = createOmmlSuperscriptElement(node, [new MathRun(formula[supAfter])]);
+                  i = supAfter + 1;
+                }
+              }
+
+              children.push(node);
+              continue;
+            }
+          }
+        }
+      }
+    }
+
+    // 4. \sqrt[deg]{content} or \sqrt{content} or \sqrt(content)
+    if (formula.startsWith("\\sqrt", i)) {
+      let after = i + 5;
+      while (after < formula.length && /\s/.test(formula[after])) after++;
+
+      let degChildren: (MathRun | BuilderElement)[] = [];
+      if (formula[after] === "[") {
+        const closeBracket = formula.indexOf("]", after);
+        if (closeBracket !== -1) {
+          const degStr = formula.slice(after + 1, closeBracket);
+          degChildren = parseMathTokens(degStr);
+          after = closeBracket + 1;
+          while (after < formula.length && /\s/.test(formula[after])) after++;
+        }
+      }
+
+      if (formula[after] === "{") {
+        const end = findMatchingBrace(formula, after);
+        if (end !== -1) {
+          const content = formula.slice(after + 1, end);
+          flushText();
+          const contentChildren = parseMathTokens(content);
+          children.push(createOmmlRadicalElement(contentChildren, degChildren));
+          i = end + 1;
+          continue;
+        }
+      } else if (formula[after] === "(") {
+        const closeParen = formula.indexOf(")", after);
+        if (closeParen !== -1) {
+          const content = formula.slice(after + 1, closeParen);
+          flushText();
+          const contentChildren = parseMathTokens(content);
+          children.push(createOmmlRadicalElement(contentChildren, degChildren));
+          i = closeParen + 1;
+          continue;
+        }
+      }
+    }
+
+    textBuf += formula[i];
+    i++;
+  }
+
+  flushText();
+  return children;
+}
+
+/**
  * Parses any mathematical formula string (from $...$ or $$...$$) into DocxMath children,
- * converting both LaTeX matrix syntax and linear matrix syntax into authentic 2D OMML matrix nodes.
+ * converting LaTeX matrix syntax, fractions, radicals, and delimiters into authentic OMML nodes.
  */
 export function parseMathFormulaToChildren(
   formula: string
 ): (MathRun | BuilderElement)[] {
   const children: (MathRun | BuilderElement)[] = [];
 
-  // Matches either LaTeX matrix (with or without backslash): \begin{bmatrix} ... \end{bmatrix} OR beginbmatrix ... endbmatrix
-  // OR Linear format matrix: [matrix(...)] or [\matrix(...)] or (matrix(...)) or |matrix(...)|
+  // Matches either LaTeX matrix: \begin{bmatrix} ... \end{bmatrix} OR Linear format matrix: [matrix(...)]
   const matrixRegex =
     /(?:\\?begin\{?(matrix|bmatrix|pmatrix|vmatrix|Vmatrix|Bmatrix|array)\}?(?:\{[lcr| ]+\})?([\s\S]*?)\\?end\{?\1\}?|((?:\[|\(|\{|\||‖)?\\?matrix\(([\s\S]*?)\)(?:\]|\)|\}|\||‖)?))/g;
 
@@ -617,10 +1002,8 @@ export function parseMathFormulaToChildren(
     // Content before matrix
     if (matchStart > lastIndex) {
       const beforeText = formula.slice(lastIndex, matchStart);
-      const cleanedBefore = cleanMathSymbols(beforeText, true);
-      if (cleanedBefore.trim()) {
-        children.push(new MathRun(cleanedBefore));
-      }
+      const parsedBefore = parseMathTokens(beforeText);
+      children.push(...parsedBefore);
     }
 
     let bracketType = "[";
@@ -646,18 +1029,14 @@ export function parseMathFormulaToChildren(
   // Content after last matrix
   if (lastIndex < formula.length) {
     const afterText = formula.slice(lastIndex);
-    const cleanedAfter = cleanMathSymbols(afterText, true);
-    if (cleanedAfter.trim()) {
-      children.push(new MathRun(cleanedAfter));
-    }
+    const parsedAfter = parseMathTokens(afterText);
+    children.push(...parsedAfter);
   }
 
-  // If no matrix was found, standard MathRun
+  // If no matrix was found, parse all math tokens
   if (children.length === 0 && formula.trim()) {
-    const cleaned = cleanMathSymbols(formula, true);
-    if (cleaned) {
-      children.push(new MathRun(cleaned));
-    }
+    const parsed = parseMathTokens(formula);
+    children.push(...parsed);
   }
 
   return children;
@@ -740,7 +1119,7 @@ export function cleanMathSymbols(raw: string, preserveWhitespace: boolean = fals
   s = s.replace(/\\{2,}/g, "\\");
 
   // Step 2: Handle fractions and roots
-  s = replaceFractions(s);
+  s = fallbackReplaceFractions(s);
   s = replaceBalancedCommand(s, "sqrt", (content) => `√(${cleanMathSymbols(content, false)})`);
   s = replaceBalancedCommand(s, "cbrt", (content) => `∛(${cleanMathSymbols(content, false)})`);
 
@@ -905,7 +1284,42 @@ export function cleanMathSymbols(raw: string, preserveWhitespace: boolean = fals
 }
 
 // ==========================================
-// 5. WORD PARAGRAPH BUILDER
+/**
+ * Detects if a document line is a pure standalone mathematical equation
+ * (e.g. "cos^6 \theta + sin^6 \theta = (1 / 8)(3 cos 2\theta + 5)" or "10x + y + z = 12")
+ */
+export function isStandaloneEquationLine(line: string): boolean {
+  const trimmed = line.trim();
+  if (
+    !trimmed ||
+    trimmed.startsWith("$") ||
+    trimmed.startsWith("#") ||
+    trimmed.startsWith("|") ||
+    trimmed.startsWith("```")
+  ) {
+    return false;
+  }
+
+  // Common English words indicating a sentence/question rather than a pure equation line
+  const sentenceWords =
+    /\b(find|solve|prove|show|hence|deduce|using|theorem|evaluate|determine|calculate|where|which|that|also|and|or|let|given|for|if|when|then|the|of|in|to|with|by|positive|root|correct|places|decimals|iteration|method|equations?|system|matrix|order|value|values|continued|product|real)\b/i;
+
+  if (sentenceWords.test(trimmed)) return false;
+
+  // Must have an equality/relation or arrow
+  const hasRelation = /[=≈≡≤≥<>→⇒]/.test(trimmed);
+
+  // Must have math indicators: Greek, trig, powers, fractions, roots, variables
+  const hasMath =
+    /[θλαβγδεζηικμνξπρστυφχψωΓΔΘΛΞΠΣΥΦΨΩ√∫∂∇±∓×·÷\^/]|(?:sin|cos|tan|sinh|cosh|tanh|log|ln|lim|det|cosec|sec|cot)\b/i.test(
+      trimmed
+    ) || /\b[xyz]\b/i.test(trimmed);
+
+  return hasRelation && hasMath;
+}
+
+// ==========================================
+// 6. WORD PARAGRAPH BUILDER
 // ==========================================
 export function buildMathParagraph(
   line: string,
@@ -914,6 +1328,24 @@ export function buildMathParagraph(
   // First clean encoding and mojibake from the entire line
   let cleanedLine = repairMojibakeAndHtmlEntities(line);
   cleanedLine = unfuseWordBoundaries(cleanedLine);
+
+  // Check if line is a standalone mathematical equation (e.g. from display equation derivation steps)
+  let isDisplayEquation = false;
+  if (!headingLevel && isStandaloneEquationLine(cleanedLine)) {
+    cleanedLine = `$$${cleanedLine}$$`;
+    isDisplayEquation = true;
+  } else if (!cleanedLine.includes("$")) {
+    // Auto-wrap un-dollared LaTeX fractions with $...$
+    cleanedLine = cleanedLine.replace(
+      /(\\(?:d?frac)\{[^{}]+\}\{[^{}]+\})/g,
+      "$$$1$"
+    );
+    // Auto-wrap parenthesized fractional powers: e.g. ((1 / 2) + i (\sqrt(3) / 2))^{3/4}
+    cleanedLine = cleanedLine.replace(
+      /(\(\s*\(?[^()]*\/[^()]*\)?\s*[\+\-\*\/][^)]+\)\^\{?[0-9\/]+\}?)/g,
+      "$$$1$"
+    );
+  }
 
   // Check if line represents a Question Number in a Question Bank (e.g. "Q1.", "Q.1", "Question 1:", "1.")
   const questionHeaderMatch = cleanedLine.match(/^(\*{0,2}(?:Q(?:uestion|\.)?\s*\d+[\w.]*|Problem\s*\d+[\w.]*|\d+\.)\*{0,2})(.*)/i);
@@ -960,6 +1392,10 @@ export function buildMathParagraph(
     else if (match[2]) formula = match[2];
     else if (match[4]) formula = match[4];
     else if (match[5]) formula = match[5];
+
+    if (match[1] || match[2]) {
+      isDisplayEquation = true;
+    }
 
     const mathChildren = parseMathFormulaToChildren(formula);
     if (mathChildren.length > 0) {
@@ -1014,8 +1450,11 @@ export function buildMathParagraph(
   return new Paragraph({
     children,
     heading: headingLevel,
+    alignment: isDisplayEquation ? AlignmentType.CENTER : undefined,
     spacing: headingLevel
       ? { before: 240, after: 120 }
+      : isDisplayEquation
+      ? { before: 140, after: 140, line: 280 }
       : isQuestionHeader
       ? { before: 200, after: 80 }
       : isOptionLine
