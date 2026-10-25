@@ -11,11 +11,15 @@ import {
   GraduationCap,
   BookOpen,
   ArrowRight,
+  Loader2,
+  Zap,
+  Sparkles,
 } from "lucide-react";
 import { AcademicBranch, AcademicSemester, DocumentCategory } from "@/types/resources";
 import { AnimatedFilterDropdown, FilterDropdownOption } from "@/components/ui/animated-filter-dropdown";
 import { FlowHoverButton } from "@/components/ui/flow-hover-button";
 import { HoverButton } from "@/components/ui/hover-button";
+import { compressPdfFile, CompressionProgress } from "@/lib/pdf/compressor";
 
 const BRANCH_OPTIONS: FilterDropdownOption[] = [
   { id: "ALL", label: "ALL BRANCHES (First Year Common)", sublabel: "Common Curriculum for Semesters 1 & 2", icon: GraduationCap },
@@ -54,23 +58,72 @@ export function ResourceUploadForm() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Auto-compression state
+  const [compressing, setCompressing] = useState(false);
+  const [compressionProgress, setCompressionProgress] = useState<CompressionProgress | null>(null);
+  const [compressionStats, setCompressionStats] = useState<{
+    originalSize: number;
+    finalSize: number;
+    savingsPct: number;
+  } | null>(null);
+
   const MAX_UPLOAD_BYTES = 4.5 * 1024 * 1024; // 4.5 MB Vercel Serverless payload ceiling
+
+  const processAndSetFile = async (selected: File) => {
+    if (!selected.name.toLowerCase().endsWith(".pdf")) {
+      setError("Only PDF documents (.pdf) are accepted for the academic vault.");
+      return;
+    }
+
+    setError(null);
+    setCompressionStats(null);
+
+    // If file exceeds the 4.5 MB limit, auto-compress it!
+    if (selected.size > MAX_UPLOAD_BYTES) {
+      setCompressing(true);
+      setCompressionProgress({
+        stage: `File is ${(selected.size / (1024 * 1024)).toFixed(1)} MB (limit 4.5 MB). Auto-compressing PDF...`,
+        percent: 15,
+      });
+
+      try {
+        const result = await compressPdfFile(selected, {
+          maxBytes: MAX_UPLOAD_BYTES,
+          onProgress: (p) => setCompressionProgress(p),
+        });
+
+        if (result.finalSize <= MAX_UPLOAD_BYTES) {
+          setFile(result.file);
+          setCompressionStats({
+            originalSize: result.originalSize,
+            finalSize: result.finalSize,
+            savingsPct: result.savingsPct,
+          });
+          setError(null);
+        } else {
+          setError(
+            `Auto-compression reduced document from ${(result.originalSize / (1024 * 1024)).toFixed(1)} MB to ${(result.finalSize / (1024 * 1024)).toFixed(1)} MB, which still exceeds the 4.5 MB ceiling. Please upload a smaller portion of the syllabus.`
+          );
+          setFile(null);
+        }
+      } catch (compErr: any) {
+        console.error("Auto-compression error:", compErr);
+        setError(
+          `Document size (${(selected.size / (1024 * 1024)).toFixed(1)} MB) exceeds 4.5 MB. Auto-compression encountered an issue: ${compErr?.message || "Please compress your PDF."}`
+        );
+        setFile(null);
+      } finally {
+        setCompressing(false);
+        setCompressionProgress(null);
+      }
+    } else {
+      setFile(selected);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const selected = e.target.files[0];
-      if (!selected.name.toLowerCase().endsWith(".pdf")) {
-        setError("Only PDF documents (.pdf) are accepted for the academic vault.");
-        return;
-      }
-      if (selected.size > MAX_UPLOAD_BYTES) {
-        setError(
-          `Document size (${(selected.size / (1024 * 1024)).toFixed(1)} MB) exceeds the 4.5 MB upload limit. Please compress your PDF or upload a smaller file.`
-        );
-        return;
-      }
-      setFile(selected);
-      setError(null);
+      processAndSetFile(e.target.files[0]);
     }
   };
 
@@ -356,30 +409,93 @@ export function ResourceUploadForm() {
             <label className="block text-[11px] font-mono text-[var(--text-secondary)] tracking-wider">
               ATTACH PDF PAYLOAD <span className="text-[var(--brand-primary)]">*</span>
             </label>
-            <div className="relative border-2 border-dashed border-black/15 dark:border-white/20 hover:border-[var(--brand-primary)] rounded-2xl p-7 text-center bg-white/30 dark:bg-white/[0.03] backdrop-blur-xl transition-all group cursor-pointer hover:shadow-[0_0_30px_rgba(0,194,105,0.2)]">
+            <div
+              className={`relative border-2 border-dashed ${
+                compressing
+                  ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/[0.04] shadow-[0_0_30px_rgba(0,194,105,0.25)]"
+                  : "border-black/15 dark:border-white/20 hover:border-[var(--brand-primary)] bg-white/30 dark:bg-white/[0.03] hover:shadow-[0_0_30px_rgba(0,194,105,0.2)]"
+              } rounded-2xl p-7 text-center backdrop-blur-xl transition-all group cursor-pointer`}
+            >
               <input
                 type="file"
                 accept=".pdf,application/pdf"
                 onChange={handleFileChange}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+                disabled={compressing}
+                className={`absolute inset-0 w-full h-full opacity-0 ${
+                  compressing ? "cursor-not-allowed" : "cursor-pointer"
+                } z-20`}
                 aria-label="Upload PDF document"
               />
-              <div className="flex flex-col items-center justify-center space-y-2.5">
-                <div className="w-12 h-12 rounded-2xl bg-[var(--brand-primary)]/15 text-[var(--brand-primary)] flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-[0_0_20px_rgba(0,194,105,0.2)]">
-                  <UploadCloud className="w-6 h-6" />
-                </div>
-                {file ? (
-                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--brand-primary)]/15 border border-[var(--brand-primary)]/40 text-xs font-mono text-[var(--brand-primary)] font-semibold">
-                    <FileCheck className="w-4 h-4" />
-                    <span>{file.name} ({(file.size / 1024).toFixed(1)} KB)</span>
+              <div className="flex flex-col items-center justify-center space-y-3">
+                {compressing ? (
+                  <>
+                    <div className="relative">
+                      <div className="w-12 h-12 rounded-2xl bg-[var(--brand-primary)]/20 text-[var(--brand-primary)] flex items-center justify-center shadow-[0_0_25px_rgba(0,194,105,0.35)]">
+                        <Zap className="w-6 h-6 animate-bounce text-[var(--brand-primary)]" />
+                      </div>
+                      <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--brand-primary)] opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-[var(--brand-primary)]"></span>
+                      </span>
+                    </div>
+                    <div className="w-full max-w-xs space-y-2">
+                      <div className="flex items-center justify-between text-xs font-mono">
+                        <span className="text-[var(--brand-primary)] font-semibold flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 animate-spin" />
+                          AUTO-COMPRESSING
+                        </span>
+                        <span className="text-[var(--text-secondary)]">
+                          {compressionProgress?.percent || 15}%
+                        </span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-[var(--brand-primary)] to-emerald-400 rounded-full transition-all duration-300 shadow-[0_0_12px_rgba(0,194,105,0.5)]"
+                          style={{ width: `${compressionProgress?.percent || 15}%` }}
+                        />
+                      </div>
+                      <p className="text-[11px] font-mono text-[var(--text-muted)] truncate">
+                        {compressionProgress?.stage || "Optimizing PDF payload below 4.5 MB ceiling..."}
+                      </p>
+                    </div>
+                  </>
+                ) : file ? (
+                  <div className="flex flex-col items-center space-y-2">
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--brand-primary)]/15 border border-[var(--brand-primary)]/40 text-xs font-mono text-[var(--brand-primary)] font-semibold">
+                      <FileCheck className="w-4 h-4" />
+                      <span>
+                        {file.name} (
+                        {file.size / (1024 * 1024) >= 1
+                          ? `${(file.size / (1024 * 1024)).toFixed(2)} MB`
+                          : `${(file.size / 1024).toFixed(1)} KB`}
+                        )
+                      </span>
+                    </div>
+                    {compressionStats && (
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[11px] font-mono text-emerald-400">
+                        <Zap className="w-3 h-3 text-emerald-400" />
+                        <span>
+                          Auto-Compressed:{" "}
+                          {(compressionStats.originalSize / (1024 * 1024)).toFixed(1)} MB →{" "}
+                          {(compressionStats.finalSize / (1024 * 1024)).toFixed(1)} MB (
+                          {compressionStats.savingsPct}% saved)
+                        </span>
+                      </div>
+                    )}
+                    <p className="text-[10px] font-mono text-[var(--text-muted)]">
+                      Click or drop another file to replace
+                    </p>
                   </div>
                 ) : (
                   <>
+                    <div className="w-12 h-12 rounded-2xl bg-[var(--brand-primary)]/15 text-[var(--brand-primary)] flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-[0_0_20px_rgba(0,194,105,0.2)]">
+                      <UploadCloud className="w-6 h-6" />
+                    </div>
                     <p className="text-xs sm:text-sm text-[var(--text-primary)] font-medium">
                       Drag &amp; drop PDF here, or click to browse files
                     </p>
                     <p className="text-[10px] font-mono text-[var(--text-muted)] tracking-wider">
-                      PDF DOCUMENTS ONLY • MAXIMUM 4.5 MB
+                      PDF DOCUMENTS ONLY • AUTO-COMPRESSED IF OVER 4.5 MB
                     </p>
                   </>
                 )}
@@ -391,11 +507,21 @@ export function ResourceUploadForm() {
           <div className="pt-2 relative z-10 flex justify-start">
             <FlowHoverButton
               type="submit"
-              disabled={loading}
-              icon={<ArrowRight className="w-4 h-4" />}
+              disabled={loading || compressing}
+              icon={
+                compressing ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <ArrowRight className="w-4 h-4" />
+                )
+              }
               className="w-full sm:w-auto h-12 min-w-[280px]"
             >
-              {loading ? "TRANSMITTING TO MODERATION..." : "TRANSMIT TO FACULTY REVIEW"}
+              {compressing
+                ? "AUTO-COMPRESSING PDF..."
+                : loading
+                ? "TRANSMITTING TO MODERATION..."
+                : "TRANSMIT TO FACULTY REVIEW"}
             </FlowHoverButton>
           </div>
         </form>

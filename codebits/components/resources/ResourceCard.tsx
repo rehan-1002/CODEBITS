@@ -1,9 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { FileText, Eye, ShieldCheck, User, ArrowUpRight, Sparkles } from "lucide-react";
 import { Resource } from "@/types/resources";
+import { SyllabusOverviewModal } from "@/components/resources/SyllabusOverviewModal";
 
 interface ResourceCardProps {
   resource: Resource;
@@ -30,6 +31,8 @@ const DEFAULT_GRADIENTS = [
 ];
 
 export function ResourceCard({ resource, index = 0 }: ResourceCardProps) {
+  const [showSyllabusModal, setShowSyllabusModal] = useState(false);
+
   const categoryLabels: Record<string, string> = {
     pyq: "QUESTION PAPER",
     notes: "LECTURE NOTES",
@@ -145,16 +148,28 @@ export function ResourceCard({ resource, index = 0 }: ResourceCardProps) {
               </span>
             </div>
 
-            {/* Kinetic HUD Actions: Solve with cbAI + Study Document */}
+            {/* Kinetic HUD Actions: Syllabus Overview or Solve with cbAI + Study Document */}
             <div className="flex items-center gap-1.5 shrink-0">
-              <Link
-                href={`/solver?docId=${resource.id}&title=${encodeURIComponent(resource.title)}`}
-                title="Extract and solve questions with cbAI"
-                className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold text-[var(--brand-primary)] bg-[var(--brand-primary)]/10 hover:bg-[var(--brand-primary)]/20 border border-[var(--brand-primary)]/35 hover:border-[var(--brand-primary)]/70 shadow-xs hover:scale-[1.03] active:scale-[0.98] transition-all duration-200 cursor-pointer"
-              >
-                <Sparkles className="w-3 h-3 text-[var(--brand-primary)]" />
-                <span>cbAI</span>
-              </Link>
+              {resource.category === "syllabus" ? (
+                <button
+                  type="button"
+                  onClick={() => setShowSyllabusModal(true)}
+                  title="View AI Syllabus Overview & Marks Distribution"
+                  className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold text-[var(--brand-primary)] bg-[var(--brand-primary)]/15 hover:bg-[var(--brand-primary)]/25 border border-[var(--brand-primary)]/45 hover:border-[var(--brand-primary)] shadow-xs hover:scale-[1.03] active:scale-[0.98] transition-all duration-200 cursor-pointer"
+                >
+                  <Sparkles className="w-3 h-3 text-[var(--brand-primary)] animate-pulse" />
+                  <span>OVERVIEW</span>
+                </button>
+              ) : (
+                <Link
+                  href={`/solver?docId=${resource.id}&title=${encodeURIComponent(resource.title)}`}
+                  title="Extract and solve questions with cbAI"
+                  className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold text-[var(--brand-primary)] bg-[var(--brand-primary)]/10 hover:bg-[var(--brand-primary)]/20 border border-[var(--brand-primary)]/35 hover:border-[var(--brand-primary)]/70 shadow-xs hover:scale-[1.03] active:scale-[0.98] transition-all duration-200 cursor-pointer"
+                >
+                  <Sparkles className="w-3 h-3 text-[var(--brand-primary)]" />
+                  <span>cbAI</span>
+                </Link>
+              )}
 
               <Link
                 href={`/viewer/${resource.id}`}
@@ -168,6 +183,16 @@ export function ResourceCard({ resource, index = 0 }: ResourceCardProps) {
           </div>
         </div>
       </div>
+
+      {/* Syllabus Tabular Overview Modal */}
+      {resource.category === "syllabus" && (
+        <SyllabusOverviewModal
+          isOpen={showSyllabusModal}
+          onClose={() => setShowSyllabusModal(false)}
+          documentTitle={resource.title}
+          resourceId={resource.id}
+        />
+      )}
 
       {/* Floating Blob Physics Keyframes */}
       <style>{`

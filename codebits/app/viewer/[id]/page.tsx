@@ -63,6 +63,7 @@ export default async function ViewerPage({ params }: ViewerPageProps) {
         scheme={resource?.scheme || "Mumbai University Engineering"}
         studentName={user.full_name.toUpperCase()}
         studentPhone={user.phone ? `+91 ${user.phone}` : undefined}
+        category={resource?.category}
       />
     </div>
   );

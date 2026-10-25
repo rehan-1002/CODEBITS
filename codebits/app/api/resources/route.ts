@@ -172,13 +172,32 @@ export async function POST(req: NextRequest) {
     // 2. File size check (Max 4.5MB for Serverless compatibility)
     const MAX_SIZE = 4.5 * 1024 * 1024; // 4.5 MB platform limit
     if (fileSize > MAX_SIZE) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: `File size (${(fileSize / (1024 * 1024)).toFixed(1)} MB) exceeds the 4.5 MB serverless limit. Please compress your PDF before uploading.`,
-        },
-        { status: 413 }
-      );
+      // Attempt quick lossless stream compression if slightly above limit
+      try {
+        const { PDFDocument } = await import('pdf-lib');
+        const pdfDoc = await PDFDocument.load(buffer, { ignoreEncryption: true });
+        const compressedBytes = await pdfDoc.save({ useObjectStreams: true });
+        if (compressedBytes.length <= MAX_SIZE) {
+          buffer = Buffer.from(compressedBytes);
+          fileSize = buffer.length;
+        } else {
+          return NextResponse.json(
+            {
+              success: false,
+              error: `File size (${(fileSize / (1024 * 1024)).toFixed(1)} MB) exceeds the 4.5 MB limit. Please use the auto-compress feature on the upload form.`,
+            },
+            { status: 413 }
+          );
+        }
+      } catch {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `File size (${(fileSize / (1024 * 1024)).toFixed(1)} MB) exceeds the 4.5 MB serverless limit. Please compress your PDF before uploading.`,
+          },
+          { status: 413 }
+        );
+      }
     }
 
     // 3. Name check

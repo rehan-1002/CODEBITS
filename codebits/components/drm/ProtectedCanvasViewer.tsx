@@ -16,6 +16,7 @@ import {
   FileX,
   Sparkles,
 } from "lucide-react";
+import { SyllabusOverviewModal } from "@/components/resources/SyllabusOverviewModal";
 
 interface ProtectedCanvasViewerProps {
   documentId: string;
@@ -25,6 +26,7 @@ interface ProtectedCanvasViewerProps {
   scheme?: string;
   studentName?: string;
   studentPhone?: string;
+  category?: string;
 }
 
 export function ProtectedCanvasViewer({
@@ -35,7 +37,9 @@ export function ProtectedCanvasViewer({
   scheme = "Mumbai University",
   studentName = "STUDENT",
   studentPhone = "+91 9920336099",
+  category,
 }: ProtectedCanvasViewerProps) {
+  const [showSyllabusModal, setShowSyllabusModal] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const pdfDocRef = useRef<any>(null);
@@ -319,15 +323,28 @@ export function ProtectedCanvasViewer({
             <ZoomIn className="w-4 h-4" />
           </button>
 
-          <Link
-            href={`/solver?docId=${documentId}&title=${encodeURIComponent(documentTitle || 'Exam Paper')}`}
-            className="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/20 font-mono text-xs font-bold transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
-            title="Extract questions and solve with cbAI"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">SOLVE WITH</span>
-            <span>cbAI</span>
-          </Link>
+          {category === "syllabus" || documentTitle.toLowerCase().includes("syllabus") ? (
+            <button
+              type="button"
+              onClick={() => setShowSyllabusModal(true)}
+              className="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border border-[var(--brand-primary)]/45 bg-[var(--brand-primary)]/15 text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/25 font-mono text-xs font-bold transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
+              title="View AI Syllabus Overview & Marks Distribution"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[var(--brand-primary)] animate-pulse" />
+              <span className="hidden sm:inline">AI</span>
+              <span>OVERVIEW</span>
+            </button>
+          ) : (
+            <Link
+              href={`/solver?docId=${documentId}&title=${encodeURIComponent(documentTitle || 'Exam Paper')}`}
+              className="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/20 font-mono text-xs font-bold transition-all cursor-pointer shadow-xs hover:scale-[1.02] active:scale-[0.98]"
+              title="Extract questions and solve with cbAI"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">SOLVE WITH</span>
+              <span>cbAI</span>
+            </Link>
+          )}
 
           <div className="hidden lg:flex items-center space-x-1.5 px-2.5 py-1 rounded bg-[var(--surface-elevated)] border border-[var(--border-subtle)] font-mono text-[10px] text-[var(--brand-primary)]">
             <ShieldCheck className="w-3.5 h-3.5" />
@@ -404,6 +421,14 @@ export function ProtectedCanvasViewer({
         </div>
         <div>CLIENT DETERRENCE ACTIVE • AUTHENTIC CANVAS RENDERED</div>
       </div>
+
+      {/* Syllabus Tabular Overview Modal */}
+      <SyllabusOverviewModal
+        isOpen={showSyllabusModal}
+        onClose={() => setShowSyllabusModal(false)}
+        documentTitle={documentTitle}
+        resourceId={documentId}
+      />
     </div>
   );
 }
