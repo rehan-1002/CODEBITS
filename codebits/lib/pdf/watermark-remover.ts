@@ -214,7 +214,7 @@ export function whitenCanvasBackground(
   context: CanvasRenderingContext2D,
   width: number,
   height: number,
-  threshold: number = 190
+  threshold: number = 180
 ): void {
   try {
     const imgData = context.getImageData(0, 0, width, height);
@@ -226,14 +226,19 @@ export function whitenCanvasBackground(
       const g = data[i + 1];
       const b = data[i + 2];
 
+      // Luminance (standard ITU-R BT.601)
+      const lum = 0.299 * r + 0.587 * g + 0.114 * b;
       const minVal = Math.min(r, g, b);
       const maxVal = Math.max(r, g, b);
 
-      // Faint gray/neutral watermark stamp over paper
-      // (High brightness > threshold with low color variance between RGB channels)
-      const isFaintWatermark = minVal > threshold && maxVal - minVal < 28;
+      // 1. Faint gray/neutral paper shadows & watermark stamps (lum >= threshold, low saturation)
+      const isNeutralWatermark = lum >= threshold && maxVal - minVal < 35;
 
-      if (isFaintWatermark) {
+      // 2. Colored semi-transparent watermarks (e.g. Stupidsid faint red/pink "S" logo, light cyan stamps, yellow scanner tint)
+      // Watermark ink is semi-transparent over white paper: high luminance and all color channels elevated above dark ink range.
+      const isColoredWatermark = lum >= 135 && minVal >= 90;
+
+      if (isNeutralWatermark || isColoredWatermark) {
         data[i] = 255;
         data[i + 1] = 255;
         data[i + 2] = 255;

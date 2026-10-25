@@ -209,7 +209,7 @@ export async function compressPdfFile(
     }).promise;
 
     // Apply smart watermark whitening filter to erase faint background logos on scanned paper
-    whitenCanvasBackground(context, canvas.width, canvas.height, 192);
+    whitenCanvasBackground(context, canvas.width, canvas.height, 180);
 
     // Convert canvas to optimized progressive JPEG
     const jpegDataUrl = canvas.toDataURL("image/jpeg", jpegQuality);

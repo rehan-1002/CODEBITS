@@ -520,7 +520,7 @@ export function ResourceUploadForm() {
                   className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[var(--brand-primary)]/10 hover:bg-[var(--brand-primary)]/20 border border-[var(--brand-primary)]/30 text-[11px] font-mono font-semibold text-[var(--brand-primary)] cursor-pointer transition-colors shadow-xs"
                 >
                   <Zap className="w-3 h-3 text-[var(--brand-primary)]" />
-                  <span>⚡ Optimize / Compress File</span>
+                  <span>⚡ Purge Watermarks &amp; Optimize</span>
                 </button>
               </div>
             )}
