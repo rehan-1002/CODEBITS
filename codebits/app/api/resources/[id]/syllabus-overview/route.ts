@@ -95,14 +95,14 @@ export async function GET(req: NextRequest, { params }: RouteProps) {
       );
     }
 
-    // 4. Extract first 12 pages using pdf-lib (where MU Teaching & Examination Schemes always reside)
+    // 4. Extract first 18 pages using pdf-lib (where MU Teaching & Examination Schemes for both semesters reside)
     const { PDFDocument } = await import('pdf-lib');
     let schemeBuffer: Buffer = pdfBuffer;
 
     try {
       const sourcePdf = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
       const totalPages = sourcePdf.getPageCount();
-      const pagesToCopy = Math.min(totalPages, 12);
+      const pagesToCopy = Math.min(totalPages, 18);
 
       const schemeDoc = await PDFDocument.create();
       const copied = await schemeDoc.copyPages(
@@ -123,49 +123,62 @@ export async function GET(req: NextRequest, { params }: RouteProps) {
 You are a senior academic curriculum specialist for Mumbai University Engineering (Faculty of Science & Technology).
 Carefully read the provided Mumbai University Syllabus document and examine the Teaching Scheme and Examination Scheme tables.
 
+IMPORTANT CONTEXT FOR MUMBAI UNIVERSITY SYLLABI:
+Mumbai University syllabus circulars and booklets frequently combine two semesters for an entire academic year (e.g. S.E. covers Sem III & IV, T.E. covers Sem V & VI, B.E. covers Sem VII & VIII).
+Inspect the document to see if it covers a SINGLE semester or TWO semesters (e.g. Sem V & Sem VI).
+
 Extract the complete curriculum structure into a valid, strict JSON object following this EXACT schema:
 {
   "schemeTitle": "e.g. University of Mumbai - Rev 2019 'C' Scheme / NEP 2024",
   "branch": "${resource.branch || 'Engineering'}",
   "semester": ${resource.semester || 3},
-  "totalCredits": "e.g. 23",
-  "totalMarks": "e.g. 750",
-  "theorySubjectsCount": 5,
-  "practicalLabsCount": 3,
-  "bothCount": 3,
+  "semesters": [
+    {
+      "semesterNumber": 5,
+      "semesterLabel": "Semester V",
+      "totalCredits": "e.g. 23",
+      "totalMarks": "e.g. 750",
+      "theorySubjectsCount": 5,
+      "practicalLabsCount": 3,
+      "bothCount": 3,
+      "subjects": [
+        {
+          "code": "e.g. CSC501",
+          "name": "e.g. Theoretical Computer Science",
+          "type": "theory" | "practical" | "both" | "project",
+          "teachingScheme": {
+            "lectures": 3,
+            "practicals": "-",
+            "tutorials": 1,
+            "credits": 4
+          },
+          "examScheme": {
+            "internalAssessment": 20,
+            "endSemExam": 80,
+            "examDurationHours": "3h",
+            "termWork": "-",
+            "practicalOral": "-",
+            "totalMarks": 100
+          },
+          "summary": "1 concise sentence explaining the primary core modules covered in this subject"
+        }
+      ]
+    }
+  ],
   "passingRules": "Detailed passing criteria (e.g. Minimum 40% in End Sem Exam & Internal Assessment, separate passing in Term Work / Oral)",
   "notes": [
     "Any important syllabus scheme guidelines or exam directives from the university"
-  ],
-  "subjects": [
-    {
-      "code": "e.g. CSC301",
-      "name": "e.g. Applied Mathematics-III",
-      "type": "theory" | "practical" | "both" | "project",
-      "teachingScheme": {
-        "lectures": 3,
-        "practicals": "-",
-        "tutorials": 1,
-        "credits": 4
-      },
-      "examScheme": {
-        "internalAssessment": 20,
-        "endSemExam": 80,
-        "examDurationHours": "3h",
-        "termWork": "-",
-        "practicalOral": "-",
-        "totalMarks": 100
-      },
-      "summary": "1 concise sentence explaining the primary core modules covered in this subject"
-    }
   ]
 }
 
-CRITICAL RULES FOR "type":
-- "theory": Subject with lectures and an End Sem written theory exam (ESE), but NO dedicated practical/oral exam.
-- "practical": Subject that is strictly a Laboratory, Workshop, Mini Project, or Skill Lab (usually has Term Work [TW] and/or Practical/Oral [PR/OR], NO written 80-mark theory exam).
-- "both": Subject that has BOTH a formal End Semester theory exam (ESE) AND associated practical lab / oral sessions or termwork.
-- "project": Mini-project or Major project course.
+CRITICAL RULES:
+1. If the PDF contains 2 semesters (e.g. Sem V and Sem VI), include BOTH semesters in the "semesters" array in order (e.g. Sem V first, Sem VI second), each with its own respective Teaching & Examination Scheme and subject list.
+2. If the PDF only contains 1 semester, "semesters" should contain just that 1 semester.
+3. Subject "type":
+   - "theory": Subject with lectures and an End Sem written theory exam (ESE), but NO dedicated practical/oral exam.
+   - "practical": Subject that is strictly a Laboratory, Workshop, Mini Project, or Skill Lab (usually has Term Work [TW] and/or Practical/Oral [PR/OR], NO written 80-mark theory exam).
+   - "both": Subject that has BOTH a formal End Semester theory exam (ESE) AND associated practical lab / oral sessions or termwork.
+   - "project": Mini-project or Major project course.
 
 Return ONLY the raw JSON object. Do not wrap in markdown or backticks.
 `;
@@ -211,6 +224,32 @@ Return ONLY the raw JSON object. Do not wrap in markdown or backticks.
           const parsed = JSON.parse(cleanedText);
           parsed.resourceId = id;
           parsed.generatedAt = new Date().toISOString();
+
+          // Normalize semesters array and top-level fields
+          if (Array.isArray(parsed.semesters) && parsed.semesters.length > 0) {
+            const first = parsed.semesters[0];
+            parsed.totalCredits = parsed.totalCredits || first.totalCredits;
+            parsed.totalMarks = parsed.totalMarks || first.totalMarks;
+            parsed.theorySubjectsCount = parsed.theorySubjectsCount ?? first.theorySubjectsCount;
+            parsed.practicalLabsCount = parsed.practicalLabsCount ?? first.practicalLabsCount;
+            parsed.bothCount = parsed.bothCount ?? first.bothCount;
+            parsed.subjects = parsed.subjects || first.subjects;
+            parsed.semester = parsed.semester || first.semesterNumber;
+          } else if (Array.isArray(parsed.subjects) && parsed.subjects.length > 0) {
+            parsed.semesters = [
+              {
+                semesterNumber: Number(parsed.semester) || 1,
+                semesterLabel: `Semester ${parsed.semester || 1}`,
+                totalCredits: parsed.totalCredits || '24',
+                totalMarks: parsed.totalMarks || '750',
+                theorySubjectsCount: parsed.theorySubjectsCount || 0,
+                practicalLabsCount: parsed.practicalLabsCount || 0,
+                bothCount: parsed.bothCount || 0,
+                subjects: parsed.subjects,
+              },
+            ];
+          }
+
           extractedData = parsed as SyllabusOverviewData;
           modelUsed = model;
           break;

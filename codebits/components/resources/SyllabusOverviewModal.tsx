@@ -37,6 +37,7 @@ export function SyllabusOverviewModal({
   const [loading, setLoading] = useState(false);
   const [overview, setOverview] = useState<SyllabusOverviewData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedSemesterIndex, setSelectedSemesterIndex] = useState(0);
   const [activeFilter, setActiveFilter] = useState<"all" | SyllabusSubjectType>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [copied, setCopied] = useState(false);
@@ -73,6 +74,7 @@ export function SyllabusOverviewModal({
     if (overview?.resourceId !== resourceId) {
       setOverview(null);
       setError(null);
+      setSelectedSemesterIndex(0);
       setLoading(true);
 
       fetch(`/api/resources/${resourceId}/syllabus-overview`)
@@ -82,6 +84,7 @@ export function SyllabusOverviewModal({
             throw new Error(json.error || "Failed to load syllabus overview.");
           }
           setOverview(json.data);
+          setSelectedSemesterIndex(0);
         })
         .catch((err) => {
           console.error("Error loading syllabus overview:", err);
@@ -93,10 +96,28 @@ export function SyllabusOverviewModal({
     }
   }, [isOpen, resourceId, overview?.resourceId]);
 
-  // Filtered subjects
+  // Active semester data (supports dual-semester combined MU circulars e.g. Sem V & Sem VI)
+  const activeSemester = useMemo(() => {
+    if (!overview) return null;
+    if (overview.semesters && overview.semesters.length > 0) {
+      return overview.semesters[selectedSemesterIndex] || overview.semesters[0];
+    }
+    return {
+      semesterNumber: Number(overview.semester) || 1,
+      semesterLabel: `Semester ${overview.semester || 1}`,
+      totalCredits: overview.totalCredits,
+      totalMarks: overview.totalMarks,
+      theorySubjectsCount: overview.theorySubjectsCount,
+      practicalLabsCount: overview.practicalLabsCount,
+      bothCount: overview.bothCount,
+      subjects: overview.subjects || [],
+    };
+  }, [overview, selectedSemesterIndex]);
+
+  // Filtered subjects based on active semester and search query
   const filteredSubjects = useMemo(() => {
-    if (!overview?.subjects) return [];
-    return overview.subjects.filter((sub) => {
+    if (!activeSemester?.subjects) return [];
+    return activeSemester.subjects.filter((sub) => {
       const matchesFilter =
         activeFilter === "all" ? true : sub.type === activeFilter;
       const matchesSearch =
@@ -105,18 +126,18 @@ export function SyllabusOverviewModal({
         sub.code.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesFilter && matchesSearch;
     });
-  }, [overview, activeFilter, searchQuery]);
+  }, [activeSemester, activeFilter, searchQuery]);
 
   const copyAsTableText = () => {
-    if (!overview) return;
+    if (!overview || !activeSemester) return;
     const lines = [
       `Syllabus Overview: ${documentTitle}`,
       `Scheme: ${overview.schemeTitle || "Mumbai University Engineering"}`,
-      `Branch: ${overview.branch} | Semester: ${overview.semester}`,
-      `Total Marks: ${overview.totalMarks} | Total Credits: ${overview.totalCredits}`,
+      `Branch: ${overview.branch} | ${activeSemester.semesterLabel}`,
+      `Total Marks: ${activeSemester.totalMarks} | Total Credits: ${activeSemester.totalCredits}`,
       "",
       "Code\tSubject\tType\tLectures\tPracticals\tTutorials\tCredits\tIA(20)\tESE(80)\tTW\tPR/OR\tTotal",
-      ...overview.subjects.map(
+      ...activeSemester.subjects.map(
         (s) =>
           `${s.code}\t${s.name}\t${s.type.toUpperCase()}\t${s.teachingScheme.lectures}\t${s.teachingScheme.practicals}\t${s.teachingScheme.tutorials}\t${s.teachingScheme.credits}\t${s.examScheme.internalAssessment}\t${s.examScheme.endSemExam}\t${s.examScheme.termWork}\t${s.examScheme.practicalOral}\t${s.examScheme.totalMarks}`
       ),
@@ -163,8 +184,10 @@ export function SyllabusOverviewModal({
 
             {overview && (
               <p className="text-xs font-mono text-[var(--text-secondary)]">
-                Branch: <span className="text-[var(--brand-primary)] font-semibold">{overview.branch}</span> • Semester:{" "}
-                <span className="text-[var(--brand-primary)] font-semibold">{overview.semester}</span>
+                Branch: <span className="text-[var(--brand-primary)] font-semibold">{overview.branch}</span> •{" "}
+                <span className="text-[var(--brand-primary)] font-semibold">
+                  {activeSemester ? activeSemester.semesterLabel : `Semester ${overview.semester}`}
+                </span>
               </p>
             )}
           </div>
@@ -253,6 +276,47 @@ export function SyllabusOverviewModal({
           {/* Loaded Content */}
           {overview && !loading && (
             <>
+              {/* Dual-Semester Tabs (For combined MU circulars e.g. Sem V & Sem VI) */}
+              {overview.semesters && overview.semesters.length > 1 && (
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-2.5 rounded-2xl bg-black/[0.04] dark:bg-white/[0.04] border border-black/10 dark:border-white/10">
+                  <div className="flex items-center gap-2 px-2 text-xs font-mono text-[var(--text-secondary)]">
+                    <Calendar className="w-4 h-4 text-[var(--brand-primary)]" />
+                    <span className="font-bold text-[var(--text-primary)]">SEMESTER SCHEME:</span>
+                  </div>
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    {overview.semesters.map((sem, idx) => {
+                      const isSelected = selectedSemesterIndex === idx;
+                      return (
+                        <button
+                          key={sem.semesterNumber || idx}
+                          type="button"
+                          onClick={() => {
+                            setSelectedSemesterIndex(idx);
+                            setActiveFilter("all");
+                          }}
+                          className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
+                            isSelected
+                              ? "bg-[var(--brand-primary)] text-black shadow-[0_0_20px_rgba(0,194,105,0.4)] scale-[1.02]"
+                              : "bg-black/[0.03] dark:bg-white/[0.03] hover:bg-black/[0.06] dark:hover:bg-white/[0.06] text-[var(--text-secondary)] border border-black/10 dark:border-white/10"
+                          }`}
+                        >
+                          <span>{sem.semesterLabel || `Semester ${sem.semesterNumber}`}</span>
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded ${
+                              isSelected
+                                ? "bg-black/20 text-black font-semibold"
+                                : "bg-black/10 dark:bg-white/10 text-[var(--text-muted)]"
+                            }`}
+                          >
+                            {sem.totalCredits} Credits
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Executive Metrics Bar */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="p-3.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.03] border border-black/10 dark:border-white/10 space-y-1">
@@ -261,9 +325,11 @@ export function SyllabusOverviewModal({
                     <Award className="w-3.5 h-3.5 text-amber-400" />
                   </div>
                   <p className="text-xl font-bold font-mono text-[var(--text-primary)]">
-                    {overview.totalMarks}
+                    {activeSemester ? activeSemester.totalMarks : overview.totalMarks}
                   </p>
-                  <p className="text-[10px] font-mono text-[var(--text-muted)]">Total Tally</p>
+                  <p className="text-[10px] font-mono text-[var(--text-muted)]">
+                    {activeSemester?.semesterLabel || "Total Tally"}
+                  </p>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.03] border border-black/10 dark:border-white/10 space-y-1">
@@ -272,7 +338,7 @@ export function SyllabusOverviewModal({
                     <GraduationCap className="w-3.5 h-3.5 text-[var(--brand-primary)]" />
                   </div>
                   <p className="text-xl font-bold font-mono text-[var(--brand-primary)]">
-                    {overview.totalCredits}
+                    {activeSemester ? activeSemester.totalCredits : overview.totalCredits}
                   </p>
                   <p className="text-[10px] font-mono text-[var(--text-muted)]">University Credits</p>
                 </div>
@@ -283,7 +349,10 @@ export function SyllabusOverviewModal({
                     <Layers className="w-3.5 h-3.5 text-emerald-400" />
                   </div>
                   <p className="text-xl font-bold font-mono text-emerald-400">
-                    {overview.bothCount || overview.subjects.filter((s) => s.type === "both").length}
+                    {activeSemester
+                      ? activeSemester.bothCount ||
+                        activeSemester.subjects.filter((s) => s.type === "both").length
+                      : overview.bothCount}
                   </p>
                   <p className="text-[10px] font-mono text-[var(--text-muted)]">Integrated Subjects</p>
                 </div>
@@ -294,8 +363,10 @@ export function SyllabusOverviewModal({
                     <FlaskConical className="w-3.5 h-3.5 text-sky-400" />
                   </div>
                   <p className="text-xl font-bold font-mono text-sky-400">
-                    {overview.practicalLabsCount ||
-                      overview.subjects.filter((s) => s.type === "practical").length}
+                    {activeSemester
+                      ? activeSemester.practicalLabsCount ||
+                        activeSemester.subjects.filter((s) => s.type === "practical").length
+                      : overview.practicalLabsCount}
                   </p>
                   <p className="text-[10px] font-mono text-[var(--text-muted)]">Practical Courses</p>
                 </div>
@@ -507,20 +578,20 @@ export function SyllabusOverviewModal({
                     </tbody>
 
                     {/* Table Summary Footer */}
-                    {overview.subjects.length > 0 && (
+                    {activeSemester && activeSemester.subjects.length > 0 && (
                       <tfoot>
                         <tr className="bg-black/5 dark:bg-white/5 border-t border-black/10 dark:border-white/10 font-mono font-bold text-xs">
                           <td colSpan={5} className="py-3 px-4 text-[var(--text-primary)]">
-                            SEMESTER TALLY TOTAL
+                            {activeSemester.semesterLabel.toUpperCase()} TALLY TOTAL
                           </td>
                           <td className="py-3 px-2 text-center text-[var(--brand-primary)] border-r border-black/10 dark:border-white/10">
-                            {overview.totalCredits} CR
+                            {activeSemester.totalCredits} CR
                           </td>
                           <td colSpan={5} className="py-3 px-3 text-right text-[var(--text-muted)] text-[11px]">
                             GRAND TOTAL MARKS:
                           </td>
                           <td className="py-3 px-3 text-center text-[var(--brand-primary)] bg-[var(--brand-primary)]/10 text-sm">
-                            {overview.totalMarks}
+                            {activeSemester.totalMarks}
                           </td>
                         </tr>
                       </tfoot>

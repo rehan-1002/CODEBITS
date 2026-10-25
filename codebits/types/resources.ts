@@ -71,6 +71,17 @@ export interface SyllabusSubject {
   summary?: string; // Quick note on topics / objectives
 }
 
+export interface SyllabusSemesterOverview {
+  semesterNumber: number; // e.g. 5
+  semesterLabel: string; // e.g. "Semester V"
+  totalCredits: number | string; // e.g. 23
+  totalMarks: number | string; // e.g. 750
+  theorySubjectsCount: number;
+  practicalLabsCount: number;
+  bothCount: number;
+  subjects: SyllabusSubject[];
+}
+
 export interface SyllabusOverviewData {
   resourceId: string;
   schemeTitle: string; // e.g. "Mumbai University Rev-2019 'C' Scheme / NEP"
@@ -82,6 +93,7 @@ export interface SyllabusOverviewData {
   practicalLabsCount: number;
   bothCount: number;
   subjects: SyllabusSubject[];
+  semesters?: SyllabusSemesterOverview[]; // Supports dual-semester combined MU circulars (e.g. Sem V & VI together)
   passingRules?: string; // Summary of passing criteria (e.g. 40% aggregate in ESE and IA)
   notes?: string[];
   generatedAt: string;
