@@ -1,4 +1,5 @@
 import { PDFDocument } from "pdf-lib";
+import { purgePdfWatermarks, whitenCanvasBackground } from "./watermark-remover";
 
 export interface CompressionProgress {
   stage: string;
@@ -101,49 +102,41 @@ export async function compressPdfFile(
   const arrayBuffer = await file.arrayBuffer();
 
   // ==========================================
-  // TIER 1: Lossless Stream & Object Deduplication
+  // TIER 1: Lossless Stream Deduplication & Watermark Purge
   // ==========================================
   try {
     options?.onProgress?.({
-      stage: "Applying stream deduplication...",
+      stage: "Purging watermarks & deduplicating streams...",
       percent: 25,
     });
 
-    const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
+    const sanitized = await purgePdfWatermarks(arrayBuffer, file.name, {
+      stripAnnotations: true,
+      stripCommonDomains: true,
+      cleanMetadata: true,
+      onProgress: (stage) => options?.onProgress?.({ stage, percent: 25 }),
+    });
 
-    // Clean bloat metadata
-    pdfDoc.setTitle("");
-    pdfDoc.setAuthor("");
-    pdfDoc.setSubject("");
-    pdfDoc.setKeywords([]);
-    pdfDoc.setProducer("CodeBits Academic Vault");
-    pdfDoc.setCreator("CodeBits PDF Optimizer");
-
-    const tier1Bytes = await pdfDoc.save({ useObjectStreams: true });
-
-    if (tier1Bytes.length <= maxBytes) {
-      const finalFile = new File([new Uint8Array(tier1Bytes)], file.name, {
-        type: "application/pdf",
-      });
+    if (sanitized.finalSize <= maxBytes) {
       const savingsPct = Math.round(
-        ((originalSize - tier1Bytes.length) / originalSize) * 100
+        ((originalSize - sanitized.finalSize) / originalSize) * 100
       );
 
       options?.onProgress?.({
-        stage: "Compression complete!",
+        stage: "Optimization & sanitization complete!",
         percent: 100,
       });
 
       return {
-        file: finalFile,
+        file: sanitized.file,
         compressed: true,
         originalSize,
-        finalSize: tier1Bytes.length,
-        savingsPct,
+        finalSize: sanitized.finalSize,
+        savingsPct: Math.max(savingsPct, 0),
       };
     }
   } catch (tier1Err) {
-    console.warn("Tier 1 PDF compression failed, proceeding to Tier 2:", tier1Err);
+    console.warn("Tier 1 PDF compression & sanitization failed, proceeding to Tier 2:", tier1Err);
   }
 
   // ==========================================
@@ -214,6 +207,9 @@ export async function compressPdfFile(
       canvasContext: context,
       viewport,
     }).promise;
+
+    // Apply smart watermark whitening filter to erase faint background logos on scanned paper
+    whitenCanvasBackground(context, canvas.width, canvas.height, 192);
 
     // Convert canvas to optimized progressive JPEG
     const jpegDataUrl = canvas.toDataURL("image/jpeg", jpegQuality);

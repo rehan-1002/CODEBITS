@@ -14,12 +14,14 @@ import {
   Loader2,
   Zap,
   Sparkles,
+  Shield,
 } from "lucide-react";
 import { AcademicBranch, AcademicSemester, DocumentCategory } from "@/types/resources";
 import { AnimatedFilterDropdown, FilterDropdownOption } from "@/components/ui/animated-filter-dropdown";
 import { FlowHoverButton } from "@/components/ui/flow-hover-button";
 import { HoverButton } from "@/components/ui/hover-button";
 import { compressPdfFile, CompressionProgress } from "@/lib/pdf/compressor";
+import { purgePdfWatermarks } from "@/lib/pdf/watermark-remover";
 
 const BRANCH_OPTIONS: FilterDropdownOption[] = [
   { id: "ALL", label: "ALL BRANCHES (First Year Common)", sublabel: "Common Curriculum for Semesters 1 & 2", icon: GraduationCap },
@@ -67,12 +69,16 @@ export function ResourceUploadForm() {
     savingsPct: number;
   } | null>(null);
 
+  // Watermark sanitization state
+  const [purgeWatermarks, setPurgeWatermarks] = useState(true);
+  const [sanitizedCount, setSanitizedCount] = useState<number>(0);
+
   const MAX_UPLOAD_BYTES = 4.0 * 1024 * 1024; // 4.0 MB safe ceiling (under 4.5 MB Vercel Serverless limit)
 
   const triggerCompression = async (selected: File) => {
     setCompressing(true);
     setCompressionProgress({
-      stage: `File is ${(selected.size / (1024 * 1024)).toFixed(1)} MB. Initializing optimizer...`,
+      stage: `File is ${(selected.size / (1024 * 1024)).toFixed(1)} MB. Initializing optimizer & watermark cleaner...`,
       percent: 15,
     });
 
@@ -108,12 +114,25 @@ export function ResourceUploadForm() {
 
     setError(null);
     setCompressionStats(null);
+    setSanitizedCount(0);
 
-    // If file exceeds 4.0 MB limit, auto-compress it!
+    // If file exceeds 4.0 MB limit, auto-compress and sanitize it!
     if (selected.size > MAX_UPLOAD_BYTES) {
       await triggerCompression(selected);
     } else {
-      setFile(selected);
+      let finalDoc = selected;
+      if (purgeWatermarks) {
+        try {
+          const sanitized = await purgePdfWatermarks(selected, selected.name);
+          if (sanitized.detectedCount > 0) {
+            finalDoc = sanitized.file;
+            setSanitizedCount(sanitized.detectedCount);
+          }
+        } catch (sanitizeErr) {
+          console.warn("Watermark pre-scan skipped:", sanitizeErr);
+        }
+      }
+      setFile(finalDoc);
     }
   };
 
@@ -466,6 +485,12 @@ export function ResourceUploadForm() {
                         </span>
                       </div>
                     )}
+                    {sanitizedCount > 0 && (
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/30 text-[11px] font-mono text-sky-400">
+                        <Shield className="w-3 h-3 text-sky-400" />
+                        <span>Sanitized: {sanitizedCount} external watermark/stamp(s) purged</span>
+                      </div>
+                    )}
                     <p className="text-[10px] font-mono text-[var(--text-muted)]">
                       Click or drop another file to replace
                     </p>
@@ -479,7 +504,7 @@ export function ResourceUploadForm() {
                       Drag &amp; drop PDF here, or click to browse files
                     </p>
                     <p className="text-[10px] font-mono text-[var(--text-muted)] tracking-wider">
-                      PDF DOCUMENTS ONLY • AUTO-COMPRESSED IF OVER 4.5 MB
+                      PDF DOCUMENTS ONLY • AUTO-COMPRESSED IF OVER 4.0 MB
                     </p>
                   </>
                 )}
@@ -499,6 +524,34 @@ export function ResourceUploadForm() {
                 </button>
               </div>
             )}
+          </div>
+
+          {/* Watermark Sanitization Shield Toggle (z-10) */}
+          <div className="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl border border-black/10 dark:border-white/10 bg-white/40 dark:bg-white/[0.03] backdrop-blur-xl relative z-10 shadow-xs">
+            <div className="space-y-0.5 pr-4">
+              <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-[var(--text-primary)]">
+                <Shield className="w-3.5 h-3.5 text-[var(--brand-primary)]" />
+                <span>PURGE THIRD-PARTY WATERMARKS &amp; STAMPS</span>
+              </div>
+              <p className="text-[11px] text-[var(--text-muted)] font-mono leading-tight">
+                Automatically strips external platform URLs (Stupidsid, Ques10, Telegram), CamScanner headers, and faint background stamps.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={purgeWatermarks}
+              onClick={() => setPurgeWatermarks(!purgeWatermarks)}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                purgeWatermarks ? "bg-[var(--brand-primary)]" : "bg-black/20 dark:bg-white/20"
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                  purgeWatermarks ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
           </div>
 
           {/* Submit Action with 21st.dev FlowHoverButton (z-10) */}
