@@ -53,7 +53,6 @@ export function ProtectedCanvasViewer({
   const [error, setError] = useState<string | null>(null);
   const [isWindowBlurred, setIsWindowBlurred] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const [cleanWatermarks, setCleanWatermarks] = useState(true);
 
   // Client-Side Deterrence Controls
   useEffect(() => {
@@ -211,39 +210,29 @@ export function ProtectedCanvasViewer({
         await page.render(renderContext).promise;
         if (cancelRender) return;
 
-        // --- Real-Time Watermark Purge (Whitens background watermarks like Stupidsid red S, photocopy noise) ---
-        if (cleanWatermarks) {
-          whitenCanvasBackground(ctx, canvas.width, canvas.height, 180);
-        }
+        // --- Real-Time Third-Party Watermark Sanitizer ---
+        // Bleaches third-party background stamps, colored logos (e.g. Stupidsid red S), and photocopy noise to pure #FFFFFF
+        whitenCanvasBackground(ctx, canvas.width, canvas.height, 180);
 
-        // --- Injected Forensic Watermark: Only for non-syllabus protected resources ---
-        // Public academic syllabi and circulars remain pristine and unwatermarked for student readability
-        const isSyllabusDoc =
-          category === "syllabus" ||
-          (documentTitle || "").toLowerCase().includes("syllabus") ||
-          (documentTitle || "").toLowerCase().includes("circular") ||
-          (subject || "").toLowerCase().includes("syllabus");
+        // --- CodeBits Academic DRM Watermark (Stamped across every PDF) ---
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(-Math.PI / 4.5);
+        const fontSize = Math.max(13 * dpr, 15 * zoom * dpr);
+        ctx.font = `bold ${fontSize}px monospace`;
+        ctx.fillStyle = "rgba(0, 160, 80, 0.16)"; // Restrained non-obstructive emerald watermark
+        ctx.textAlign = "center";
 
-        if (!isSyllabusDoc) {
-          ctx.save();
-          ctx.translate(canvas.width / 2, canvas.height / 2);
-          ctx.rotate(-Math.PI / 4.5);
-          const fontSize = Math.max(13 * dpr, 15 * zoom * dpr);
-          ctx.font = `bold ${fontSize}px monospace`;
-          ctx.fillStyle = "rgba(0, 160, 80, 0.16)"; // Restrained non-obstructive emerald watermark
-          ctx.textAlign = "center";
+        const watermarkText = `${studentName} • ${studentPhone || "LICENSED"} • CODEBITS ACADEMIC`;
+        const stepY = 150 * zoom * dpr;
+        const stepX = 420 * zoom * dpr;
 
-          const watermarkText = `${studentName} • ${studentPhone || "LICENSED"} • CODEBITS ACADEMIC`;
-          const stepY = 150 * zoom * dpr;
-          const stepX = 420 * zoom * dpr;
-
-          for (let y = -canvas.height; y <= canvas.height; y += stepY) {
-            for (let x = -canvas.width; x <= canvas.width; x += stepX) {
-              ctx.fillText(watermarkText, x, y);
-            }
+        for (let y = -canvas.height; y <= canvas.height; y += stepY) {
+          for (let x = -canvas.width; x <= canvas.width; x += stepX) {
+            ctx.fillText(watermarkText, x, y);
           }
-          ctx.restore();
         }
+        ctx.restore();
 
         setRendering(false);
       } catch (err) {
@@ -261,7 +250,7 @@ export function ProtectedCanvasViewer({
     return () => {
       cancelRender = true;
     };
-  }, [currentPage, zoom, loading, studentName, studentPhone, cleanWatermarks, category, documentTitle, subject]);
+  }, [currentPage, zoom, loading, studentName, studentPhone]);
 
   return (
     <div
@@ -362,24 +351,9 @@ export function ProtectedCanvasViewer({
             </Link>
           )}
 
-          <button
-            type="button"
-            onClick={() => setCleanWatermarks((prev) => !prev)}
-            className={`inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border font-mono text-xs font-bold transition-all cursor-pointer shadow-xs ${
-              cleanWatermarks
-                ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
-                : "border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            }`}
-            title="Toggle real-time background watermark & stamp bleach filter"
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="hidden sm:inline">WATERMARKS:</span>
-            <span>{cleanWatermarks ? "PURGED" : "RAW"}</span>
-          </button>
-
-          <div className="hidden lg:flex items-center space-x-1.5 px-2.5 py-1 rounded bg-[var(--surface-elevated)] border border-[var(--border-subtle)] font-mono text-[10px] text-[var(--brand-primary)]">
+          <div className="hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded bg-[var(--surface-elevated)] border border-[var(--border-subtle)] font-mono text-[10px] text-[var(--brand-primary)]">
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>CANVAS RASTERIZED</span>
+            <span>CODEBITS SECURE</span>
           </div>
         </div>
       </div>
