@@ -67,7 +67,38 @@ export function ResourceUploadForm() {
     savingsPct: number;
   } | null>(null);
 
-  const MAX_UPLOAD_BYTES = 4.5 * 1024 * 1024; // 4.5 MB Vercel Serverless payload ceiling
+  const MAX_UPLOAD_BYTES = 4.0 * 1024 * 1024; // 4.0 MB safe ceiling (under 4.5 MB Vercel Serverless limit)
+
+  const triggerCompression = async (selected: File) => {
+    setCompressing(true);
+    setCompressionProgress({
+      stage: `File is ${(selected.size / (1024 * 1024)).toFixed(1)} MB. Initializing optimizer...`,
+      percent: 15,
+    });
+
+    try {
+      const result = await compressPdfFile(selected, {
+        maxBytes: MAX_UPLOAD_BYTES,
+        onProgress: (p) => setCompressionProgress(p),
+      });
+
+      setFile(result.file);
+      setCompressionStats({
+        originalSize: result.originalSize,
+        finalSize: result.finalSize,
+        savingsPct: result.savingsPct,
+      });
+      setError(null);
+    } catch (compErr: any) {
+      console.error("Auto-compression error:", compErr);
+      setError(
+        `Auto-compression encountered an issue: ${compErr?.message || "Please compress your PDF."}`
+      );
+    } finally {
+      setCompressing(false);
+      setCompressionProgress(null);
+    }
+  };
 
   const processAndSetFile = async (selected: File) => {
     if (!selected.name.toLowerCase().endsWith(".pdf")) {
@@ -78,44 +109,9 @@ export function ResourceUploadForm() {
     setError(null);
     setCompressionStats(null);
 
-    // If file exceeds the 4.5 MB limit, auto-compress it!
+    // If file exceeds 4.0 MB limit, auto-compress it!
     if (selected.size > MAX_UPLOAD_BYTES) {
-      setCompressing(true);
-      setCompressionProgress({
-        stage: `File is ${(selected.size / (1024 * 1024)).toFixed(1)} MB (limit 4.5 MB). Auto-compressing PDF...`,
-        percent: 15,
-      });
-
-      try {
-        const result = await compressPdfFile(selected, {
-          maxBytes: MAX_UPLOAD_BYTES,
-          onProgress: (p) => setCompressionProgress(p),
-        });
-
-        if (result.finalSize <= MAX_UPLOAD_BYTES) {
-          setFile(result.file);
-          setCompressionStats({
-            originalSize: result.originalSize,
-            finalSize: result.finalSize,
-            savingsPct: result.savingsPct,
-          });
-          setError(null);
-        } else {
-          setError(
-            `Auto-compression reduced document from ${(result.originalSize / (1024 * 1024)).toFixed(1)} MB to ${(result.finalSize / (1024 * 1024)).toFixed(1)} MB, which still exceeds the 4.5 MB ceiling. Please upload a smaller portion of the syllabus.`
-          );
-          setFile(null);
-        }
-      } catch (compErr: any) {
-        console.error("Auto-compression error:", compErr);
-        setError(
-          `Document size (${(selected.size / (1024 * 1024)).toFixed(1)} MB) exceeds 4.5 MB. Auto-compression encountered an issue: ${compErr?.message || "Please compress your PDF."}`
-        );
-        setFile(null);
-      } finally {
-        setCompressing(false);
-        setCompressionProgress(null);
-      }
+      await triggerCompression(selected);
     } else {
       setFile(selected);
     }
@@ -143,7 +139,7 @@ export function ResourceUploadForm() {
 
     if (file.size > MAX_UPLOAD_BYTES) {
       setError(
-        `Document size (${(file.size / (1024 * 1024)).toFixed(1)} MB) exceeds the 4.5 MB limit. Please compress your PDF and try again.`
+        `Document size (${(file.size / (1024 * 1024)).toFixed(1)} MB) exceeds 4.0 MB limit. Please compress your PDF before uploading.`
       );
       return;
     }
@@ -151,30 +147,18 @@ export function ResourceUploadForm() {
     setLoading(true);
 
     try {
-      // 1. Read file into memory via FileReader (bypasses mobile WebKit detached file stream bugs)
-      const fileBase64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = () => reject(new Error("Unable to read selected PDF from device storage. Please re-select the file."));
-        reader.readAsDataURL(file);
-      });
-
-      const payload = {
-        title: title.trim(),
-        subject: subject.trim(),
-        branch,
-        semester,
-        category,
-        fileName: file.name,
-        fileBase64,
-      };
+      // Use standard FormData to transmit raw binary stream without 33% Base64 payload bloat
+      const formData = new FormData();
+      formData.append("title", title.trim());
+      formData.append("subject", subject.trim());
+      formData.append("branch", branch);
+      formData.append("semester", String(semester));
+      formData.append("category", category);
+      formData.append("file", file);
 
       const res = await fetch("/api/resources", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+        body: formData,
       });
 
       let json: any = null;
@@ -183,7 +167,7 @@ export function ResourceUploadForm() {
       } catch {
         if (res.status === 413) {
           setLoading(false);
-          setError("Document payload is too large for upload (limit 4.5 MB). Please compress your PDF.");
+          setError("Document payload is too large for upload (serverless 4.5 MB limit). Please compress your PDF.");
           return;
         }
         setLoading(false);
@@ -501,6 +485,20 @@ export function ResourceUploadForm() {
                 )}
               </div>
             </div>
+
+            {file && !compressionStats && !compressing && (
+              <div className="flex items-center justify-between text-xs font-mono px-2 pt-1">
+                <span className="text-[var(--text-muted)]">File ready for submission</span>
+                <button
+                  type="button"
+                  onClick={() => triggerCompression(file)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[var(--brand-primary)]/10 hover:bg-[var(--brand-primary)]/20 border border-[var(--brand-primary)]/30 text-[11px] font-mono font-semibold text-[var(--brand-primary)] cursor-pointer transition-colors shadow-xs"
+                >
+                  <Zap className="w-3 h-3 text-[var(--brand-primary)]" />
+                  <span>⚡ Optimize / Compress File</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Submit Action with 21st.dev FlowHoverButton (z-10) */}

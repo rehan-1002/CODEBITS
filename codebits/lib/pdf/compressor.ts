@@ -16,52 +16,56 @@ export interface CompressionResult {
 }
 
 /**
- * Dynamically loads the official Mozilla PDF.js engine from CDN in the browser
+ * Dynamically loads the official Mozilla PDF.js engine with resilient CDN fallback in the browser
  */
 export async function loadPdfJs(): Promise<any> {
   if (typeof window === "undefined") return null;
   if ((window as any).pdfjsLib) return (window as any).pdfjsLib;
 
-  return new Promise((resolve, reject) => {
-    const existingScript =
-      document.querySelector('script[src*="pdf.js"]') ||
-      document.querySelector('script[src*="pdf.min.js"]');
+  const cdnPairs = [
+    {
+      src: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",
+      worker: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js",
+    },
+    {
+      src: "https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js",
+      worker: "https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js",
+    },
+  ];
 
-    if (existingScript) {
-      const interval = setInterval(() => {
-        if ((window as any).pdfjsLib) {
-          clearInterval(interval);
-          const pdfjs = (window as any).pdfjsLib;
-          pdfjs.GlobalWorkerOptions.workerSrc =
-            "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-          resolve(pdfjs);
+  for (const pair of cdnPairs) {
+    try {
+      const pdfjs = await new Promise((resolve, reject) => {
+        const existingScript = document.querySelector(`script[src="${pair.src}"]`);
+        if (existingScript && (window as any).pdfjsLib) {
+          const lib = (window as any).pdfjsLib;
+          lib.GlobalWorkerOptions.workerSrc = pair.worker;
+          return resolve(lib);
         }
-      }, 50);
 
-      setTimeout(() => {
-        clearInterval(interval);
-        if ((window as any).pdfjsLib) resolve((window as any).pdfjsLib);
-        else reject(new Error("Timeout loading PDF.js engine"));
-      }, 10000);
-      return;
+        const script = document.createElement("script");
+        script.src = pair.src;
+        script.async = true;
+        script.onload = () => {
+          const lib = (window as any).pdfjsLib;
+          if (lib) {
+            lib.GlobalWorkerOptions.workerSrc = pair.worker;
+            resolve(lib);
+          } else {
+            reject(new Error("pdfjsLib object not found after script load"));
+          }
+        };
+        script.onerror = () => reject(new Error(`Failed to load ${pair.src}`));
+        document.head.appendChild(script);
+      });
+
+      if (pdfjs) return pdfjs;
+    } catch (e) {
+      console.warn("Primary PDF CDN failed, trying next mirror:", e);
     }
+  }
 
-    const script = document.createElement("script");
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
-    script.async = true;
-    script.onload = () => {
-      const pdfjs = (window as any).pdfjsLib;
-      if (pdfjs) {
-        pdfjs.GlobalWorkerOptions.workerSrc =
-          "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-        resolve(pdfjs);
-      } else {
-        reject(new Error("PDF.js library failed to initialize"));
-      }
-    };
-    script.onerror = () => reject(new Error("Failed to load PDF.js engine from CDN"));
-    document.head.appendChild(script);
-  });
+  throw new Error("Unable to initialize PDF engine in browser. Please check internet connection.");
 }
 
 /**
@@ -118,7 +122,7 @@ export async function compressPdfFile(
     const tier1Bytes = await pdfDoc.save({ useObjectStreams: true });
 
     if (tier1Bytes.length <= maxBytes) {
-      const finalFile = new File([tier1Bytes as unknown as BlobPart], file.name, {
+      const finalFile = new File([new Uint8Array(tier1Bytes)], file.name, {
         type: "application/pdf",
       });
       const savingsPct = Math.round(
@@ -155,7 +159,7 @@ export async function compressPdfFile(
     throw new Error("PDF processing engine unavailable in browser.");
   }
 
-  const loadingTask = pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) });
+  const loadingTask = pdfjs.getDocument({ data: new Uint8Array(arrayBuffer.slice(0)) });
   const pdf = await loadingTask.promise;
   const numPages = pdf.numPages;
 
@@ -242,7 +246,7 @@ export async function compressPdfFile(
   });
 
   const finalBytes = await newPdf.save({ useObjectStreams: true });
-  const finalFile = new File([finalBytes as unknown as BlobPart], file.name, {
+  const finalFile = new File([new Uint8Array(finalBytes)], file.name, {
     type: "application/pdf",
   });
   const savingsPct = Math.round(
