@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   X,
   Sparkles,
@@ -32,12 +33,37 @@ export function SyllabusOverviewModal({
   documentTitle,
   resourceId,
 }: SyllabusOverviewModalProps) {
+  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [overview, setOverview] = useState<SyllabusOverviewData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<"all" | SyllabusSubjectType>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Lock body scroll and listen for Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   // Fetch or retrieve cached overview when opened
   React.useEffect(() => {
@@ -100,18 +126,19 @@ export function SyllabusOverviewModal({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (!isOpen) return null;
+  if (!mounted || !isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
-      {/* Blurred Backdrop */}
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+      {/* Full-screen Dark Blurred Backdrop */}
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-black/70 backdrop-blur-md transition-opacity duration-300"
+        className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity duration-300"
+        aria-hidden="true"
       />
 
-      {/* Modal Dialog Box */}
-      <div className="relative z-10 w-full max-w-5xl rounded-3xl bg-white/95 dark:bg-[#0A120E]/95 border border-black/10 dark:border-white/15 backdrop-blur-2xl shadow-[0_20px_70px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col max-h-[92vh] my-auto animate-in fade-in zoom-in-95 duration-200">
+      {/* Modal Dialog Box - Pops Out as a Floating Glass HUD */}
+      <div className="relative z-10 w-full max-w-5xl rounded-3xl bg-white/95 dark:bg-[#0A120E]/95 border border-black/10 dark:border-white/15 backdrop-blur-2xl shadow-[0_25px_80px_rgba(0,0,0,0.7)] overflow-hidden flex flex-col max-h-[90vh] my-auto animate-in fade-in zoom-in-95 duration-200">
         {/* Top Glare Light Bar */}
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-[var(--brand-primary)] to-transparent pointer-events-none" />
 
@@ -165,10 +192,11 @@ export function SyllabusOverviewModal({
 
             <button
               onClick={onClose}
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-all cursor-pointer"
+              className="w-10 h-10 rounded-xl flex items-center justify-center text-[var(--text-secondary)] hover:text-white hover:bg-red-500/85 bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/15 transition-all cursor-pointer shadow-xs hover:scale-105 active:scale-95 group"
+              title="Close Syllabus Overview (Esc)"
               aria-label="Close modal"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-200" />
             </button>
           </div>
         </div>
@@ -542,7 +570,8 @@ export function SyllabusOverviewModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
