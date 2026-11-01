@@ -322,34 +322,24 @@ export function generatePreparationInsight(
     }
   }
 
-  // Option form preference tier
+  // Option form preference tier based on course selectivity
   let preferenceRecommendation: 'top' | 'middle' | 'safe' = 'middle';
-  let optionFormRankGuide = 'Include in Choices 6 to 15 (Realistic Target)';
-  let prepActionItem = 'Maintain consistent mock score above R1 benchmark';
+  let optionFormRankGuide = 'Core Merit Target (Choices 6 to 15 in Option Form)';
+  let prepActionItem = 'Check Round 1 cutoff and monitor Round 3/4 relaxation';
 
   const benchmarkScore = r4 ?? r1 ?? 85;
-  if (userScore > 0) {
-    const margin = userScore - benchmarkScore;
-    if (margin >= 3.0) {
-      preferenceRecommendation = 'safe';
-      optionFormRankGuide = 'Include in Choices 16 to 25 (Guaranteed Safety Net)';
-      prepActionItem = 'Your current score comfortably secures this seat across all rounds';
-    } else if (margin >= 0.0) {
-      preferenceRecommendation = 'middle';
-      optionFormRankGuide = 'Include in Choices 6 to 15 (Primary Realistic Target)';
-      prepActionItem = 'Focus on locking this option during Round 1 or Round 2 option form';
-    } else if (margin >= -3.5) {
-      preferenceRecommendation = 'top';
-      optionFormRankGuide = 'Include in Choices 1 to 5 (High Value Ambitious Choice)';
-      prepActionItem = `Target late round shifts: R3/R4 drop can bridge your ${Math.abs(margin).toFixed(2)}% margin gap`;
-    } else {
-      preferenceRecommendation = 'top';
-      optionFormRankGuide = 'Keep as top aspirational choice (Choices 1 to 3)';
-      prepActionItem = `Requires a boost of ${Math.abs(margin).toFixed(2)}% in upcoming test revisions`;
-    }
+  if (benchmarkScore >= 95.0) {
+    preferenceRecommendation = 'top';
+    optionFormRankGuide = 'Tier-1 Elite Course (Choices 1 to 5 in Option Form)';
+    prepActionItem = `Target cutoff: ${r1 ? r1.toFixed(2) + '%' : '96%+'} · High demand course, minimal seat vacancy in spot rounds`;
+  } else if (benchmarkScore >= 85.0) {
+    preferenceRecommendation = 'middle';
+    optionFormRankGuide = 'Core Target Course (Choices 6 to 15 in Option Form)';
+    prepActionItem = `Target cutoff: ${r1 ? r1.toFixed(2) + '%' : '85%+'} · Expect ~${expectedDrop !== null ? expectedDrop.toFixed(2) + '%' : '1-2%'} drop in CAP Round 3/4`;
   } else {
-    optionFormRankGuide = `Aim for >= ${benchmarkScore.toFixed(2)}% for assured allotment`;
-    prepActionItem = `Round 1 cutoff is ${r1 ? r1.toFixed(2) + '%' : 'competitive'}; prepare for Round 3 relaxation`;
+    preferenceRecommendation = 'safe';
+    optionFormRankGuide = 'Accessible Course (Choices 16 to 25 in Option Form)';
+    prepActionItem = `Target cutoff: ${r1 ? r1.toFixed(2) + '%' : 'Under 85%'} · High probability of allotment across rounds`;
   }
 
   // Fees calculation

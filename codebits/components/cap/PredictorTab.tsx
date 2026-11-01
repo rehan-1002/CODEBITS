@@ -245,7 +245,6 @@ export function PredictorTab() {
         <CutoffRecordsSection
           initialCollegeCode={selectedCutoffCollege}
           initialCategory={category}
-          initialScore={scoreInput}
         />
       ) : (
         <>

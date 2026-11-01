@@ -65,13 +65,11 @@ const POPULAR_COLLEGES = [
 interface CutoffRecordsSectionProps {
   initialCollegeCode?: string;
   initialCategory?: string;
-  initialScore?: string;
 }
 
 export function CutoffRecordsSection({
   initialCollegeCode,
   initialCategory = "OPEN",
-  initialScore = "92.50",
 }: CutoffRecordsSectionProps) {
   // Search & Filters
   const [collegeSearch, setCollegeSearch] = useState<string>("");
@@ -85,13 +83,8 @@ export function CutoffRecordsSection({
   const [quotaFilter, setQuotaFilter] = useState<"all" | "general" | "ladies">("all");
   const [roundFilter, setRoundFilter] = useState<number | "all">("all");
 
-  // Benchmark score
-  const [benchmarkScoreInput, setBenchmarkScoreInput] = useState<string>(initialScore);
-
   // Expanded branch cards
   const [expandedBranches, setExpandedBranches] = useState<Record<string, boolean>>({});
-
-  const userScore = parseFloat(benchmarkScoreInput) || 0;
 
   // Filtered colleges list based on search/region/status
   const matchingColleges = useMemo(() => {
@@ -164,7 +157,6 @@ export function CutoffRecordsSection({
     setCategoryFilter("all");
     setQuotaFilter("all");
     setRoundFilter("all");
-    setBenchmarkScoreInput("92.50");
   };
 
   return (
@@ -183,7 +175,7 @@ export function CutoffRecordsSection({
               College Cutoff Records &amp; Round Matrix
             </h2>
             <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-1 max-w-2xl">
-              Inspect comprehensive round-wise (CAP 1 to 4) and category-wise cutoffs for all 372 engineering institutes. Benchmark your percentile and plan your option preferences strategically.
+              Inspect comprehensive round-wise (CAP 1 to 4) and category-wise cutoffs for all 372 engineering institutes across Maharashtra. Explore cutoff trends and closing percentiles to prepare your option preferences.
             </p>
           </div>
 
@@ -266,11 +258,11 @@ export function CutoffRecordsSection({
           </div>
         </div>
 
-        {/* STEP 2: Filters Grid (Category, Quota, Round, Branch, & Benchmark Score) */}
+        {/* STEP 2: Filters Grid (Category, Quota, Round, & Region) */}
         <div className="mt-6 pt-5 border-t border-[var(--border-subtle)]">
           <label className="text-xs font-mono font-bold text-[var(--text-primary)] uppercase flex items-center gap-1.5 mb-3">
             <span className="w-5 h-5 rounded-full bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] flex items-center justify-center text-[11px] font-bold">2</span>
-            <span>Configure Cutoff Filters &amp; Benchmarks</span>
+            <span>Configure Cutoff Filters &amp; View Options</span>
           </label>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -352,56 +344,80 @@ export function CutoffRecordsSection({
               </div>
             </div>
 
-            {/* My Score Benchmark */}
+            {/* Region Filter */}
             <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono text-[var(--text-secondary)]">
-                  My Percentile Target
-                </span>
-                <span className="text-[10px] font-mono text-[var(--brand-primary)]">
-                  Active Benchmark
-                </span>
-              </div>
+              <span className="text-xs font-mono text-[var(--text-secondary)]">
+                Region / Cluster
+              </span>
               <div className="relative">
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="100"
-                  value={benchmarkScoreInput}
-                  onChange={(e) => setBenchmarkScoreInput(e.target.value)}
-                  placeholder="e.g. 92.50"
-                  className="w-full px-3 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-base)] text-[var(--text-primary)] font-mono text-xs font-bold focus:outline-none focus:border-[var(--brand-primary)] transition-all"
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono font-semibold text-[var(--text-muted)]">
-                  %tile
-                </span>
+                <select
+                  value={regionFilter}
+                  onChange={(e) => setRegionFilter(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-base)] text-[var(--text-primary)] text-xs font-semibold focus:outline-none focus:border-[var(--brand-primary)] transition-colors appearance-none cursor-pointer pr-8"
+                >
+                  {REGIONS.map((r) => (
+                    <option key={r.id} value={r.id} className="bg-[var(--surface-base)]">
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
               </div>
             </div>
           </div>
 
-          {/* Branch Discipline Pills */}
-          <div className="mt-4 pt-3 border-t border-[var(--border-subtle)] flex items-center gap-1.5 flex-wrap">
-            <span className="text-[11px] font-mono text-[var(--text-muted)] mr-1">
-              Discipline:
-            </span>
-            {BRANCH_CATEGORIES.map((bc) => {
-              const isSel = branchFilter === bc.id;
-              return (
-                <button
-                  key={bc.id}
-                  type="button"
-                  onClick={() => setBranchFilter(bc.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border cursor-pointer ${
-                    isSel
-                      ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/15 text-[var(--brand-primary)] font-bold shadow-sm"
-                      : "border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                  }`}
-                >
-                  {bc.label}
-                </button>
-              );
-            })}
+          {/* Branch Discipline & Governance Pills */}
+          <div className="mt-4 pt-3 border-t border-[var(--border-subtle)] flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[11px] font-mono text-[var(--text-muted)] mr-1">
+                Discipline:
+              </span>
+              {BRANCH_CATEGORIES.map((bc) => {
+                const isSel = branchFilter === bc.id;
+                return (
+                  <button
+                    key={bc.id}
+                    type="button"
+                    onClick={() => setBranchFilter(bc.id)}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all border cursor-pointer ${
+                      isSel
+                        ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/15 text-[var(--brand-primary)] font-bold shadow-sm"
+                        : "border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                    }`}
+                  >
+                    {bc.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[11px] font-mono text-[var(--text-muted)] mr-1">
+                Governance:
+              </span>
+              {[
+                { id: "all", label: "All" },
+                { id: "autonomous", label: "Autonomous" },
+                { id: "govt", label: "Govt" },
+                { id: "unaided", label: "Unaided" },
+              ].map((st) => {
+                const isSel = statusFilter === st.id;
+                return (
+                  <button
+                    key={st.id}
+                    type="button"
+                    onClick={() => setStatusFilter(st.id)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-mono transition-all border cursor-pointer ${
+                      isSel
+                        ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-black font-bold"
+                        : "border-[var(--border-subtle)] bg-[var(--surface-base)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                    }`}
+                  >
+                    {st.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
@@ -513,8 +529,7 @@ export function CutoffRecordsSection({
               currentCollege,
               branch,
               categoryFilter === "all" ? "OPEN" : categoryFilter,
-              quotaFilter === "ladies",
-              userScore
+              quotaFilter === "ladies"
             );
 
             return (
@@ -615,22 +630,24 @@ export function CutoffRecordsSection({
                         </div>
                       </div>
 
-                      {userScore > 0 && prepInsight.r4Target && (
-                        <div className="flex flex-col items-start md:items-end shrink-0 pl-3 md:pl-0 border-l md:border-l-0 border-[var(--border-subtle)]">
-                          <span className="text-[10px] font-mono uppercase text-[var(--text-muted)]">
-                            Margin vs Final Cutoff
+                      <div className="flex flex-row md:flex-col items-start md:items-end gap-2.5 shrink-0 pl-3 md:pl-0 border-l md:border-l-0 border-[var(--border-subtle)]">
+                        <div>
+                          <span className="text-[10px] font-mono uppercase text-[var(--text-muted)] block text-left md:text-right">
+                            Opening Cutoff (R1)
                           </span>
-                          <span
-                            className={`text-base font-mono font-bold ${
-                              userScore >= prepInsight.r4Target ? "text-[var(--brand-primary)]" : "text-amber-400"
-                            }`}
-                          >
-                            {userScore >= prepInsight.r4Target
-                              ? `+${(userScore - prepInsight.r4Target).toFixed(2)}% (Safe)`
-                              : `${(userScore - prepInsight.r4Target).toFixed(2)}% (Target)`}
+                          <span className="text-sm font-mono font-bold text-[var(--text-primary)]">
+                            {prepInsight.r1Target ? `${prepInsight.r1Target.toFixed(2)}%` : "Competitive"}
                           </span>
                         </div>
-                      )}
+                        <div>
+                          <span className="text-[10px] font-mono uppercase text-[var(--text-muted)] block text-left md:text-right">
+                            Closing Cutoff (R4)
+                          </span>
+                          <span className="text-sm font-mono font-bold text-[var(--brand-primary)]">
+                            {prepInsight.r4Target ? `${prepInsight.r4Target.toFixed(2)}%` : "Spot Pool"}
+                          </span>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Category-wise & Round-wise Cutoff Records Table */}
@@ -651,10 +668,8 @@ export function CutoffRecordsSection({
                             {(roundFilter === "all" || roundFilter === 4) && (
                               <th className="py-3 px-3 font-semibold text-center">Round 4 Final (%tile)</th>
                             )}
-                            <th className="py-3 px-3 font-semibold text-center">Round Drop</th>
-                            {userScore > 0 && (
-                              <th className="py-3 px-4 font-semibold text-right">Target Score Status</th>
-                            )}
+                            <th className="py-3 px-3 font-semibold text-center">Round Relaxation</th>
+                            <th className="py-3 px-4 font-semibold text-right">Closing Cutoff</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--border-subtle)]">
@@ -666,27 +681,6 @@ export function CutoffRecordsSection({
                             </tr>
                           ) : (
                             cutoffRows.map((row, rIdx) => {
-                              const benchmarkTarget = row.effectiveCutoff || row.round4 || row.round1;
-                              const scoreDiff = benchmarkTarget !== null && userScore > 0 ? userScore - benchmarkTarget : null;
-
-                              let statusLabel = "";
-                              let statusBadgeClass = "";
-                              if (scoreDiff !== null) {
-                                if (scoreDiff >= 2.0) {
-                                  statusLabel = `Safe (+${scoreDiff.toFixed(2)}%)`;
-                                  statusBadgeClass = "bg-emerald-500/10 text-emerald-400 border-emerald-500/30";
-                                } else if (scoreDiff >= 0.0) {
-                                  statusLabel = `Target (+${scoreDiff.toFixed(2)}%)`;
-                                  statusBadgeClass = "bg-sky-500/10 text-sky-400 border-sky-500/30";
-                                } else if (scoreDiff >= -3.0) {
-                                  statusLabel = `Ambitious (${scoreDiff.toFixed(2)}%)`;
-                                  statusBadgeClass = "bg-amber-500/10 text-amber-400 border-amber-500/30";
-                                } else {
-                                  statusLabel = `Reach (${scoreDiff.toFixed(2)}%)`;
-                                  statusBadgeClass = "bg-purple-500/10 text-purple-400 border-purple-500/30";
-                                }
-                              }
-
                               return (
                                 <tr
                                   key={rIdx}
@@ -754,18 +748,12 @@ export function CutoffRecordsSection({
                                     )}
                                   </td>
 
-                                  {/* Benchmark Status */}
-                                  {userScore > 0 && (
-                                    <td className="py-3 px-4 text-right">
-                                      {statusLabel ? (
-                                        <span className={`inline-block px-2 py-0.5 rounded-md text-[11px] font-bold border ${statusBadgeClass}`}>
-                                          {statusLabel}
-                                        </span>
-                                      ) : (
-                                        <span className="text-[var(--text-muted)]">—</span>
-                                      )}
-                                    </td>
-                                  )}
+                                  {/* Closing Cutoff */}
+                                  <td className="py-3 px-4 text-right">
+                                    <span className="font-bold text-[var(--brand-primary)]">
+                                      {row.effectiveCutoff !== null ? `${row.effectiveCutoff.toFixed(2)}%` : "—"}
+                                    </span>
+                                  </td>
                                 </tr>
                               );
                             })
