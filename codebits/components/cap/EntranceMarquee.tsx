@@ -12,11 +12,6 @@ import {
   ViteeeLogo,
   UgeeLogo,
   ComedkLogo,
-  GateLogo,
-  CatLogo,
-  GreLogo,
-  IesLogo,
-  IsroLogo,
 } from "./ExamLogos";
 
 export interface ExamPortal {
@@ -31,10 +26,19 @@ export interface ExamPortal {
 
 const ALL_EXAMS: ExamPortal[] = [
   {
-    id: "mht-cet",
-    name: "MHT-CET 2026",
+    id: "mht-cet-engg",
+    name: "MHT-CET (PCM)",
     authority: "State CET Cell Maharashtra",
-    badge: "100% MH Quota",
+    badge: "UG Engineering",
+    url: "https://cetcell.mahacet.org/",
+    ctaText: "Official Portal",
+    Logo: MhtCetLogo,
+  },
+  {
+    id: "mht-cet-pharmacy",
+    name: "MHT-CET (PCB)",
+    authority: "State CET Cell Maharashtra",
+    badge: "UG Pharmacy & Agri",
     url: "https://cetcell.mahacet.org/",
     ctaText: "Official Portal",
     Logo: MhtCetLogo,
@@ -43,16 +47,16 @@ const ALL_EXAMS: ExamPortal[] = [
     id: "jee-main",
     name: "JEE MAIN 2026",
     authority: "National Testing Agency (NTA)",
-    badge: "NIT / IIIT & AI Quota",
+    badge: "UG Engineering",
     url: "https://jeemain.nta.nic.in/",
-    ctaText: "Registration",
+    ctaText: "NTA Portal",
     Logo: JeeMainLogo,
   },
   {
     id: "neet-ug",
     name: "NEET UG 2026",
     authority: "National Testing Agency (NTA)",
-    badge: "Medical / AIIMS Quota",
+    badge: "UG Medical (MBBS/BDS)",
     url: "https://exams.nta.ac.in/NEET/",
     ctaText: "NTA Portal",
     Logo: NeetLogo,
@@ -61,7 +65,7 @@ const ALL_EXAMS: ExamPortal[] = [
     id: "jee-adv",
     name: "JEE ADVANCED",
     authority: "IIT Joint Admission Board",
-    badge: "Premier 23 IITs",
+    badge: "UG Engineering (IITs)",
     url: "https://jeeadv.ac.in/",
     ctaText: "Official Site",
     Logo: JeeAdvancedLogo,
@@ -70,7 +74,7 @@ const ALL_EXAMS: ExamPortal[] = [
     id: "bitsat",
     name: "BITSAT 2026",
     authority: "BITS Pilani / Goa / Hyd",
-    badge: "Deemed Premier",
+    badge: "UG Engg & B.Pharm",
     url: "https://www.bitsadmission.com/",
     ctaText: "Apply Online",
     Logo: BitsatLogo,
@@ -79,7 +83,7 @@ const ALL_EXAMS: ExamPortal[] = [
     id: "viteee",
     name: "VITEEE 2026",
     authority: "Vellore Institute of Technology",
-    badge: "Private Tier-1",
+    badge: "UG Engineering",
     url: "https://vit.ac.in/",
     ctaText: "Admissions",
     Logo: ViteeeLogo,
@@ -88,7 +92,7 @@ const ALL_EXAMS: ExamPortal[] = [
     id: "ugee",
     name: "UGEE (IIIT-H)",
     authority: "IIIT Hyderabad Dual Degree",
-    badge: "Research & CS",
+    badge: "UG Engineering + MS",
     url: "https://ugadmissions.iiit.ac.in/",
     ctaText: "Portal",
     Logo: UgeeLogo,
@@ -97,55 +101,10 @@ const ALL_EXAMS: ExamPortal[] = [
     id: "comedk",
     name: "COMEDK UGET",
     authority: "Karnataka Engineering Consortium",
-    badge: "RVCE / BMS / MSRIT",
+    badge: "UG Engineering",
     url: "https://www.comedk.org/",
     ctaText: "Official Site",
     Logo: ComedkLogo,
-  },
-  {
-    id: "gate",
-    name: "GATE 2026",
-    authority: "IISc & Premier IITs",
-    badge: "PSU Jobs & M.Tech",
-    url: "https://gate2026.iitr.ac.in/",
-    ctaText: "GOAPS Portal",
-    Logo: GateLogo,
-  },
-  {
-    id: "cat",
-    name: "CAT (IIMs)",
-    authority: "Indian Institutes of Management",
-    badge: "Premier MBA",
-    url: "https://iimcat.ac.in/",
-    ctaText: "IIM Portal",
-    Logo: CatLogo,
-  },
-  {
-    id: "gre",
-    name: "GRE / TOEFL",
-    authority: "Educational Testing Service (ETS)",
-    badge: "Global MS / PhD",
-    url: "https://www.ets.org/gre.html",
-    ctaText: "ETS Official",
-    Logo: GreLogo,
-  },
-  {
-    id: "ies",
-    name: "IES & ESE (UPSC)",
-    authority: "Union Public Service Commission",
-    badge: "Govt. Engineering Cadre",
-    url: "https://upsc.gov.in/",
-    ctaText: "UPSC Portal",
-    Logo: IesLogo,
-  },
-  {
-    id: "isro",
-    name: "ISRO / BARC",
-    authority: "Dept of Space & Atomic Energy",
-    badge: "Scientist / Engineer",
-    url: "https://www.isro.gov.in/Careers.html",
-    ctaText: "Careers Hub",
-    Logo: IsroLogo,
   },
 ];
 
@@ -165,11 +124,11 @@ export function EntranceMarquee({ className = "" }: { className?: string }) {
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-[var(--brand-primary)] animate-pulse" />
           <span className="uppercase tracking-widest font-bold text-[11px] sm:text-xs text-[var(--text-primary)]">
-            Official Entrance &amp; Examination Portals (2026-27)
+            Official UG Entrance Portals · Engineering, Medical &amp; Pharmacy
           </span>
         </div>
         <span className="hidden sm:inline-block text-[11px] text-[var(--text-muted)]">
-          Live External Application Channels · State &amp; National Authorities
+          Live UG Application Channels · State CET Cell, NTA &amp; Central Boards
         </span>
       </div>
 
