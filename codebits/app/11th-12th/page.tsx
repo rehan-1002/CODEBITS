@@ -10,15 +10,17 @@ import {
   FileText,
   Compass,
   GraduationCap,
+  Table2,
 } from "lucide-react";
 import EntranceMarquee from "@/components/cap/EntranceMarquee";
 import PredictorTab from "@/components/cap/PredictorTab";
+import CutoffRecordsSection from "@/components/cap/CutoffRecordsSection";
 import CollegesTab from "@/components/cap/CollegesTab";
 import EligibilityTab from "@/components/cap/EligibilityTab";
 import ReservationsTab from "@/components/cap/ReservationsTab";
 import DocumentsTab from "@/components/cap/DocumentsTab";
 
-type TabId = "predictor" | "colleges" | "eligibility" | "reservations" | "documents";
+type TabId = "predictor" | "cutoffs" | "colleges" | "eligibility" | "reservations" | "documents";
 
 interface TabMeta {
   id: TabId;
@@ -33,6 +35,12 @@ const TABS: TabMeta[] = [
     label: "College Predictor",
     icon: SlidersHorizontal,
     tag: "CAP ROUNDS I - IV",
+  },
+  {
+    id: "cutoffs",
+    label: "Cutoff Records",
+    icon: Table2,
+    tag: "CATEGORY & ROUND MATRIX",
   },
   {
     id: "colleges",
@@ -121,6 +129,7 @@ function JuniorCollegeContent() {
         {/* Tab View Panels */}
         <div className="w-full">
           {activeTab === "predictor" && <PredictorTab />}
+          {activeTab === "cutoffs" && <CutoffRecordsSection />}
           {activeTab === "colleges" && <CollegesTab />}
           {activeTab === "eligibility" && <EligibilityTab />}
           {activeTab === "reservations" && <ReservationsTab />}

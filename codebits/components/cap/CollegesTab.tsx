@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import Link from "next/link";
 import {
   Building2,
   Search,
@@ -225,15 +226,26 @@ export function CollegesTab() {
               </div>
 
               {/* Branch Expander Toggle */}
-              <div className="mt-3.5 pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => toggleExpand(col.c)}
-                  className="flex items-center gap-1.5 text-xs font-mono font-medium text-[var(--brand-primary)] hover:underline"
-                >
-                  <span>{isExpanded ? "Hide Cutoff Matrix" : `Inspect ${col.br.length} Branch Cutoffs`}</span>
-                  {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                </button>
+              <div className="mt-3.5 pt-3 border-t border-[var(--border-subtle)] flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => toggleExpand(col.c)}
+                    className="flex items-center gap-1.5 text-xs font-mono font-medium text-[var(--brand-primary)] hover:underline cursor-pointer"
+                  >
+                    <span>{isExpanded ? "Hide Cutoff Matrix" : `Inspect ${col.br.length} Branch Cutoffs`}</span>
+                    {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                  </button>
+
+                  <span className="text-[var(--text-muted)] hidden sm:inline">·</span>
+
+                  <Link
+                    href={`/11th-12th?tab=cutoffs`}
+                    className="text-xs font-mono text-[var(--text-secondary)] hover:text-[var(--brand-primary)] flex items-center gap-1"
+                  >
+                    <span>Open Cutoff Records Archive →</span>
+                  </Link>
+                </div>
 
                 <span className="text-[11px] font-mono text-[var(--text-muted)]">
                   CAP Round 1 &amp; Round 4 Data

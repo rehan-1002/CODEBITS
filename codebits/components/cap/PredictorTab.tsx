@@ -18,8 +18,10 @@ import {
   GraduationCap,
   Sliders,
   Settings2,
+  Table2,
 } from "lucide-react";
 import { runPrediction, PredictionResult, MatchBand } from "@/lib/cap/predictor-engine";
+import CutoffRecordsSection from "@/components/cap/CutoffRecordsSection";
 
 const PRIMARY_CATEGORIES = [
   { id: "OPEN", label: "Open / General", note: "General merit seats (open to all candidates)" },
@@ -71,6 +73,10 @@ const MINORITIES = [
 ];
 
 export function PredictorTab() {
+  // Navigation mode: Percentile Predictor vs Cutoff Records Archive
+  const [activeMode, setActiveMode] = useState<"predict" | "cutoffs">("predict");
+  const [selectedCutoffCollege, setSelectedCutoffCollege] = useState<string>("03012");
+
   // Input states
   const [scoreInput, setScoreInput] = useState<string>("92.50");
   const [category, setCategory] = useState<string>("OPEN");
@@ -200,7 +206,50 @@ export function PredictorTab() {
 
   return (
     <div className="w-full flex flex-col gap-6">
-      {/* Redesigned Streamlined Predictor Form */}
+      {/* Tool Navigation Switcher: Percentile Predictor vs Cutoff Records Archive */}
+      <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-base)] shadow-sm">
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[var(--bg-base)] border border-[var(--border-subtle)] w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={() => setActiveMode("predict")}
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+              activeMode === "predict"
+                ? "bg-[var(--brand-primary)] text-black shadow-sm"
+                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            }`}
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            <span>Percentile Predictor</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveMode("cutoffs")}
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+              activeMode === "cutoffs"
+                ? "bg-[var(--brand-primary)] text-black shadow-sm"
+                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            }`}
+          >
+            <Table2 className="w-4 h-4" />
+            <span>Cutoff Records Archive (R1 - R4)</span>
+          </button>
+        </div>
+
+        <div className="hidden sm:flex items-center gap-2 px-3 text-xs font-mono text-[var(--text-muted)]">
+          <span>CAP 2026-27 · 372 Colleges · Category &amp; Round Matrix</span>
+        </div>
+      </div>
+
+      {activeMode === "cutoffs" ? (
+        <CutoffRecordsSection
+          initialCollegeCode={selectedCutoffCollege}
+          initialCategory={category}
+          initialScore={scoreInput}
+        />
+      ) : (
+        <>
+          {/* Redesigned Streamlined Predictor Form */}
       <div className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-base)] p-5 sm:p-7 shadow-sm">
         {/* Form Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-6 border-b border-[var(--border-subtle)]">
@@ -864,15 +913,32 @@ export function PredictorTab() {
                 </div>
 
                 {/* Expand Details Trigger */}
-                <div className="mt-4 pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={() => toggleExpand(collegeKey)}
-                    className="flex items-center gap-1.5 text-xs font-mono font-medium text-[var(--brand-primary)] hover:underline cursor-pointer"
-                  >
-                    <span>{isExpanded ? "Hide Other Branches" : "View All Branches in Institute"}</span>
-                    {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                  </button>
+                <div className="mt-4 pt-3 border-t border-[var(--border-subtle)] flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => toggleExpand(collegeKey)}
+                      className="flex items-center gap-1.5 text-xs font-mono font-medium text-[var(--brand-primary)] hover:underline cursor-pointer"
+                    >
+                      <span>{isExpanded ? "Hide Other Branches" : "View All Branches in Institute"}</span>
+                      {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                    </button>
+
+                    <span className="text-[var(--text-muted)] hidden sm:inline">·</span>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCutoffCollege(item.college.c);
+                        setActiveMode("cutoffs");
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--brand-primary)]/30 bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] text-xs font-mono font-bold hover:bg-[var(--brand-primary)] hover:text-black transition-all cursor-pointer"
+                    >
+                      <Table2 className="w-3.5 h-3.5" />
+                      <span>Cutoff Records Matrix</span>
+                    </button>
+                  </div>
 
                   <span className="text-[11px] font-mono text-[var(--text-muted)]">
                     Affiliation: {item.college.u}
@@ -922,6 +988,8 @@ export function PredictorTab() {
             </div>
           )}
         </div>
+      )}
+        </>
       )}
     </div>
   );
