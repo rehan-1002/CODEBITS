@@ -35,6 +35,7 @@ function VaultContent() {
   const [allResources, setAllResources] = useState<Resource[]>([]);
   const [pendingResources, setPendingResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   // Check user role
@@ -66,15 +67,19 @@ function VaultContent() {
   // Fetch approved catalog with fresh live data
   const fetchApproved = () => {
     setLoading(true);
+    setFetchError(null);
     fetch(`/api/resources?t=${Date.now()}`, { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (data.success && Array.isArray(data.resources)) {
           setAllResources(data.resources);
+        } else if (!data.success && data.error) {
+          setFetchError(data.error);
         }
       })
       .catch((err) => {
         console.error("Error fetching resources:", err);
+        setFetchError(err.message || "Failed to reach server");
       })
       .finally(() => {
         setLoading(false);
@@ -159,26 +164,67 @@ function VaultContent() {
     setTimeout(() => setActionNotice(null), 3500);
   };
 
-  // Filter application for catalog
-  const filteredResources = allResources.filter((r) => {
-    if (r.status !== "approved") return false;
-    if (filters.branch && filters.branch !== "ALL") {
-      // First-year foundational subjects (Sem 1-2) are common to all branches and tagged 'ALL'
-      if (r.branch !== filters.branch && r.branch !== "ALL") return false;
-    }
-    if (filters.semester && filters.semester !== "ALL" && r.semester !== filters.semester) return false;
-    if (filters.category && filters.category !== "ALL" && r.category !== filters.category) return false;
-    if (filters.searchQuery?.trim()) {
-      const q = filters.searchQuery.toLowerCase();
-      const matchTitle = r.title.toLowerCase().includes(q);
-      const matchSubject = r.subject.toLowerCase().includes(q);
-      if (!matchTitle && !matchSubject) return false;
-    }
-    return true;
-  });
+  // Filter and prioritize application for catalog
+  const filteredResources = allResources
+    .filter((r) => {
+      if (r.status !== "approved") return false;
+      if (filters.branch && filters.branch !== "ALL") {
+        // First-year foundational subjects (Sem 1-2) are common to all branches and tagged 'ALL'
+        if (r.branch !== filters.branch && r.branch !== "ALL") return false;
+      }
+      if (filters.semester && filters.semester !== "ALL" && r.semester !== filters.semester) return false;
+      if (filters.category && filters.category !== "ALL" && r.category !== filters.category) return false;
+      if (filters.searchQuery?.trim()) {
+        const q = filters.searchQuery.toLowerCase();
+        const matchTitle = r.title.toLowerCase().includes(q);
+        const matchSubject = r.subject.toLowerCase().includes(q);
+        if (!matchTitle && !matchSubject) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      // 1. Official syllabus at very top
+      if (a.category === "syllabus" && b.category !== "syllabus") return -1;
+      if (b.category === "syllabus" && a.category !== "syllabus") return 1;
+
+      // 2. NEP Priority: NEP-2020 question papers always first!
+      const aIsNep = Boolean(a.is_nep || a.scheme?.toUpperCase().includes("NEP") || a.title?.includes("NEP"));
+      const bIsNep = Boolean(b.is_nep || b.scheme?.toUpperCase().includes("NEP") || b.title?.includes("NEP"));
+      if (aIsNep && !bIsNep) return -1;
+      if (!aIsNep && bIsNep) return 1;
+
+      // 3. Semester-wise grouping
+      if (a.semester !== b.semester) {
+        return a.semester - b.semester;
+      }
+
+      // 4. Year descending (e.g. 2026, 2025, 2024...)
+      const aYear = parseInt(a.exam_year || a.title.match(/\b(20\d\d)\b/)?.[1] || "0", 10);
+      const bYear = parseInt(b.exam_year || b.title.match(/\b(20\d\d)\b/)?.[1] || "0", 10);
+      if (aYear !== bYear) return bYear - aYear;
+
+      // 5. Subject title alphabetical
+      return a.subject.localeCompare(b.subject);
+    });
 
   return (
     <div className="flex flex-col w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16 space-y-8">
+      {/* Database Error Banner */}
+      {fetchError && (
+        <div className="p-4 rounded-xl border border-red-500/40 bg-red-500/10 text-red-300 text-xs font-mono flex flex-wrap items-center justify-between gap-3 shadow-lg">
+          <div className="flex items-center gap-2">
+            <span className="text-red-400 font-bold">⚠️ Database Auth Alert:</span>
+            <span>{fetchError} (Please check Vercel Dashboard MONGODB_URI)</span>
+          </div>
+          <button
+            type="button"
+            onClick={fetchApproved}
+            className="px-3 py-1 rounded-md bg-red-500/20 hover:bg-red-500/40 text-white font-bold cursor-pointer transition-colors"
+          >
+            Retry Connection
+          </button>
+        </div>
+      )}
       {/* Toast Notification */}
       {actionNotice && (
         <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-2xl bg-[#0E1512] border border-[var(--brand-primary)] text-[var(--brand-primary)] text-xs font-mono font-bold shadow-2xl flex items-center gap-2 animate-bounce">

@@ -98,13 +98,18 @@ export function ResourceCard({ resource, index = 0 }: ResourceCardProps) {
         {/* Card Header & Academic Badges */}
         <div className="space-y-3 relative z-10">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center space-x-1.5">
+            <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
               <span className="font-mono text-xs font-bold text-[var(--brand-primary)] bg-[var(--badge-bg,#e6fcf1)] dark:bg-[#0f241a] border border-[var(--brand-primary)]/40 px-2.5 py-0.5 rounded-md shadow-xs">
                 {resource.branch === "ALL" ? "ALL BRANCH" : resource.branch}
               </span>
               <span className="font-mono text-xs text-[var(--text-secondary)] bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 px-2.5 py-0.5 rounded-md">
                 SEM {resource.semester}
               </span>
+              {(resource.is_nep || resource.scheme?.toUpperCase().includes('NEP') || resource.title?.includes('NEP')) && (
+                <span className="font-mono text-[10px] font-bold text-amber-300 bg-amber-400/20 border border-amber-400/50 px-2 py-0.5 rounded-md shadow-xs flex items-center gap-1 animate-pulse">
+                  ★ NEP 2020
+                </span>
+              )}
             </div>
 
             <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.03] px-2 py-0.5 rounded-md">
@@ -127,7 +132,11 @@ export function ResourceCard({ resource, index = 0 }: ResourceCardProps) {
         <div className="pt-3 border-t border-black/10 dark:border-white/10 space-y-3 text-xs relative z-10">
           <div className="flex items-center justify-between text-[11px] font-mono text-[var(--text-muted)]">
             <span className="truncate">
-              {resource.page_count ? `${resource.page_count} pages` : "Official PDF"}
+              {resource.exam_session || resource.exam_year
+                ? `${resource.exam_session ? `${resource.exam_session} ` : ''}${resource.exam_year || ''}`.trim()
+                : resource.page_count
+                ? `${resource.page_count} pages`
+                : 'Official PDF'}
             </span>
             <span className="shrink-0 flex items-center space-x-1">
               <Eye className="w-3.5 h-3.5 text-[var(--text-muted)]" />

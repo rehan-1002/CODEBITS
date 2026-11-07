@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import { connectToDatabase } from '@/lib/db';
 import { ResourceModel } from '@/models/Resource';
-import { QuestionPaperModel, mapQpBranchToAcademicBranch, mapAcademicBranchToQpBranches } from '@/models/QuestionPaper';
+import {
+  QuestionPaperModel,
+  mapQpBranchToAcademicBranch,
+  mapAcademicBranchToQpBranches,
+  formatQuestionPaperMetadata,
+} from '@/models/QuestionPaper';
 import { verifySessionToken, COOKIE_NAME } from '@/lib/auth-server';
 import { AcademicBranch, AcademicSemester, DocumentCategory } from '@/types/resources';
 import { saveResourcePdf } from '@/lib/storage';
@@ -124,30 +129,29 @@ export async function GET(req: NextRequest) {
       }
 
       const qpDocs = await QuestionPaperModel.find(qpFilter)
-        .select('_id subject semester branch year session scheme title view_count createdAt')
-        .sort({ semester: 1, year: -1, subject: 1 })
+        .select('_id subject semester branch year session scheme isNep title view_count createdAt')
+        .sort({ isNep: -1, semester: 1, year: -1, subject: 1 })
         .lean();
 
       const qpResources = qpDocs.map((qp) => {
         const academicBranch = mapQpBranchToAcademicBranch(qp.branch, qp.semester);
-        const title =
-          qp.title ||
-          `MU | ${qp.scheme || 'Rev-2019'} | ${qp.subject}${
-            qp.year ? ` (${qp.session ? `${qp.session} ` : ''}${qp.year})` : ''
-          }`;
+        const meta = formatQuestionPaperMetadata(qp);
 
         return {
           id: qp._id.toString(),
-          title,
-          subject: qp.subject,
+          title: meta.title,
+          subject: meta.subject,
           branch: academicBranch,
           semester: qp.semester as AcademicSemester,
-          scheme: qp.scheme || 'Mumbai University',
+          scheme: meta.scheme,
           category: 'pyq' as DocumentCategory,
           file_url: `/api/resources/${qp._id.toString()}/file`,
           gridfs_id: undefined,
           file_size: undefined,
           page_count: 1,
+          is_nep: meta.isNep,
+          exam_year: meta.year,
+          exam_session: meta.session,
           uploader_id: 'system',
           uploader_name: 'Mumbai University Archives',
           uploader_role: 'admin' as const,

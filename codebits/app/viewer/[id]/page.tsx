@@ -7,7 +7,7 @@ import { ProtectedCanvasViewer } from "@/components/drm/ProtectedCanvasViewer";
 import { verifySessionToken, COOKIE_NAME } from "@/lib/auth-server";
 import { connectToDatabase } from "@/lib/db";
 import { ResourceModel } from "@/models/Resource";
-import { QuestionPaperModel } from "@/models/QuestionPaper";
+import { QuestionPaperModel, formatQuestionPaperMetadata } from "@/models/QuestionPaper";
 
 interface ViewerPageProps {
   params: Promise<{
@@ -75,16 +75,12 @@ export default async function ViewerPage({ params }: ViewerPageProps) {
         ).lean();
 
         if (qp) {
-          const title =
-            qp.title ||
-            `MU | ${qp.scheme || 'Rev-2019'} | ${qp.subject}${
-              qp.year ? ` (${qp.session ? `${qp.session} ` : ''}${qp.year})` : ''
-            }`;
+          const meta = formatQuestionPaperMetadata(qp);
           resource = {
             id: qp._id.toString(),
-            title,
-            subject: qp.subject,
-            scheme: qp.scheme || 'Mumbai University',
+            title: meta.title,
+            subject: meta.subject,
+            scheme: meta.scheme,
             category: 'pyq',
             file_url: `/api/resources/${id}/file`,
           };

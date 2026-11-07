@@ -37,6 +37,9 @@ export interface Resource {
   status: ModerationStatus;
   view_count: number;
   gridfs_id?: string;
+  is_nep?: boolean;
+  exam_year?: string;
+  exam_session?: string;
   created_at: string;
   updated_at?: string;
 }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { isValidObjectId } from 'mongoose';
 import { connectToDatabase } from '@/lib/db';
 import { ResourceModel } from '@/models/Resource';
-import { QuestionPaperModel, mapQpBranchToAcademicBranch } from '@/models/QuestionPaper';
+import { QuestionPaperModel, mapQpBranchToAcademicBranch, formatQuestionPaperMetadata } from '@/models/QuestionPaper';
 import { verifySessionToken, COOKIE_NAME } from '@/lib/auth-server';
 import { deleteResourcePdf } from '@/lib/storage';
 
@@ -35,26 +35,25 @@ export async function GET(
 
         if (qp) {
           const academicBranch = mapQpBranchToAcademicBranch(qp.branch, qp.semester);
-          const title =
-            qp.title ||
-            `MU | ${qp.scheme || 'Rev-2019'} | ${qp.subject}${
-              qp.year ? ` (${qp.session ? `${qp.session} ` : ''}${qp.year})` : ''
-            }`;
+          const meta = formatQuestionPaperMetadata(qp);
 
           return NextResponse.json({
             success: true,
             resource: {
               id: qp._id.toString(),
-              title,
-              subject: qp.subject,
+              title: meta.title,
+              subject: meta.subject,
               branch: academicBranch,
               semester: qp.semester,
-              scheme: qp.scheme || 'Mumbai University',
+              scheme: meta.scheme,
               category: 'pyq',
               file_url: `/api/resources/${qp._id.toString()}/file`,
               gridfs_id: null,
               file_size: 0,
               page_count: 1,
+              is_nep: meta.isNep,
+              exam_year: meta.year,
+              exam_session: meta.session,
               uploader_id: 'system',
               uploader_name: 'Mumbai University Archives',
               uploader_role: 'admin',
