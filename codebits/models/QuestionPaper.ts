@@ -117,12 +117,73 @@ const MU_ACRONYMS: Record<string, string> = {
   EG: 'Engineering Graphics & Design',
 };
 
+export function isLegitimateNep(qp: {
+  scheme?: string;
+  slug?: string;
+  pdfUrl?: string;
+  subject?: string;
+  semester?: number;
+  isNep?: boolean;
+}): boolean {
+  // In Mumbai University, NEP-2020 only applies to Semesters 1 to 4 (FE and SE).
+  // Semesters 5 through 8 (TE & BE) are strictly Rev-2019 C-Scheme.
+  if (qp.semester && qp.semester >= 5) {
+    return false;
+  }
+
+  const scheme = (qp.scheme || '').toLowerCase();
+  const slug = (qp.slug || '').toLowerCase();
+  const pdfUrl = (qp.pdfUrl || '').toLowerCase();
+
+  // If explicitly Rev-2019, Rev-2016, CBCGS, or CBSGS -> definitely NOT NEP
+  if (
+    scheme.includes('rev-2019') ||
+    scheme.includes('rev-2016') ||
+    scheme.includes('cbcgs') ||
+    scheme.includes('cbsgs') ||
+    slug.includes('rev-2019') ||
+    slug.includes('r19') ||
+    slug.includes('rev-2016') ||
+    slug.includes('r16') ||
+    slug.includes('cbcgs') ||
+    pdfUrl.includes('rev-2019') ||
+    pdfUrl.includes('rev-2016') ||
+    pdfUrl.includes('cbcgs')
+  ) {
+    return false;
+  }
+
+  // Legitimate NEP: scheme is NEP-2020 OR slug/pdfUrl/subject explicitly mentions NEP
+  if (
+    scheme.includes('nep') ||
+    slug.includes('nep') ||
+    pdfUrl.includes('nep')
+  ) {
+    return true;
+  }
+
+  // If isNep is true in db AND scheme is 'NEP-2020'
+  if (qp.isNep && scheme === 'nep-2020') {
+    return true;
+  }
+
+  return false;
+}
+
 export function formatQuestionPaperMetadata(qp: Partial<IQuestionPaper>) {
   let subject = (qp.subject || '').trim();
   let year = qp.year && qp.year !== 'Unknown' ? qp.year : '';
   let session = qp.session && qp.session !== 'EXAM' ? qp.session : '';
-  let scheme = qp.scheme || 'Mumbai University';
-  const isNep = Boolean(qp.isNep || (scheme && scheme.toUpperCase().includes('NEP')));
+  let rawScheme = qp.scheme || '';
+
+  const isNep = isLegitimateNep({
+    scheme: rawScheme,
+    slug: qp.slug,
+    pdfUrl: qp.pdfUrl,
+    subject: qp.subject,
+    semester: qp.semester,
+    isNep: qp.isNep,
+  });
 
   // Check if subject is an encoded filename like "FE_SEM1_BEE CBCGS_DEC16" or "SE Comps_SEM4_CG_MAY19"
   const fileCodeMatch = subject.match(
@@ -131,7 +192,7 @@ export function formatQuestionPaperMetadata(qp: Partial<IQuestionPaper>) {
 
   if (fileCodeMatch) {
     const rawSubj = fileCodeMatch[1].trim();
-    const rawScheme = fileCodeMatch[2];
+    const extractedScheme = fileCodeMatch[2];
     const rawMonth = fileCodeMatch[3].toUpperCase();
     let rawYr = fileCodeMatch[4];
 
@@ -141,7 +202,7 @@ export function formatQuestionPaperMetadata(qp: Partial<IQuestionPaper>) {
 
     if (!year || year === 'Unknown') year = rawYr;
     if (!session || session === 'EXAM') session = rawMonth === 'DEC' ? 'DECEMBER' : rawMonth === 'MAY' ? 'MAY' : rawMonth;
-    if ((!scheme || scheme === 'Other') && rawScheme) scheme = rawScheme.toUpperCase();
+    if ((!rawScheme || rawScheme === 'Other') && extractedScheme) rawScheme = extractedScheme.toUpperCase();
 
     const cleanSubj = rawSubj.replace(/^_+|_+$/g, '').trim();
     if (MU_ACRONYMS[cleanSubj.toUpperCase()]) {
@@ -154,10 +215,19 @@ export function formatQuestionPaperMetadata(qp: Partial<IQuestionPaper>) {
   // Capitalize Subject title cleanly
   subject = subject.replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
 
-  let displayScheme = scheme;
-  if (isNep) {
+  // Determine true display scheme accurately
+  let displayScheme = rawScheme;
+  if (qp.semester && qp.semester >= 5) {
+    displayScheme = rawScheme.toLowerCase().includes('rev-2016') ? 'Rev-2016' : 'Rev-2019 C-Scheme';
+  } else if (isNep) {
     displayScheme = 'NEP-2020';
-  } else if (scheme === 'Other' || !scheme) {
+  } else if (rawScheme.toLowerCase().includes('rev-2019') || (qp.slug && qp.slug.includes('rev-2019'))) {
+    displayScheme = 'Rev-2019 C-Scheme';
+  } else if (rawScheme.toLowerCase().includes('rev-2016') || (qp.slug && qp.slug.includes('rev-2016'))) {
+    displayScheme = 'Rev-2016';
+  } else if (rawScheme.toUpperCase().includes('CBCGS') || (qp.slug && qp.slug.includes('cbcgs'))) {
+    displayScheme = 'CBCGS';
+  } else if (displayScheme === 'Other' || !displayScheme) {
     displayScheme = 'Mumbai University';
   }
 
