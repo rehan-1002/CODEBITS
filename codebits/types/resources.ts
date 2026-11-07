@@ -18,7 +18,7 @@ export type DocumentCategory = "pyq" | "notes" | "syllabus" | "solution";
 
 export type ModerationStatus = "pending" | "approved" | "rejected";
 
-export type AcademicScheme = "Mumbai University" | "Autonomous" | "General";
+export type AcademicScheme = "Mumbai University" | "Autonomous" | "General" | string;
 
 export interface Resource {
   id: string;

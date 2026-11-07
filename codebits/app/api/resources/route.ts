@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import { connectToDatabase } from '@/lib/db';
 import { ResourceModel } from '@/models/Resource';
+import { QuestionPaperModel, mapQpBranchToAcademicBranch, mapAcademicBranchToQpBranches } from '@/models/QuestionPaper';
 import { verifySessionToken, COOKIE_NAME } from '@/lib/auth-server';
 import { AcademicBranch, AcademicSemester, DocumentCategory } from '@/types/resources';
 import { saveResourcePdf } from '@/lib/storage';
@@ -89,6 +90,75 @@ export async function GET(req: NextRequest) {
       view_count: doc.view_count,
       created_at: doc.createdAt?.toISOString() || new Date().toISOString(),
     }));
+
+    // 2. Query QuestionPaperModel if approved PYQs are requested
+    if (statusFilter === 'approved' && (!category || category === 'ALL' || category === 'pyq')) {
+      const qpFilter: Record<string, unknown> = {};
+
+      const semNum = semester && semester !== 'ALL' ? parseInt(semester, 10) : null;
+      if (semNum && !isNaN(semNum) && semNum >= 1 && semNum <= 8) {
+        qpFilter.semester = semNum;
+      }
+
+      if (branch && branch !== 'ALL' && validBranches.includes(branch)) {
+        const qpBranches = mapAcademicBranchToQpBranches(branch as AcademicBranch);
+        if (semNum === 1 || semNum === 2) {
+          qpFilter.branch = 'fe';
+        } else if (semNum && semNum >= 3) {
+          qpFilter.branch = { $in: qpBranches };
+        } else {
+          // If no semester specified, include departmental branches plus first year 'fe'
+          qpFilter.branch = { $in: Array.from(new Set([...qpBranches, 'fe'])) };
+        }
+      }
+
+      if (search && search.length > 0 && search.length <= 100) {
+        const escaped = escapeRegex(search);
+        qpFilter.$or = [
+          { subject: { $regex: escaped, $options: 'i' } },
+          { branchName: { $regex: escaped, $options: 'i' } },
+          { scheme: { $regex: escaped, $options: 'i' } },
+          { year: { $regex: escaped, $options: 'i' } },
+          { title: { $regex: escaped, $options: 'i' } },
+        ];
+      }
+
+      const qpDocs = await QuestionPaperModel.find(qpFilter)
+        .select('_id subject semester branch year session scheme title view_count createdAt')
+        .sort({ semester: 1, year: -1, subject: 1 })
+        .lean();
+
+      const qpResources = qpDocs.map((qp) => {
+        const academicBranch = mapQpBranchToAcademicBranch(qp.branch, qp.semester);
+        const title =
+          qp.title ||
+          `MU | ${qp.scheme || 'Rev-2019'} | ${qp.subject}${
+            qp.year ? ` (${qp.session ? `${qp.session} ` : ''}${qp.year})` : ''
+          }`;
+
+        return {
+          id: qp._id.toString(),
+          title,
+          subject: qp.subject,
+          branch: academicBranch,
+          semester: qp.semester as AcademicSemester,
+          scheme: qp.scheme || 'Mumbai University',
+          category: 'pyq' as DocumentCategory,
+          file_url: `/api/resources/${qp._id.toString()}/file`,
+          gridfs_id: undefined,
+          file_size: undefined,
+          page_count: 1,
+          uploader_id: 'system',
+          uploader_name: 'Mumbai University Archives',
+          uploader_role: 'admin' as const,
+          status: 'approved' as const,
+          view_count: qp.view_count || 0,
+          created_at: qp.createdAt ? new Date(qp.createdAt).toISOString() : new Date().toISOString(),
+        };
+      });
+
+      resources.push(...qpResources);
+    }
 
     const response = NextResponse.json({ success: true, resources });
 

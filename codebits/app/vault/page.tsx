@@ -162,7 +162,10 @@ function VaultContent() {
   // Filter application for catalog
   const filteredResources = allResources.filter((r) => {
     if (r.status !== "approved") return false;
-    if (filters.branch && filters.branch !== "ALL" && r.branch !== filters.branch) return false;
+    if (filters.branch && filters.branch !== "ALL") {
+      // First-year foundational subjects (Sem 1-2) are common to all branches and tagged 'ALL'
+      if (r.branch !== filters.branch && r.branch !== "ALL") return false;
+    }
     if (filters.semester && filters.semester !== "ALL" && r.semester !== filters.semester) return false;
     if (filters.category && filters.category !== "ALL" && r.category !== filters.category) return false;
     if (filters.searchQuery?.trim()) {

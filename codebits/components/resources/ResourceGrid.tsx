@@ -1,6 +1,8 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { FolderArchive, UploadCloud, RefreshCw } from "lucide-react";
+import { FolderArchive, UploadCloud, RefreshCw, ChevronDown } from "lucide-react";
 import { Resource } from "@/types/resources";
 import { ResourceCard } from "./ResourceCard";
 
@@ -9,7 +11,16 @@ interface ResourceGridProps {
   onResetFilters?: () => void;
 }
 
+const PAGE_SIZE = 36;
+
 export function ResourceGrid({ resources, onResetFilters }: ResourceGridProps) {
+  const [visibleCount, setVisibleCount] = useState<number>(PAGE_SIZE);
+
+  // Reset pagination window when filtered results change
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [resources.length]);
+
   if (resources.length === 0) {
     return (
       <div className="py-16 md:py-24 px-6 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-base)] text-center space-y-5">
@@ -53,11 +64,43 @@ export function ResourceGrid({ resources, onResetFilters }: ResourceGridProps) {
     );
   }
 
+  const displayedResources = resources.slice(0, visibleCount);
+  const hasMore = visibleCount < resources.length;
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 pt-2 pb-8 px-2">
-      {resources.map((resource, index) => (
-        <ResourceCard key={resource.id} resource={resource} index={index} />
-      ))}
+    <div className="space-y-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 pt-2 px-2">
+        {displayedResources.map((resource, index) => (
+          <ResourceCard key={resource.id} resource={resource} index={index} />
+        ))}
+      </div>
+
+      {hasMore && (
+        <div className="py-8 text-center flex flex-col items-center justify-center space-y-3 border-t border-[var(--border-subtle)]">
+          <p className="text-xs font-mono text-[var(--text-muted)]">
+            Showing {displayedResources.length} of {resources.length} approved academic papers
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => setVisibleCount((prev) => Math.min(prev + 48, resources.length))}
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl border border-[var(--brand-primary)]/50 bg-[var(--surface-elevated)] hover:bg-[var(--brand-primary)] text-[var(--brand-primary)] hover:text-black font-mono text-xs font-bold transition-all shadow-md cursor-pointer"
+            >
+              <ChevronDown className="w-4 h-4" />
+              <span>LOAD MORE PAPERS (+48)</span>
+            </button>
+            {resources.length - visibleCount > 48 && (
+              <button
+                type="button"
+                onClick={() => setVisibleCount(resources.length)}
+                className="px-4 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-base)] hover:border-[var(--brand-primary)] text-xs font-mono text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
+              >
+                SHOW ALL ({resources.length})
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

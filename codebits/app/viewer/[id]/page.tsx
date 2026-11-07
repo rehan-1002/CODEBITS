@@ -7,6 +7,7 @@ import { ProtectedCanvasViewer } from "@/components/drm/ProtectedCanvasViewer";
 import { verifySessionToken, COOKIE_NAME } from "@/lib/auth-server";
 import { connectToDatabase } from "@/lib/db";
 import { ResourceModel } from "@/models/Resource";
+import { QuestionPaperModel } from "@/models/QuestionPaper";
 
 interface ViewerPageProps {
   params: Promise<{
@@ -39,15 +40,56 @@ export default async function ViewerPage({ params }: ViewerPageProps) {
   }
 
   // 2. Fetch document record from MongoDB Atlas
-  let resource = null;
+  let resource: {
+    id: string;
+    title: string;
+    subject?: string;
+    scheme?: string;
+    category?: string;
+    file_url: string;
+  } | null = null;
+
   try {
     await connectToDatabase();
     if (isValidObjectId(id)) {
-      resource = await ResourceModel.findByIdAndUpdate(
+      const dbDoc = await ResourceModel.findByIdAndUpdate(
         id,
         { $inc: { view_count: 1 } },
         { returnDocument: 'after' }
       ).lean();
+
+      if (dbDoc) {
+        resource = {
+          id: dbDoc._id.toString(),
+          title: dbDoc.title,
+          subject: dbDoc.subject,
+          scheme: dbDoc.scheme,
+          category: dbDoc.category,
+          file_url: dbDoc.file_url || `/api/resources/${id}/file`,
+        };
+      } else {
+        const qp = await QuestionPaperModel.findByIdAndUpdate(
+          id,
+          { $inc: { view_count: 1 } },
+          { returnDocument: 'after' }
+        ).lean();
+
+        if (qp) {
+          const title =
+            qp.title ||
+            `MU | ${qp.scheme || 'Rev-2019'} | ${qp.subject}${
+              qp.year ? ` (${qp.session ? `${qp.session} ` : ''}${qp.year})` : ''
+            }`;
+          resource = {
+            id: qp._id.toString(),
+            title,
+            subject: qp.subject,
+            scheme: qp.scheme || 'Mumbai University',
+            category: 'pyq',
+            file_url: `/api/resources/${id}/file`,
+          };
+        }
+      }
     }
   } catch (err) {
     console.error("Error fetching resource from database:", err);
@@ -57,7 +99,7 @@ export default async function ViewerPage({ params }: ViewerPageProps) {
     <div className="w-full min-h-screen">
       <ProtectedCanvasViewer
         documentId={id}
-        fileUrl={resource?.file_url}
+        fileUrl={resource?.file_url || `/api/resources/${id}/file`}
         documentTitle={resource?.title || "Mumbai University Engineering Document"}
         subject={resource?.subject || "Mumbai University Engineering"}
         scheme={resource?.scheme || "Mumbai University Engineering"}

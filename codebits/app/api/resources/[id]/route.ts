@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { isValidObjectId } from 'mongoose';
 import { connectToDatabase } from '@/lib/db';
 import { ResourceModel } from '@/models/Resource';
+import { QuestionPaperModel, mapQpBranchToAcademicBranch } from '@/models/QuestionPaper';
 import { verifySessionToken, COOKIE_NAME } from '@/lib/auth-server';
 import { deleteResourcePdf } from '@/lib/storage';
 
@@ -24,6 +25,46 @@ export async function GET(
       )
         .select('title subject branch semester scheme category file_url gridfs_id file_size page_count uploader_id uploader_name uploader_role status view_count createdAt')
         .lean();
+
+      if (!doc) {
+        const qp = await QuestionPaperModel.findByIdAndUpdate(
+          id,
+          { $inc: { view_count: 1 } },
+          { returnDocument: 'after' }
+        ).lean();
+
+        if (qp) {
+          const academicBranch = mapQpBranchToAcademicBranch(qp.branch, qp.semester);
+          const title =
+            qp.title ||
+            `MU | ${qp.scheme || 'Rev-2019'} | ${qp.subject}${
+              qp.year ? ` (${qp.session ? `${qp.session} ` : ''}${qp.year})` : ''
+            }`;
+
+          return NextResponse.json({
+            success: true,
+            resource: {
+              id: qp._id.toString(),
+              title,
+              subject: qp.subject,
+              branch: academicBranch,
+              semester: qp.semester,
+              scheme: qp.scheme || 'Mumbai University',
+              category: 'pyq',
+              file_url: `/api/resources/${qp._id.toString()}/file`,
+              gridfs_id: null,
+              file_size: 0,
+              page_count: 1,
+              uploader_id: 'system',
+              uploader_name: 'Mumbai University Archives',
+              uploader_role: 'admin',
+              status: 'approved',
+              view_count: qp.view_count || 1,
+              created_at: qp.createdAt ? new Date(qp.createdAt).toISOString() : new Date().toISOString(),
+            },
+          });
+        }
+      }
     }
 
     if (!doc) {
