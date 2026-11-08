@@ -59,6 +59,63 @@ export default function DocumentConverterPage() {
     return /\.(png|jpe?g|webp|bmp|gif|tiff)$/i.test(filename);
   };
 
+  const optimizeImageForAiVision = async (file: File): Promise<File> => {
+    // If image is already under 500KB, keep original buffer
+    if (file.size <= 500 * 1024) return file;
+
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const MAX_DIM = 1800; // Optimal resolution for AI OCR without hitting payload/timeout limits
+        let width = img.width;
+        let height = img.height;
+
+        if (width > MAX_DIM || height > MAX_DIM) {
+          if (width > height) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          } else {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
+
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (!blob || blob.size >= file.size) {
+              resolve(file);
+            } else {
+              const optName = file.name.replace(/\.[^.]+$/, ".jpg");
+              resolve(new File([blob], optName, { type: "image/jpeg" }));
+            }
+          },
+          "image/jpeg",
+          0.88
+        );
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(file);
+      };
+      img.src = url;
+    });
+  };
+
   const handleFilesSelection = async (selectedFiles: FileList | File[]) => {
     setErrorMessage(null);
     setDownloadUrl(null);
@@ -149,12 +206,14 @@ export default function DocumentConverterPage() {
       }
 
       setCurrentChunkIndex(i + 1);
-      const img = imageFiles[i];
-      const rangeLabel = `Image ${i + 1} of ${imageFiles.length} (${img.name})`;
+      const rawImg = imageFiles[i];
+      const rangeLabel = `Image ${i + 1} of ${imageFiles.length} (${rawImg.name})`;
 
-      setStatusMessage(`Extracting Text & Math from ${rangeLabel}...`);
+      setStatusMessage(`Optimizing and extracting Text & Math from ${rangeLabel}...`);
       const chunkPct = Math.round((i / (imageFiles.length + 1)) * 90);
       setProgress(Math.max(chunkPct, 5));
+
+      const img = await optimizeImageForAiVision(rawImg);
 
       let chunkExtractedText = "";
       let attempts = 0;
@@ -399,6 +458,12 @@ export default function DocumentConverterPage() {
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
+      let fileToUpload = primaryFile;
+      if (isImageFile(primaryFile.name)) {
+        setStatusMessage("Optimizing image for AI Vision OCR...");
+        fileToUpload = await optimizeImageForAiVision(primaryFile);
+      }
+
       const timer = setInterval(() => {
         setProgress((prev) => {
           if (prev >= 88) return prev;
@@ -407,12 +472,12 @@ export default function DocumentConverterPage() {
       }, 400);
 
       const formData = new FormData();
-      formData.append("file", primaryFile);
+      formData.append("file", fileToUpload);
       formData.append("targetFormat", targetFormat);
 
       setStatusMessage(
         isImageFile(primaryFile.name)
-          ? "Reconstructing text & math formulas with AI Vision..."
+          ? "Reconstructing text, math formulas & Venn diagrams with AI Vision..."
           : "Converting document..."
       );
 
@@ -425,8 +490,20 @@ export default function DocumentConverterPage() {
       clearInterval(timer);
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to convert document.");
+        let errMessage = "Failed to convert document.";
+        try {
+          const errorData = await res.json();
+          errMessage = errorData.error || errorData.message || errMessage;
+        } catch {
+          if (res.status === 504 || res.status === 408) {
+            errMessage = "Conversion timed out. Please try with a smaller or compressed image.";
+          } else if (res.status === 413) {
+            errMessage = "Uploaded file size exceeds server limits.";
+          } else {
+            errMessage = `Server error (${res.status}): Failed to convert document.`;
+          }
+        }
+        throw new Error(errMessage);
       }
 
       const blob = await res.blob();

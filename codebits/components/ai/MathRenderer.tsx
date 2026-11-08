@@ -22,10 +22,12 @@ export function formatMathText(rawText: string): string {
   let processed = rawText;
 
   // Pre-clean unbackslashed set theory operations & overlines
-  processed = processed.replace(/([A-Z0-9\)])\s+setminus\s+([A-Z0-9\(])/gi, "$1 \\setminus $2");
-  processed = processed.replace(/([A-Z0-9\)])\s+oplus\s+([A-Z0-9\(])/gi, "$1 \\oplus $2");
+  processed = processed.replace(/\b([A-Z0-9\)])\s+(?:setminus|set\s*minus)\s+([A-Z0-9\(])/gi, "$1 \\setminus $2");
+  processed = processed.replace(/\b([A-Z0-9\)])\s+oplus\s+([A-Z0-9\(])/gi, "$1 \\oplus $2");
   processed = processed.replace(/\boverline([A-Za-z0-9])\b/g, "\\overline{$1}");
   processed = processed.replace(/\\?overline\s*\{?([A-Za-z0-9])\}?/g, "\\overline{$1}");
+  // Convert bare set difference and symmetric difference statements into inline math if not already delimited
+  processed = processed.replace(/(?<!\$)\b([A-C]\s*(?:\\setminus|∖|\\oplus|⊕)\s*\(?[A-C][\s\w()\\∖\-∩∪⊕]*\)?)(?!\$)/gi, "$ $1 $");
 
   // 1. Double dollar or \[...\] display math: $$math$$ or \[math\]
   processed = processed.replace(/(?:\$\$|\\\[)([\s\S]+?)(?:\$\$|\\\])/g, (_, math) => {

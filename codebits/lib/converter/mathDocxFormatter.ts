@@ -1214,8 +1214,8 @@ export function cleanMathSymbols(raw: string, preserveWhitespace: boolean = fals
     .replace(/\\neq(?![a-zA-Z])|\\ne(?![a-zA-Z])/g, "≠")
     .replace(/\\leq(?![a-zA-Z])|\\le(?![a-zA-Z])/g, "≤")
     .replace(/\\geq(?![a-zA-Z])|\\ge(?![a-zA-Z])/g, "≥")
-    .replace(/\\setminus(?![a-zA-Z])|\\smallsetminus(?![a-zA-Z])/g, "∖")
-    .replace(/\\oplus(?![a-zA-Z])/g, "⊕")
+    .replace(/\\setminus(?![a-zA-Z])|\\smallsetminus(?![a-zA-Z])|\b(?:setminus|set\s*minus)\b/gi, "∖")
+    .replace(/\\oplus(?![a-zA-Z])|\boplus\b/gi, "⊕")
     .replace(/\\otimes(?![a-zA-Z])/g, "⊗")
     .replace(/\\odot(?![a-zA-Z])/g, "⊙")
     .replace(/\\emptyset(?![a-zA-Z])|\\varnothing(?![a-zA-Z])/g, "∅")
@@ -1230,8 +1230,10 @@ export function cleanMathSymbols(raw: string, preserveWhitespace: boolean = fals
     .replace(/\\subseteq(?![a-zA-Z])/g, "⊆")
     .replace(/\\supset(?![a-zA-Z])/g, "⊃")
     .replace(/\\supseteq(?![a-zA-Z])/g, "⊇")
-    .replace(/\\cup(?![a-zA-Z])/g, "∪")
-    .replace(/\\cap(?![a-zA-Z])/g, "∩")
+    .replace(/\\cup(?![a-zA-Z])|\bcup\b/gi, "∪")
+    .replace(/\\cap(?![a-zA-Z])|\bcap\b/gi, "∩")
+    .replace(/\boverline([A-Za-z0-9])\b/g, "$1̄")
+    .replace(/\\overline\{([A-Za-z0-9])\}/g, "$1̄")
     .replace(/\\forall(?![a-zA-Z])/g, "∀")
     .replace(/\\exists(?![a-zA-Z])/g, "∃")
     .replace(/\\rightarrow(?![a-zA-Z])|\\to(?![a-zA-Z])/g, "→")
@@ -1779,6 +1781,18 @@ export async function buildDocumentElements(text: string, title?: string): Promi
         }
       }
 
+      // Check if this block is actually mathematical / question text that AI wrapped in backticks
+      const isMathOrDoc =
+        /\b(?:\\int|\\frac|\\setminus|\\cup|\\cap|\\sqrt|\\bmatrix|\\pmatrix|Venn diagram|Solution:)\b/i.test(trimmedBlock) ||
+        /^\s*\d+\.\s+/m.test(trimmedBlock) ||
+        /\b[A-C]\s*(?:∖|\\|setminus|-|∩|∪|⊕)\s*[A-C]\b/.test(trimmedBlock);
+
+      if (isMathOrDoc) {
+        const innerElems = await buildDocumentElements(trimmedBlock);
+        elements.push(...innerElems);
+        continue;
+      }
+
       // Regular text / code block fallback
       for (const cl of codeLines) {
         elements.push(
@@ -1800,28 +1814,67 @@ export async function buildDocumentElements(text: string, title?: string): Promi
     }
 
     // Intercept LaTeX \includegraphics or [includegraphics...] blocks containing Venn diagram / figure references
-    if (line.includes("includegraphics")) {
+    const isImgBlockStart =
+      line.includes("includegraphics") ||
+      (line === "[" && lines[i + 1] && lines[i + 1].includes("includegraphics"));
+
+    if (isImgBlockStart) {
       const imgBlockLines: string[] = [line];
       let j = i + 1;
-      let depth = (line.match(/\[/g) || []).length - (line.match(/\]/g) || []).length;
+      let depth = 0;
+      for (const ch of line) {
+        if (ch === "[") depth++;
+        else if (ch === "]") depth--;
+      }
+
       while (j < lines.length) {
-        const nextLine = lines[j];
-        imgBlockLines.push(nextLine);
-        depth += (nextLine.match(/\[/g) || []).length - (nextLine.match(/\]/g) || []).length;
-        if (depth <= 0 || (!nextLine.includes("includegraphics") && !/[ABC∪∩∖\-]/.test(nextLine) && nextLine.trim().startsWith("#"))) {
+        const nextLine = lines[j].trim();
+        // Stop if we hit a new question header or heading
+        if (nextLine.startsWith("#") || /^\d+\.\s+/.test(nextLine) || nextLine.startsWith("---")) {
+          break;
+        }
+
+        imgBlockLines.push(lines[j]);
+        for (const ch of lines[j]) {
+          if (ch === "[") depth++;
+          else if (ch === "]") depth--;
+        }
+
+        // If we opened with a bracket and now closed it
+        if ((line === "[" || line.startsWith("[")) && depth <= 0) {
+          j++;
+          break;
+        }
+
+        // Or if not bracketed, stop when the block transitions to normal text
+        if (
+          !line.includes("[") &&
+          !nextLine.includes("includegraphics") &&
+          !/\$?[A-C][\s\w()\\∖\-∩∪⊕]*\$?/.test(nextLine)
+        ) {
           break;
         }
         j++;
       }
-      i = j; // Advance past the block
+      i = j - 1; // Advance past the block
 
-      // Extract diagram labels / expressions from the block
-      // Look for expressions like (B \ C), A \ (B \ C), A \ B, A ∩ B ∩ C, (A \ B) ∪ (A ∩ B ∩ C), A ∪ B, A ∩ B, A ⊕ B
+      // Extract diagram labels / expressions from all lines in the block
+      const foundLabels: string[] = [];
       const labelRegex = /\(?\s*[A-C]\s*(?:∖|\\|setminus|-|∩|∪|⊕)\s*\(?[A-C][\s\w()\\∖\-∩∪⊕]*\)?/gi;
 
-      const foundLabels: string[] = [];
       for (const bLine of imgBlockLines) {
-        // Strip the includegraphics command itself to isolate caption/labels
+        // 1. Extract from $ ... $ LaTeX math expressions
+        const dollarMatches = bLine.match(/\$([^\$]+)\$/g);
+        if (dollarMatches) {
+          for (const dm of dollarMatches) {
+            const clean = dm.replace(/^\$|\$$/g, "").trim();
+            if (clean.length >= 2 && !foundLabels.includes(clean)) {
+              foundLabels.push(clean);
+            }
+          }
+        }
+
+        // 2. Extract from standard labelRegex
         const stripped = bLine.replace(/\\?includegraphics\[.*?\][^\s]+/gi, "").trim();
         if (stripped) {
           const matches = stripped.match(labelRegex);
@@ -1844,8 +1897,15 @@ export async function buildDocumentElements(text: string, title?: string): Promi
             elements.push(...svgElems);
           }
         }
-        continue;
+      } else {
+        // Fallback: If no labels could be parsed but it was a Venn diagram block, generate standard Venn diagram
+        const svg = generateVennSvg("A ∩ B", "Figure: Venn Diagram");
+        const svgElems = await renderSvgToDocxElements(svg, "Figure: Venn Diagram");
+        if (svgElems.length > 0) {
+          elements.push(...svgElems);
+        }
       }
+      continue;
     }
 
     // Direct raw SVG element outside code blocks

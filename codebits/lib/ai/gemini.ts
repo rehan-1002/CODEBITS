@@ -10,11 +10,16 @@ const backupKeys = (process.env.GEMINI_BACKUP_KEYS || '')
   .map((k) => k.trim())
   .filter(Boolean);
 
-const allKeys = [primaryKey, ...backupKeys].filter(Boolean);
 let currentKeyIndex = 0;
 
 export function getGeminiClient(): GoogleGenAI {
-  const key = allKeys[currentKeyIndex] || primaryKey;
+  const primary = process.env.GEMINI_API_KEY || '';
+  const backups = (process.env.GEMINI_BACKUP_KEYS || '')
+    .split(',')
+    .map((k) => k.trim())
+    .filter(Boolean);
+  const keys = [primary, ...backups].filter(Boolean);
+  const key = keys[currentKeyIndex % (keys.length || 1)] || primary;
   if (!key) {
     throw new Error('GEMINI_API_KEY is not configured in .env.local');
   }
@@ -69,6 +74,9 @@ export async function generateContentWithFailover(options: {
       } catch (err: any) {
         lastError = err;
         console.warn(`[GEMINI FAILOVER] Model ${model} (attempt ${attempt + 1}) returned error:`, err?.message || err);
+        if (err?.message?.includes('429') || err?.message?.includes('RESOURCE_EXHAUSTED')) {
+          currentKeyIndex++;
+        }
         await new Promise((r) => setTimeout(r, 800));
       }
     }

@@ -4,6 +4,7 @@ import mammoth from "mammoth";
 import { jsPDF } from "jspdf";
 import { generateContentWithFailover } from "@/lib/ai/gemini";
 import { buildMathParagraph, cleanMathSymbols, buildDocumentElements } from "@/lib/converter/mathDocxFormatter";
+import sharp from "sharp";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60; // Extended timeout for AI document analysis
@@ -44,11 +45,14 @@ const VERBATIM_SYSTEM_INSTRUCTION =
 function stripAiGeneratedSolutions(text: string): string {
   if (!text) return "";
   let cleaned = text;
-  // Guard against AI hallucinated solutions and derivations
+  // Guard against AI hallucinated derivations when solving was forbidden
   cleaned = cleaned.replace(/\n+\s*(?:\*\*|###?\s*)\s*Circuit Component Summary:?[\s\S]*$/i, "");
   cleaned = cleaned.replace(/\n+\s*(?:\*\*|###?\s*)\s*Circuit Analysis:?[\s\S]*$/i, "");
-  cleaned = cleaned.replace(/\n+\s*(?:\*\*|###?\s*)\s*Step-by-Step Solution:?[\s\S]*$/i, "");
-  cleaned = cleaned.replace(/\n+\s*(?:\*\*|###?\s*)\s*Solution:?\s*\n+[\s\S]*$/i, "");
+  cleaned = cleaned.replace(/\n+\s*(?:\*\*|###?\s*)\s*AI Generated Solution:?[\s\S]*$/i, "");
+  // Strip outer accidental code fences if the entire response is wrapped in ```
+  if (cleaned.startsWith("```") && cleaned.endsWith("```")) {
+    cleaned = cleaned.replace(/^```[a-zA-Z]*\n?/, "").replace(/\n?```$/, "");
+  }
   return cleaned.trim();
 }
 
@@ -239,8 +243,23 @@ export async function POST(req: NextRequest) {
       let extractedText = "";
 
       try {
-        const base64 = buffer.toString("base64");
-        const mimeType = isImage ? getImageMimeType(originalName, file.type) : "application/pdf";
+        let bufferToProcess = buffer;
+        let mimeType = isImage ? getImageMimeType(originalName, file.type) : "application/pdf";
+
+        // Pre-optimize large images before sending to AI Vision to speed up response and avoid timeouts
+        if (isImage && buffer.length > 500 * 1024) {
+          try {
+            bufferToProcess = await sharp(buffer)
+              .resize({ width: 1800, height: 1800, fit: "inside", withoutEnlargement: true })
+              .jpeg({ quality: 85 })
+              .toBuffer();
+            mimeType = "image/jpeg";
+          } catch (sharpErr) {
+            console.warn("Sharp image optimization skipped:", sharpErr);
+          }
+        }
+
+        const base64 = bufferToProcess.toString("base64");
         const promptText = getAcademicReconstructionPrompt({ isImage, rangeLabel: pageRange || undefined });
 
         const aiResult = await generateContentWithFailover({
@@ -293,10 +312,26 @@ export async function POST(req: NextRequest) {
     // ==========================================
     if (isImage && (targetFormat === "docx" || targetFormat === ".docx" || !targetFormat || targetFormat === "doc")) {
       let extractedText = "";
+      let aiErrorMessage = "";
 
       try {
-        const base64 = buffer.toString("base64");
-        const mimeType = getImageMimeType(originalName, file.type);
+        let bufferToProcess = buffer;
+        let mimeType = getImageMimeType(originalName, file.type);
+
+        // Pre-optimize large images before sending to AI Vision to speed up response and avoid timeouts
+        if (buffer.length > 500 * 1024) {
+          try {
+            bufferToProcess = await sharp(buffer)
+              .resize({ width: 1800, height: 1800, fit: "inside", withoutEnlargement: true })
+              .jpeg({ quality: 85 })
+              .toBuffer();
+            mimeType = "image/jpeg";
+          } catch (sharpErr) {
+            console.warn("Sharp image pre-optimization skipped:", sharpErr);
+          }
+        }
+
+        const base64 = bufferToProcess.toString("base64");
         const aiResult = await generateContentWithFailover({
           contents: [
             {
@@ -325,12 +360,14 @@ export async function POST(req: NextRequest) {
         }
       } catch (aiErr: any) {
         console.error("AI Image-to-DOCX extraction failed:", aiErr);
+        aiErrorMessage = aiErr?.message || "AI Vision transcription failed.";
       }
 
       if (!extractedText.trim()) {
         return NextResponse.json(
           {
             error:
+              aiErrorMessage ||
               "Could not extract legible text or equations from this image. Please ensure the image is clear and well-lit.",
           },
           { status: 422 }
@@ -342,16 +379,26 @@ export async function POST(req: NextRequest) {
 
       // Embed the source image (diagrams, circuits, handwriting) directly into the Word document
       try {
-        const ext = (originalName.split(".").pop() || "").toLowerCase();
-        const imgType: "jpg" | "png" | "gif" | "bmp" =
-          ext === "png" ? "png" : ext === "gif" ? "gif" : ext === "bmp" ? "bmp" : "jpg";
+        let embedBuffer = buffer;
+        let imgType: "jpg" | "png" | "gif" | "bmp" = "jpg";
+
+        try {
+          embedBuffer = await sharp(buffer)
+            .resize({ width: 1000, height: 700, fit: "inside", withoutEnlargement: true })
+            .jpeg({ quality: 85 })
+            .toBuffer();
+          imgType = "jpg";
+        } catch {
+          const ext = (originalName.split(".").pop() || "").toLowerCase();
+          imgType = ext === "png" ? "png" : ext === "gif" ? "gif" : ext === "bmp" ? "bmp" : "jpg";
+        }
 
         const imageParagraph = new Paragraph({
           alignment: AlignmentType.CENTER,
           spacing: { before: 240, after: 120 },
           children: [
             new ImageRun({
-              data: buffer,
+              data: embedBuffer,
               type: imgType,
               transformation: {
                 width: 520,

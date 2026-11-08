@@ -29,10 +29,11 @@ function renderInlineContent(text: string): string {
 
   // Pre-clean unbackslashed set theory operations & overlines
   let processed = text
-    .replace(/([A-Z0-9\)])\s+setminus\s+([A-Z0-9\(])/gi, "$1 \\setminus $2")
-    .replace(/([A-Z0-9\)])\s+oplus\s+([A-Z0-9\(])/gi, "$1 \\oplus $2")
+    .replace(/\b([A-Z0-9\)])\s+(?:setminus|set\s*minus)\s+([A-Z0-9\(])/gi, "$1 \\setminus $2")
+    .replace(/\b([A-Z0-9\)])\s+oplus\s+([A-Z0-9\(])/gi, "$1 \\oplus $2")
     .replace(/\boverline([A-Za-z0-9])\b/g, "\\overline{$1}")
-    .replace(/\\?overline\s*\{?([A-Za-z0-9])\}?/g, "\\overline{$1}");
+    .replace(/\\?overline\s*\{?([A-Za-z0-9])\}?/g, "\\overline{$1}")
+    .replace(/(?<!\$)\b([A-C]\s*(?:\\setminus|∖|\\oplus|⊕)\s*\(?[A-C][\s\w()\\∖\-∩∪⊕]*\)?)(?!\$)/gi, "$ $1 $");
 
   // 1. Single-line display math if embedded in paragraph: $$math$$
   processed = processed.replace(/\$\$([\s\S]+?)\$\$/g, (_, math) => {
