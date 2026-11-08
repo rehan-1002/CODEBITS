@@ -19,8 +19,9 @@ import CollegesTab from "@/components/cap/CollegesTab";
 import EligibilityTab from "@/components/cap/EligibilityTab";
 import ReservationsTab from "@/components/cap/ReservationsTab";
 import DocumentsTab from "@/components/cap/DocumentsTab";
+import EntrancePyqsTab from "@/components/cap/EntrancePyqsTab";
 
-type TabId = "predictor" | "cutoffs" | "colleges" | "eligibility" | "reservations" | "documents";
+type TabId = "pyqs" | "predictor" | "cutoffs" | "colleges" | "eligibility" | "reservations" | "documents";
 
 interface TabMeta {
   id: TabId;
@@ -30,6 +31,12 @@ interface TabMeta {
 }
 
 const TABS: TabMeta[] = [
+  {
+    id: "pyqs",
+    label: "Question Papers (PYQs)",
+    icon: GraduationCap,
+    tag: "HSC • MHT-CET • JEE",
+  },
   {
     id: "predictor",
     label: "College Predictor",
@@ -72,7 +79,7 @@ function JuniorCollegeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const tabQuery = (searchParams.get("tab") as TabId) || "predictor";
+  const tabQuery = (searchParams.get("tab") as TabId) || "pyqs";
   const [activeTab, setActiveTab] = useState<TabId>(tabQuery);
 
   useEffect(() => {
@@ -128,6 +135,7 @@ function JuniorCollegeContent() {
 
         {/* Tab View Panels */}
         <div className="w-full">
+          {activeTab === "pyqs" && <EntrancePyqsTab />}
           {activeTab === "predictor" && <PredictorTab />}
           {activeTab === "cutoffs" && <CutoffRecordsSection />}
           {activeTab === "colleges" && <CollegesTab />}

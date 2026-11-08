@@ -6,6 +6,7 @@ import { readFile } from 'fs/promises';
 import { connectToDatabase } from '@/lib/db';
 import { ResourceModel } from '@/models/Resource';
 import { QuestionPaperModel } from '@/models/QuestionPaper';
+import { EntrancePaperModel } from '@/models/EntrancePaper';
 import { getGridFSDownloadStream } from '@/lib/storage';
 
 export async function GET(
@@ -108,6 +109,31 @@ export async function GET(
         console.error('Error fetching question paper PDF from source:', e);
       }
       return NextResponse.redirect(new URL(qp.pdfUrl));
+    }
+
+    // 3. Try finding in EntrancePaperModel
+    const ep = await EntrancePaperModel.findById(id).lean();
+    if (ep && ep.pdfUrl) {
+      try {
+        const extRes = await fetch(ep.pdfUrl, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) CodeBits-Engine/1.0' },
+        });
+        if (extRes.ok && extRes.body) {
+          const contentLength = extRes.headers.get('content-length');
+          const title = ep.title || `${ep.examType}_${ep.subject}_${ep.year || 'QP'}`;
+          const headers: Record<string, string> = {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `inline; filename="${encodeURIComponent(title)}.pdf"`,
+            'Access-Control-Allow-Origin': '*',
+            'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
+          };
+          if (contentLength) headers['Content-Length'] = contentLength;
+          return new NextResponse(extRes.body as any, { status: 200, headers });
+        }
+      } catch (e) {
+        console.error('Error fetching entrance paper PDF from source:', e);
+      }
+      return NextResponse.redirect(new URL(ep.pdfUrl));
     }
 
     return NextResponse.json({ success: false, error: 'Document file payload not available.' }, { status: 404 });

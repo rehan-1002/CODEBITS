@@ -8,6 +8,7 @@ import { verifySessionToken, COOKIE_NAME } from "@/lib/auth-server";
 import { connectToDatabase } from "@/lib/db";
 import { ResourceModel } from "@/models/Resource";
 import { QuestionPaperModel, formatQuestionPaperMetadata } from "@/models/QuestionPaper";
+import { EntrancePaperModel } from "@/models/EntrancePaper";
 
 interface ViewerPageProps {
   params: Promise<{
@@ -84,6 +85,23 @@ export default async function ViewerPage({ params }: ViewerPageProps) {
             category: 'pyq',
             file_url: `/api/resources/${id}/file`,
           };
+        } else {
+          const ep = await EntrancePaperModel.findByIdAndUpdate(
+            id,
+            { $inc: { view_count: 1 } },
+            { returnDocument: 'after' }
+          ).lean();
+
+          if (ep) {
+            resource = {
+              id: ep._id.toString(),
+              title: ep.title,
+              subject: `${ep.examType} - ${ep.subject}`,
+              scheme: `${ep.examType} ${ep.year}`,
+              category: 'entrance_pyq',
+              file_url: `/api/resources/${id}/file`,
+            };
+          }
         }
       }
     }
