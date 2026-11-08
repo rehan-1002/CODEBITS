@@ -85,7 +85,7 @@ export function ResourceFiltersBar({
                 key={b}
                 active={isSelected}
                 onClick={() => handleBranchChange(b)}
-                className="font-mono min-w-[52px] text-xs px-3 py-1.5"
+                className="font-accent font-semibold tracking-wide min-w-[52px] text-xs px-3 py-1.5"
               >
                 {b}
               </HoverButton>
@@ -114,7 +114,7 @@ export function ResourceFiltersBar({
             <HoverButton
               onClick={clearAllFilters}
               icon={X}
-              className="font-mono text-xs px-3 py-1.5 border-rose-500/40 text-rose-300 hover:border-rose-400 hover:bg-rose-500/20"
+              className="font-accent font-semibold tracking-wide text-xs px-3 py-1.5 border-rose-500/40 text-rose-300 hover:border-rose-400 hover:bg-rose-500/20"
             >
               RESET
             </HoverButton>

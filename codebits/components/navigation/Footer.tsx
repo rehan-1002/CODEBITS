@@ -38,9 +38,9 @@ export function Footer() {
               A centralized, controlled academic repository delivering syllabus-validated question papers, faculty notes, and solutions for engineering students across Mumbai University.
             </p>
 
-            <div className="pt-2 text-[11px] font-mono text-black/75 space-y-1 font-semibold">
-              <div>CURRICULUM: MUMBAI UNIVERSITY</div>
-              <div>SUPERVISED BY: PROF. ROHIT FALAKE (M.R.F)</div>
+            <div className="pt-2 text-xs font-serif italic text-black/85 space-y-1">
+              <div>Curriculum: University of Mumbai (Rev-2019 'C' Scheme &amp; NEP-2020)</div>
+              <div>Academic Supervision: Prof. Rohit Falake (M.R.F)</div>
             </div>
           </div>
 

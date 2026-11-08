@@ -146,6 +146,13 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        {/* Preconnect & High-Performance Multi-Font Typography System */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400..700;1,400..700&family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Outfit:wght@400..700&family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=Space+Grotesk:wght@400..700&display=swap"
+          rel="stylesheet"
+        />
         <Script
           id="json-ld-schema"
           type="application/ld+json"

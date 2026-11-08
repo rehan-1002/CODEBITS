@@ -98,9 +98,12 @@ function JuniorCollegeContent() {
       {/* Top Hero Section */}
       <section className="pt-8 sm:pt-12 pb-4 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         {/* Headline */}
-        <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-[var(--text-primary)] uppercase">
+        <h1 className="text-3xl sm:text-5xl lg:text-6xl font-display font-black tracking-tight text-[var(--text-primary)] uppercase">
           11th &amp; 12th
         </h1>
+        <p className="text-sm sm:text-base font-serif italic text-[var(--text-secondary)] mt-2">
+          State Board HSC, MHT-CET &amp; JEE Main / Advanced Entrance Examination Archive
+        </p>
       </section>
 
       {/* Entrance Exams Parquee Ticker */}

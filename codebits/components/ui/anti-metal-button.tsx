@@ -102,7 +102,7 @@ export const AntiMetalButton = React.forwardRef<
         `}</style>
 
         {/* Button label text - adaptive to light & dark mode */}
-        <span className="absolute inset-y-0 right-4 flex items-center text-xs font-mono font-bold uppercase tracking-wider text-[var(--text-primary)] dark:text-white select-none transition-colors">
+        <span className="absolute inset-y-0 right-4 flex items-center text-xs font-accent font-bold uppercase tracking-wider text-[var(--text-primary)] dark:text-white select-none transition-colors">
           {text}
         </span>
 

@@ -37,7 +37,7 @@ export default function RandomLetterSwapNav({
           className="group inline-flex items-center py-1 transition-colors duration-200"
         >
           <RandomLetterSwap
-            className="cursor-pointer font-medium text-[var(--text-secondary)] text-sm group-hover:text-[var(--brand-primary)] dark:group-hover:text-emerald-400 transition-colors"
+            className="cursor-pointer font-accent font-semibold tracking-wide text-[var(--text-secondary)] text-sm group-hover:text-[var(--brand-primary)] dark:group-hover:text-emerald-400 transition-colors"
             label={item.label}
             staggerDuration={0.025}
             transition={{ duration: 0.6, type: "spring" }}

@@ -577,17 +577,17 @@ export default function DocumentConverterPage() {
         {/* Crisp Header Title */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border-subtle)]">
           <div className="space-y-1">
-            <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-[var(--text-primary)] uppercase">
+            <h1 className="text-3xl sm:text-4xl font-display font-black tracking-tight text-[var(--text-primary)] uppercase">
               Document Converter
             </h1>
-            <p className="text-xs font-mono text-[var(--text-muted)]">
+            <p className="text-xs font-accent tracking-wide text-[var(--text-muted)]">
               PDF ⇄ Word • Image to DOCX • Book Chunking &amp; Math Equation Engine
             </p>
           </div>
 
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-base)] text-xs font-mono text-[var(--brand-primary)] w-fit">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-base)] text-xs font-accent font-semibold tracking-wider text-[var(--brand-primary)] w-fit">
             <ArrowRightLeft className="w-3.5 h-3.5" />
-            <span className="font-bold">PDF • DOCX • IMAGE</span>
+            <span>PDF • DOCX • IMAGE</span>
           </div>
         </div>
 

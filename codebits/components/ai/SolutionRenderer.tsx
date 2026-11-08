@@ -392,7 +392,7 @@ export function SolutionRenderer({
                 <div className="p-1 rounded-lg bg-[var(--surface-base)] border border-[var(--border-subtle)]">
                   {getSectionIcon(sec.type)}
                 </div>
-                <h4 className="text-xs sm:text-sm font-mono font-bold tracking-wide text-[var(--text-primary)] uppercase">
+                <h4 className="text-xs sm:text-sm font-display font-bold tracking-tight text-[var(--text-primary)] uppercase">
                   {sec.title}
                 </h4>
               </div>

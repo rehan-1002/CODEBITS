@@ -236,9 +236,12 @@ function VaultContent() {
       {/* Vault Title Bar */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-[var(--border-subtle)]">
         <div>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-[var(--text-primary)]">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-display font-bold tracking-tight text-[var(--text-primary)]">
             Mumbai University Engineering Catalog
           </h1>
+          <p className="text-sm font-serif italic text-[var(--text-secondary)] mt-1">
+            Curated archives &amp; verified question papers · Rev-2019 'C' Scheme &amp; NEP-2020
+          </p>
         </div>
 
         <AntiMetalButton

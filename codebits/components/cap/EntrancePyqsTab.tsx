@@ -217,7 +217,7 @@ export default function EntrancePyqsTab() {
                 setSelectedExam(key);
                 setSelectedSubject("ALL");
               }}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-mono font-semibold transition-all border shrink-0 ${
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-accent font-semibold tracking-wide transition-all border shrink-0 ${
                 isSelected
                   ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/15 text-[var(--text-primary)] shadow-sm"
                   : "border-[var(--border-subtle)] bg-[var(--surface-base)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)]"
@@ -370,7 +370,7 @@ export default function EntrancePyqsTab() {
                   </div>
 
                   {/* Subject Title */}
-                  <h3 className="text-base font-bold text-[var(--text-primary)] group-hover:text-[var(--brand-primary)] transition-colors line-clamp-2 leading-tight">
+                  <h3 className="text-base font-display font-bold text-[var(--text-primary)] group-hover:text-[var(--brand-primary)] transition-colors line-clamp-2 leading-tight">
                     {paper.title}
                   </h3>
 
