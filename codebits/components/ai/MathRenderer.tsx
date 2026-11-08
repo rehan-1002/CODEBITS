@@ -21,6 +21,12 @@ export function formatMathText(rawText: string): string {
 
   let processed = rawText;
 
+  // Pre-clean unbackslashed set theory operations & overlines
+  processed = processed.replace(/([A-Z0-9\)])\s+setminus\s+([A-Z0-9\(])/gi, "$1 \\setminus $2");
+  processed = processed.replace(/([A-Z0-9\)])\s+oplus\s+([A-Z0-9\(])/gi, "$1 \\oplus $2");
+  processed = processed.replace(/\boverline([A-Za-z0-9])\b/g, "\\overline{$1}");
+  processed = processed.replace(/\\?overline\s*\{?([A-Za-z0-9])\}?/g, "\\overline{$1}");
+
   // 1. Double dollar or \[...\] display math: $$math$$ or \[math\]
   processed = processed.replace(/(?:\$\$|\\\[)([\s\S]+?)(?:\$\$|\\\])/g, (_, math) => {
     try {
@@ -46,7 +52,7 @@ export function formatMathText(rawText: string): string {
   });
 
   // 3. Fallback: Auto-detect any leftover LaTeX expressions containing \frac, \sqrt, \csc, \sin, \cos, \tan, etc.
-  processed = processed.replace(/\\(sqrt|frac|csc|sin|cos|tan|log|lim|int|sum|prod|theta|alpha|beta|lambda|pi|infty|partial)\b[^\s<]+/g, (match) => {
+  processed = processed.replace(/\\(sqrt|frac|csc|sin|cos|tan|log|lim|int|sum|prod|theta|alpha|beta|lambda|pi|infty|partial|setminus|oplus|cup|cap|subset|subseteq|emptyset|overline|therefore|because)\b[^\s<]*/g, (match) => {
     try {
       return `<span class="inline-math px-0.5 inline-block align-baseline">${katex.renderToString(
         match.trim(),

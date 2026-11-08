@@ -15,6 +15,7 @@ import {
   ImageRun,
 } from "docx";
 import sharp from "sharp";
+import { generateVennSvg } from "./vennDiagramGenerator";
 
 // ==========================================
 // 1. MOJIBAKE & CORRUPTED CHARACTER REPAIR
@@ -561,6 +562,7 @@ export function cleanMathSymbolsForMatrixCell(cell: string): string {
   s = replaceBalancedCommand(s, "cbrt", (content) => `∛(${cleanMathSymbolsForMatrixCell(content)})`);
   s = replaceBalancedCommand(s, "vec", (content) => `${cleanMathSymbolsForMatrixCell(content)}⃗`);
   s = replaceBalancedCommand(s, "bar", (content) => `${cleanMathSymbolsForMatrixCell(content)}̄`);
+  s = replaceBalancedCommand(s, "overline", (content) => `${cleanMathSymbolsForMatrixCell(content)}̄`);
   s = replaceBalancedCommand(s, "hat", (content) => `${cleanMathSymbolsForMatrixCell(content)}̂`);
 
   s = s
@@ -597,7 +599,25 @@ export function cleanMathSymbolsForMatrixCell(cell: string): string {
     .replace(/\\cdot(?![a-zA-Z])/g, "·")
     .replace(/\\neq(?![a-zA-Z])|\\ne(?![a-zA-Z])/g, "≠")
     .replace(/\\leq(?![a-zA-Z])|\\le(?![a-zA-Z])/g, "≤")
-    .replace(/\\geq(?![a-zA-Z])|\\ge(?![a-zA-Z])/g, "≥");
+    .replace(/\\geq(?![a-zA-Z])|\\ge(?![a-zA-Z])/g, "≥")
+    .replace(/\\setminus(?![a-zA-Z])|\\smallsetminus(?![a-zA-Z])/g, "∖")
+    .replace(/\\oplus(?![a-zA-Z])/g, "⊕")
+    .replace(/\\otimes(?![a-zA-Z])/g, "⊗")
+    .replace(/\\odot(?![a-zA-Z])/g, "⊙")
+    .replace(/\\cup(?![a-zA-Z])/g, "∪")
+    .replace(/\\cap(?![a-zA-Z])/g, "∩")
+    .replace(/\\subset(?![a-zA-Z])/g, "⊂")
+    .replace(/\\subseteq(?![a-zA-Z])/g, "⊆")
+    .replace(/\\in(?![a-zA-Z])/g, "∈")
+    .replace(/\\notin(?![a-zA-Z])/g, "∉")
+    .replace(/\\emptyset(?![a-zA-Z])|\\varnothing(?![a-zA-Z])/g, "∅");
+
+  // Clean unbackslashed set theory operations & overlines from OCR
+  s = s.replace(/\\?overline\s*\{?([A-Za-z0-9])\}?/g, "$1̄");
+  s = s.replace(/\boverline([A-Za-z0-9])\b/g, "$1̄");
+  s = s.replace(/\bbar([A-Za-z0-9])\b/g, "$1̄");
+  s = s.replace(/([A-Z0-9\)])\s*setminus\s*([A-Z0-9\(])/gi, "$1 ∖ $2");
+  s = s.replace(/([A-Z0-9\)])\s*oplus\s*([A-Z0-9\(])/gi, "$1 ⊕ $2");
 
   s = s.replace(/[{}]/g, "").replace(/\\([a-zA-Z]+)/g, "$1").replace(/\\/g, "");
   return s.trim();
@@ -1126,6 +1146,8 @@ export function cleanMathSymbols(raw: string, preserveWhitespace: boolean = fals
   // Step 3: Handle vectors and accents
   s = replaceBalancedCommand(s, "vec", (content) => `${cleanMathSymbols(content, false)}⃗`);
   s = replaceBalancedCommand(s, "bar", (content) => `${cleanMathSymbols(content, false)}̄`);
+  s = replaceBalancedCommand(s, "overline", (content) => `${cleanMathSymbols(content, false)}̄`);
+  s = replaceBalancedCommand(s, "underline", (content) => `${cleanMathSymbols(content, false)}̲`);
   s = replaceBalancedCommand(s, "hat", (content) => `${cleanMathSymbols(content, false)}̂`);
   s = replaceBalancedCommand(s, "dot", (content) => `${cleanMathSymbols(content, false)}̇`);
   s = replaceBalancedCommand(s, "ddot", (content) => `${cleanMathSymbols(content, false)}̈`);
@@ -1192,6 +1214,11 @@ export function cleanMathSymbols(raw: string, preserveWhitespace: boolean = fals
     .replace(/\\neq(?![a-zA-Z])|\\ne(?![a-zA-Z])/g, "≠")
     .replace(/\\leq(?![a-zA-Z])|\\le(?![a-zA-Z])/g, "≤")
     .replace(/\\geq(?![a-zA-Z])|\\ge(?![a-zA-Z])/g, "≥")
+    .replace(/\\setminus(?![a-zA-Z])|\\smallsetminus(?![a-zA-Z])/g, "∖")
+    .replace(/\\oplus(?![a-zA-Z])/g, "⊕")
+    .replace(/\\otimes(?![a-zA-Z])/g, "⊗")
+    .replace(/\\odot(?![a-zA-Z])/g, "⊙")
+    .replace(/\\emptyset(?![a-zA-Z])|\\varnothing(?![a-zA-Z])/g, "∅")
     .replace(/\\approx(?![a-zA-Z])/g, "≈")
     .replace(/\\equiv(?![a-zA-Z])/g, "≡")
     .replace(/\\sim(?![a-zA-Z])/g, "∼")
@@ -1262,6 +1289,15 @@ export function cleanMathSymbols(raw: string, preserveWhitespace: boolean = fals
   // Step 9: Standard Subscripts with braces: _{...} or single char: _x
   s = s.replace(/_\{([^}]+)\}/g, (_, content) => toSubscript(content));
   s = s.replace(/_([0-9a-zA-Z+\-()])/g, (_, char) => toSubscript(char));
+
+  // Step 9.5: Clean unbackslashed set theory operations & overlines from OCR
+  s = s.replace(/\\?overline\s*\{?([A-Za-z0-9])\}?/g, "$1̄");
+  s = s.replace(/\boverline([A-Za-z0-9])\b/g, "$1̄");
+  s = s.replace(/\bbar([A-Za-z0-9])\b/g, "$1̄");
+  s = s.replace(/([A-Z0-9\)])\s*setminus\s*([A-Z0-9\(])/gi, "$1 ∖ $2");
+  s = s.replace(/([A-Z0-9\)])\s*oplus\s*([A-Z0-9\(])/gi, "$1 ⊕ $2");
+  s = s.replace(/\bsetminus\b/gi, "∖");
+  s = s.replace(/\boplus\b/gi, "⊕");
 
   // Step 10: Clean LaTeX wrapper commands, spacing, and residual backslashes
   s = s
@@ -1557,7 +1593,7 @@ export function buildWordTable(lines: string[]): Table {
 // ==========================================
 // Renders vector SVG electrical circuits, graphs, and academic diagrams into
 // razor-sharp 300-DPI PNG ImageRuns embedded natively into Microsoft Word documents.
-export async function renderSvgToDocxElements(svgString: string): Promise<Paragraph[]> {
+export async function renderSvgToDocxElements(svgString: string, defaultCaption?: string): Promise<Paragraph[]> {
   try {
     let cleanSvg = svgString.trim();
 
@@ -1615,12 +1651,15 @@ export async function renderSvgToDocxElements(svgString: string): Promise<Paragr
       ],
     });
 
+    const isVenn = /venn|∩|∪|∖|universal/i.test(cleanSvg);
+    const captionText = defaultCaption || (isVenn ? "Figure: Venn Diagram" : "Figure: Academic Diagram / Schematic");
+
     const captionParagraph = new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: { after: 200 },
       children: [
         new TextRun({
-          text: "Figure: Schematic Circuit Diagram",
+          text: captionText,
           italics: true,
           size: 18, // 9pt
           color: "666666",
@@ -1758,6 +1797,55 @@ export async function buildDocumentElements(text: string, title?: string): Promi
       }
       elements.push(new Paragraph({ children: [], spacing: { after: 120 } }));
       continue;
+    }
+
+    // Intercept LaTeX \includegraphics or [includegraphics...] blocks containing Venn diagram / figure references
+    if (line.includes("includegraphics")) {
+      const imgBlockLines: string[] = [line];
+      let j = i + 1;
+      let depth = (line.match(/\[/g) || []).length - (line.match(/\]/g) || []).length;
+      while (j < lines.length) {
+        const nextLine = lines[j];
+        imgBlockLines.push(nextLine);
+        depth += (nextLine.match(/\[/g) || []).length - (nextLine.match(/\]/g) || []).length;
+        if (depth <= 0 || (!nextLine.includes("includegraphics") && !/[ABC∪∩∖\-]/.test(nextLine) && nextLine.trim().startsWith("#"))) {
+          break;
+        }
+        j++;
+      }
+      i = j; // Advance past the block
+
+      // Extract diagram labels / expressions from the block
+      // Look for expressions like (B \ C), A \ (B \ C), A \ B, A ∩ B ∩ C, (A \ B) ∪ (A ∩ B ∩ C), A ∪ B, A ∩ B, A ⊕ B
+      const labelRegex = /\(?\s*[A-C]\s*(?:∖|\\|setminus|-|∩|∪|⊕)\s*\(?[A-C][\s\w()\\∖\-∩∪⊕]*\)?/gi;
+
+      const foundLabels: string[] = [];
+      for (const bLine of imgBlockLines) {
+        // Strip the includegraphics command itself to isolate caption/labels
+        const stripped = bLine.replace(/\\?includegraphics\[.*?\][^\s]+/gi, "").trim();
+        if (stripped) {
+          const matches = stripped.match(labelRegex);
+          if (matches) {
+            for (const m of matches) {
+              const clean = m.trim();
+              if (clean.length >= 2 && !foundLabels.includes(clean)) {
+                foundLabels.push(clean);
+              }
+            }
+          }
+        }
+      }
+
+      if (foundLabels.length > 0) {
+        for (const label of foundLabels) {
+          const svg = generateVennSvg(label, `Figure: ${label}`);
+          const svgElems = await renderSvgToDocxElements(svg, `Figure: ${label}`);
+          if (svgElems.length > 0) {
+            elements.push(...svgElems);
+          }
+        }
+        continue;
+      }
     }
 
     // Direct raw SVG element outside code blocks

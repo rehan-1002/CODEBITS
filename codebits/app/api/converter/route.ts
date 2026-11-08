@@ -111,7 +111,23 @@ CRITICAL MATHEMATICS, PHYSICS, CHEMISTRY & EQUATION RULES:
   - Double-bar norm matrix: \\begin{Vmatrix} ... \\end{Vmatrix}
 - Always separate columns with & and rows with \\\\. Preserve every single row and column without collapsing entries.
 
-6. CRITICAL WORD AND EQUATION SPACING:
+6. SET THEORY, BOOLEAN ALGEBRA & LOGIC (MANDATORY):
+- Reconstruct all set operations using authentic LaTeX math symbols inside $...$:
+  - Set difference / relative complement: ALWAYS use vertical set difference \\setminus (e.g. $A \\setminus B$, $A \\setminus (B \\setminus C)$). NEVER write the bare English word "setminus" or "set minus"!
+  - Symmetric difference: ALWAYS use circled plus \\oplus (e.g. $A \\oplus B$, $A \\oplus (B \\oplus C)$). NEVER write the bare word "oplus"!
+  - Union & Intersection: ALWAYS use \\cup ($A \\cup B$) and \\cap ($A \\cap B$).
+  - Set Complements: ALWAYS use \\overline{A} (or $A'$). NEVER write bare "overlineA"!
+  - Universal set: $U$ (or \\mathbb{U}), Empty set: \\emptyset ($\\emptyset$).
+  - Subsets & membership: \\subset ($\\subset$), \\subseteq ($\\subseteq$), \\in ($\\in$), \\notin ($\\notin$).
+  - Logical statements: \\therefore ($\\therefore$), \\because ($\\because$), \\implies ($\\implies$), \\iff ($\\iff$).
+
+7. VENN DIAGRAMS & LOGICAL/GEOMETRIC FIGURES (MANDATORY - NO EM-DASHES, NO INCLUDGRAPHICS):
+- If the document contains Venn diagrams or requests "Using Venn diagram, prove that...":
+  - UNDER NO CIRCUMSTANCES should you output \\includegraphics, image_part_... tags, ASCII boxes, or em-dash (---) approximations!
+  - Transcribe the mathematical expressions clearly (e.g. "Figure: $B \\setminus C$", "Figure: $A \\setminus (B \\setminus C)$", "Figure: $(A \\setminus B) \\cup (A \\cap B \\cap C)$").
+  - If generating diagrams, output clean vector <svg>...</svg> blocks enclosed inside \`\`\`svg ... \`\`\` code blocks with Universal set $U$, labeled circles ($A, B, C$), and shaded regions.
+
+8. CRITICAL WORD AND EQUATION SPACING:
 - Always preserve spaces between regular English words and formulas!
   - For example, write "If $A = ...$ find the Eigen values of $A^3 + 5A + 8I$." NEVER fuse words like "If$A$" or "of$A^3$" or ")find".
   - Write "variable $X$ follows", "function $f(z)$", "along $y = x^2$", "matrix $A$".
