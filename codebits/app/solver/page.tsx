@@ -594,8 +594,8 @@ function QuestionBankSolverContent() {
               )}
             </div>
 
-            {/* Inline PDF ⇄ Word Converter Widget in AI Solver */}
-            {uploadedFileObj && (uploadedFileObj.name.toLowerCase().endsWith(".pdf") || uploadedFileObj.name.toLowerCase().endsWith(".docx")) && (
+            {/* Inline PDF ⇄ Word Converter Widget in AI Solver (Admin only) */}
+            {currentUser?.role === 'admin' && uploadedFileObj && (uploadedFileObj.name.toLowerCase().endsWith(".pdf") || uploadedFileObj.name.toLowerCase().endsWith(".docx")) && (
               <div className="rounded-2xl border border-[var(--brand-primary)]/40 bg-[var(--surface-base)] p-4 flex flex-col gap-3 shadow-sm">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5">

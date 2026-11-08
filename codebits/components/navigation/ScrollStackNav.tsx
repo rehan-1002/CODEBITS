@@ -105,14 +105,6 @@ const navDeck = [
   },
   {
     number: '05',
-    title: 'Document Converter',
-    desc: 'Instant bidirectional conversion between PDF and Word (.docx) documents.',
-    href: '/converter',
-    icon: ArrowRightLeft,
-    isPrimary: true,
-  },
-  {
-    number: '06',
     title: 'Lectures & Live',
     desc: 'Watch live broadcasts and curated YouTube video lectures by faculty.',
     href: '/lectures',
@@ -199,19 +191,28 @@ export default function ScrollStackNav() {
     return item
   })
 
-  // Only display Broadcast Console in ScrollStackNav if user is an authenticated Admin
+  // Only display Document Converter & Broadcast Console in ScrollStackNav if user is an authenticated Admin
   if (user?.role === 'admin') {
     currentNavDeck = [
-      ...currentNavDeck.slice(0, 6),
+      ...currentNavDeck.slice(0, 4),
       {
-        number: '06B',
+        number: '05',
+        title: 'Document Converter',
+        desc: 'Instant bidirectional conversion between PDF and Word (.docx) documents (Admin Only).',
+        href: '/converter',
+        icon: ArrowRightLeft,
+        isPrimary: true,
+      },
+      ...currentNavDeck.slice(4, 5),
+      {
+        number: '05B',
         title: 'Broadcast Console',
         desc: 'Add YouTube videos and toggle live revision broadcasts on CodeBits (Admin Only).',
         href: '/admin/lectures',
         icon: Radio,
         isPrimary: true,
       },
-      ...currentNavDeck.slice(6),
+      ...currentNavDeck.slice(5),
     ]
   }
 

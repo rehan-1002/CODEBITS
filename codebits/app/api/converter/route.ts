@@ -5,6 +5,7 @@ import { jsPDF } from "jspdf";
 import { generateContentWithFailover } from "@/lib/ai/gemini";
 import { buildMathParagraph, cleanMathSymbols, buildDocumentElements } from "@/lib/converter/mathDocxFormatter";
 import sharp from "sharp";
+import { verifySessionToken, COOKIE_NAME } from "@/lib/auth-server";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60; // Extended timeout for AI document analysis
@@ -154,6 +155,16 @@ CRITICAL MATHEMATICS, PHYSICS, CHEMISTRY & EQUATION RULES:
 
 export async function POST(req: NextRequest) {
   try {
+    // Verify Admin Authorization: Document Converter API is strictly restricted to Administrators
+    const token = req.cookies.get(COOKIE_NAME)?.value;
+    const user = token ? await verifySessionToken(token) : null;
+    if (user && user.role !== "admin") {
+      return NextResponse.json(
+        { error: "Administrative privileges required. Document Converter is restricted to administrators." },
+        { status: 403 }
+      );
+    }
+
     // Check if request is JSON (e.g. for docx assembly)
     const contentType = req.headers.get("content-type") || "";
     if (contentType.includes("application/json")) {

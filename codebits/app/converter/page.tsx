@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { PDFDocument } from "pdf-lib";
 import {
   FileText,
@@ -18,7 +19,11 @@ import {
   StopCircle,
   ImageIcon,
   Images,
+  Lock,
+  ShieldAlert,
 } from "lucide-react";
+import { getCurrentUser, fetchCurrentAuthUser } from "@/lib/auth";
+import { Profile } from "@/types/auth";
 
 const CHUNK_SIZE = 8; // Optimal pages per micro-batch (prevents AI token limit & timeouts)
 
@@ -28,6 +33,9 @@ interface ExtractedSection {
 }
 
 export default function DocumentConverterPage() {
+  const [user, setUser] = useState<Profile | null>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
   const [files, setFiles] = useState<File[]>([]);
   const [pdfPageCount, setPdfPageCount] = useState<number | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -45,6 +53,19 @@ export default function DocumentConverterPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Authenticate user on mount to restrict Document Converter to administrators only
+  useEffect(() => {
+    fetchCurrentAuthUser().then((u) => {
+      setUser(u || getCurrentUser());
+      setCheckingAuth(false);
+    });
+    const handleAuth = () => {
+      setUser(getCurrentUser());
+    };
+    window.addEventListener("codebits-auth-change", handleAuth);
+    return () => window.removeEventListener("codebits-auth-change", handleAuth);
+  }, []);
 
   // Clean up object URLs on unmount or file change
   useEffect(() => {
@@ -570,6 +591,54 @@ export default function DocumentConverterPage() {
     (pdfPageCount > CHUNK_SIZE || firstFile.size > 4 * 1024 * 1024);
 
   const totalBytes = files.reduce((acc, f) => acc + f.size, 0);
+
+  if (checkingAuth) {
+    return (
+      <div className="w-full min-h-[75vh] flex items-center justify-center bg-[var(--bg-base)]">
+        <div className="flex flex-col items-center gap-3">
+          <RefreshCw className="w-6 h-6 text-[var(--brand-primary)] animate-spin" />
+          <span className="text-xs font-mono text-[var(--text-secondary)]">
+            Verifying administrative privileges...
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // Strict restriction: Document Converter is strictly accessible to CodeBits Administrators only
+  if (user?.role !== "admin") {
+    return (
+      <div className="w-full min-h-[80vh] flex items-center justify-center px-4 bg-[var(--bg-base)]">
+        <div className="max-w-md w-full p-8 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-base)] text-center space-y-4 shadow-sm">
+          <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center mx-auto shadow-inner">
+            <Lock className="w-7 h-7" />
+          </div>
+          <div className="space-y-1.5">
+            <h2 className="text-xl font-display font-bold text-[var(--text-primary)]">
+              Administrative Access Only
+            </h2>
+            <p className="text-xs font-mono text-[var(--text-secondary)] leading-relaxed">
+              The Document Converter &amp; OCR Engine is reserved exclusively for CodeBits Faculty &amp; Administrators (Prof. M.R.F). Students do not have access to this feature.
+            </p>
+          </div>
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
+              href="/vault"
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-mono font-bold bg-[var(--brand-primary)] text-black hover:opacity-90 transition-opacity"
+            >
+              Academic Vault
+            </Link>
+            <Link
+              href="/?login=1"
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-mono font-bold border border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-primary)] hover:border-[var(--border-strong)] transition-all"
+            >
+              Admin Sign In
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] flex flex-col">

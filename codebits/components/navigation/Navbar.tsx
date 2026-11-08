@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { LogOut, User as UserIcon } from 'lucide-react'
@@ -13,16 +13,6 @@ import { Profile } from '@/types/auth'
 interface NavbarProps {
   onOpenSearch?: () => void
 }
-
-const NAV_LINKS = [
-  { label: "Home", href: "/?home=1" },
-  { label: "11th & 12th", href: "/11th-12th" },
-  { label: "Vault", href: "/vault" },
-  { label: "AI Solver", href: "/solver" },
-  { label: "Converter", href: "/converter" },
-  { label: "Lectures", href: "/lectures" },
-  { label: "About", href: "/about" },
-];
 
 export default function Navbar({ onOpenSearch }: NavbarProps = {}) {
   const [user, setUser] = useState<Profile | null>(null)
@@ -37,6 +27,22 @@ export default function Navbar({ onOpenSearch }: NavbarProps = {}) {
     window.addEventListener('codebits-auth-change', handleAuth)
     return () => window.removeEventListener('codebits-auth-change', handleAuth)
   }, [])
+
+  // Document Converter is strictly reserved for faculty administrators (Prof. MRF / CODEBITS)
+  const navLinks = useMemo(() => {
+    const links = [
+      { label: "Home", href: "/?home=1" },
+      { label: "11th & 12th", href: "/11th-12th" },
+      { label: "Vault", href: "/vault" },
+      { label: "AI Solver", href: "/solver" },
+      { label: "Lectures", href: "/lectures" },
+      { label: "About", href: "/about" },
+    ];
+    if (user?.role === 'admin') {
+      links.splice(4, 0, { label: "Converter", href: "/converter" });
+    }
+    return links;
+  }, [user]);
 
   return (
     <header className="sticky top-0 z-40 w-full bg-[var(--bg-base)]/80 backdrop-blur-md border-b border-[var(--border-subtle)] transition-colors duration-200">
@@ -68,7 +74,7 @@ export default function Navbar({ onOpenSearch }: NavbarProps = {}) {
 
         {/* Center: Quick Nav with Random Letter Swap Interaction */}
         <div className="hidden md:flex items-center justify-center flex-1 mx-4 lg:mx-6">
-          <RandomLetterSwapNav links={NAV_LINKS} />
+          <RandomLetterSwapNav links={navLinks} />
         </div>
 
         {/* Right Actions: Theme Toggler, Admin Badge & Stacked Navigation Trigger */}

@@ -14,7 +14,6 @@ const defaultLinks: NavLinkItem[] = [
   { label: "11th & 12th", href: "/11th-12th" },
   { label: "Vault", href: "/vault" },
   { label: "AI Solver", href: "/solver" },
-  { label: "Converter", href: "/converter" },
   { label: "Lectures", href: "/lectures" },
   { label: "About", href: "/about" },
 ]
