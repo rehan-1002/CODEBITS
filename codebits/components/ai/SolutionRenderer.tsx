@@ -14,6 +14,7 @@ import {
   FileText,
   Sparkles,
 } from "lucide-react";
+import { generateVennSvg } from "@/lib/converter/vennDiagramGenerator";
 
 interface SolutionRendererProps {
   markdown: string;
@@ -33,6 +34,7 @@ function renderInlineContent(text: string): string {
     .replace(/\b([A-Z0-9\)])\s+oplus\s+([A-Z0-9\(])/gi, "$1 \\oplus $2")
     .replace(/\boverline([A-Za-z0-9])\b/g, "\\overline{$1}")
     .replace(/\\?overline\s*\{?([A-Za-z0-9])\}?/g, "\\overline{$1}")
+    .replace(/\\therefore\b/g, "\\therefore ")
     .replace(/(?<!\$)\b([A-C]\s*(?:\\setminus|∖|\\oplus|⊕)\s*\(?[A-C][\s\w()\\∖\-∩∪⊕]*\)?)(?!\$)/gi, "$ $1 $");
 
   // 1. Single-line display math if embedded in paragraph: $$math$$
@@ -46,6 +48,24 @@ function renderInlineContent(text: string): string {
       return `<code class="font-mono text-emerald-600 dark:text-emerald-400 text-xs">${math}</code>`;
     }
   });
+
+  // Catch lines with naked LaTeX symbols like "= U \cap [A \cup B]" or "= \overline{A} \cap B"
+  if (
+    !processed.includes("$") &&
+    (processed.includes("\\cap") ||
+      processed.includes("\\cup") ||
+      processed.includes("\\setminus") ||
+      processed.includes("\\oplus") ||
+      processed.includes("\\overline") ||
+      processed.includes("\\therefore"))
+  ) {
+    const trailMatch = processed.match(/^(.*?)(\s+(?:By|by|where|since|is)\s+.*)$/i);
+    if (trailMatch && (trailMatch[1].includes("\\") || trailMatch[1].includes("="))) {
+      processed = `$${trailMatch[1].trim()}$ ${trailMatch[2].trim()}`;
+    } else {
+      processed = `$${processed.trim()}$`;
+    }
+  }
 
   // 2. Inline math: $math$
   processed = processed.replace(/\$([^\$\n]+?)\$/g, (_, math) => {
@@ -85,7 +105,8 @@ export type SectionBlock =
   | { type: "math"; math: string }
   | { type: "list_item"; badge?: string; title?: string; body: string }
   | { type: "code"; language: string; code: string }
-  | { type: "table"; rows: string[][] };
+  | { type: "table"; rows: string[][] }
+  | { type: "svg_diagram"; diagrams: { svg: string; caption: string }[] };
 
 interface ParsedSection {
   title: string;
@@ -235,6 +256,94 @@ export function SolutionRenderer({
           });
           tableBuffer = [];
         }
+      }
+
+      // 3.5. LaTeX \includegraphics or [includegraphics...] blocks containing Venn diagram / figure references
+      const isImgBlock =
+        trimmed.includes("includegraphics") ||
+        (trimmed === "[" && lines[i + 1] && lines[i + 1].includes("includegraphics"));
+
+      if (isImgBlock) {
+        const imgBlockLines: string[] = [line];
+        let j = i + 1;
+        let depth = 0;
+        for (const ch of line) {
+          if (ch === "[") depth++;
+          else if (ch === "]") depth--;
+        }
+
+        while (j < lines.length) {
+          const nextLine = lines[j].trim();
+          if (nextLine.startsWith("#") || /^\d+\.\s+/.test(nextLine) || nextLine.startsWith("---")) {
+            break;
+          }
+          imgBlockLines.push(lines[j]);
+          for (const ch of lines[j]) {
+            if (ch === "[") depth++;
+            else if (ch === "]") depth--;
+          }
+          if ((line === "[" || line.startsWith("[")) && depth <= 0) {
+            j++;
+            break;
+          }
+          if (
+            !line.includes("[") &&
+            !nextLine.includes("includegraphics") &&
+            !/\$?[A-C][\s\w()\\∖\-∩∪⊕]*\$?/.test(nextLine)
+          ) {
+            break;
+          }
+          j++;
+        }
+        i = j - 1;
+
+        const foundLabels: string[] = [];
+        const labelRegex = /\(?\s*[A-C]\s*(?:∖|\\|setminus|-|∩|∪|⊕)\s*\(?[A-C][\s\w()\\∖\-∩∪⊕]*\)?/gi;
+
+        for (const bLine of imgBlockLines) {
+          const dollarMatches = bLine.match(/\$([^\$]+)\$/g);
+          if (dollarMatches) {
+            for (const dm of dollarMatches) {
+              const clean = dm.replace(/^\$|\$$/g, "").trim();
+              if (clean.length >= 2 && !foundLabels.includes(clean)) {
+                foundLabels.push(clean);
+              }
+            }
+          }
+          const stripped = bLine.replace(/\\?includegraphics\[.*?\][^\s]+/gi, "").trim();
+          if (stripped) {
+            const matches = stripped.match(labelRegex);
+            if (matches) {
+              for (const m of matches) {
+                const clean = m.trim();
+                if (clean.length >= 2 && !foundLabels.includes(clean)) {
+                  foundLabels.push(clean);
+                }
+              }
+            }
+            const ocrSetMatches = stripped.match(/\(?[A-C]\s+[A-C]\)?(?:\s*∪\s*\(?[A-C][\s\w()\\∖\-∩∪⊕]*\)?)?/g);
+            if (ocrSetMatches) {
+              for (const osm of ocrSetMatches) {
+                const clean = osm.trim();
+                if (clean.length >= 2 && !foundLabels.includes(clean)) {
+                  foundLabels.push(clean);
+                }
+              }
+            }
+          }
+        }
+
+        const labelsToRender = foundLabels.length > 0 ? foundLabels : ["A ∩ B"];
+        const diagrams = labelsToRender.map((label) => ({
+          svg: generateVennSvg(label, label),
+          caption: label,
+        }));
+
+        currentSection.blocks.push({
+          type: "svg_diagram",
+          diagrams,
+        });
+        continue;
       }
 
       // 4. Section Header Detection (###, ##, or standalone **Title**)
@@ -533,6 +642,31 @@ export function SolutionRenderer({
                             ))}
                           </tbody>
                         </table>
+                      </div>
+                    );
+                  }
+
+                  if (block.type === "svg_diagram") {
+                    return (
+                      <div key={bIdx} className="my-4 space-y-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {block.diagrams.map((d, dIdx) => (
+                            <div
+                              key={dIdx}
+                              className="p-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-base)] flex flex-col items-center gap-2 shadow-xs"
+                            >
+                              <div
+                                className="w-full max-w-[280px] overflow-hidden rounded-lg flex justify-center"
+                                dangerouslySetInnerHTML={{ __html: d.svg }}
+                              />
+                              {d.caption && (
+                                <span className="text-[11px] font-mono text-[var(--text-secondary)] text-center font-medium">
+                                  {d.caption}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     );
                   }

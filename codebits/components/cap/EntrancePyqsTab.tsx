@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   RefreshCw,
 } from "lucide-react";
+import { BorderBeamPanel } from "@/components/ui/border-beam-panel";
 
 interface EntrancePaperItem {
   _id: string;
@@ -64,6 +65,21 @@ const EXAM_CONFIG = {
     badgeBg: "bg-purple-500/10 text-purple-400 border-purple-500/30",
   },
 };
+
+function getExamBeamColors(examType: string): [string, string] {
+  switch (examType) {
+    case "HSC":
+      return ["#00C269", "#34EE99"];
+    case "MHT-CET":
+      return ["#f59e0b", "#fbbf24"];
+    case "JEE-MAIN":
+      return ["#3b82f6", "#60a5fa"];
+    case "JEE-ADVANCED":
+      return ["#8b5cf6", "#c084fc"];
+    default:
+      return ["#00C269", "#34EE99"];
+  }
+}
 
 export default function EntrancePyqsTab() {
   const [papers, setPapers] = useState<EntrancePaperItem[]>([]);
@@ -339,14 +355,22 @@ export default function EntrancePyqsTab() {
         </div>
       ) : (
         /* Paper Cards Grid */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredPapers.map((paper) => {
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filteredPapers.map((paper, index) => {
             const examCfg = EXAM_CONFIG[paper.examType] || EXAM_CONFIG.ALL;
 
             return (
-              <div
+              <BorderBeamPanel
                 key={paper._id}
-                className="group p-5 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-base)] hover:border-[var(--border-strong)] transition-all flex flex-col justify-between gap-4"
+                beams={2}
+                colors={getExamBeamColors(paper.examType)}
+                thickness={1.5}
+                radius={16}
+                glow={true}
+                idleSpeed={38}
+                hoverSpeed={220}
+                seed={index + 1}
+                className="group p-5 border border-[var(--border-subtle)] bg-[var(--surface-base)] hover:border-[var(--border-strong)] transition-all flex flex-col justify-between gap-4 shadow-sm"
               >
                 {/* Top Card Header */}
                 <div className="space-y-2.5">
@@ -430,7 +454,7 @@ export default function EntrancePyqsTab() {
                     </a>
                   </div>
                 </div>
-              </div>
+              </BorderBeamPanel>
             );
           })}
         </div>

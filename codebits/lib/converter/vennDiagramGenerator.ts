@@ -26,6 +26,10 @@ export function normalizeSetExpression(raw: string): string {
   s = s.replace(/\\cap\b/g, "∩");
   s = s.replace(/\\overline\{([A-Za-z])\}/g, "$1̄");
   s = s.replace(/\boverline([A-Za-z])\b/g, "$1̄");
+  // OCR loss recoveries for set minus in Venn diagram context
+  s = s.replace(/\(\s*([A-C])\s+([A-C])\s*\)/g, "($1 ∖ $2)");
+  s = s.replace(/\b([A-C])\s+\(\s*([A-C])\s*∖\s*([A-C])\s*\)/g, "$1 ∖ ($2 ∖ $3)");
+  s = s.replace(/\b([A-C])\s+([A-C])\b/g, "$1 ∖ $2");
   s = s.replace(/\\/g, "∖");
   return s.trim();
 }

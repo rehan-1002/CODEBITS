@@ -1886,6 +1886,17 @@ export async function buildDocumentElements(text: string, title?: string): Promi
               }
             }
           }
+
+          // 3. Extract OCR space-separated set labels like (B C), A (B C), A B
+          const ocrSetMatches = stripped.match(/\(?[A-C]\s+[A-C]\)?(?:\s*∪\s*\(?[A-C][\s\w()\\∖\-∩∪⊕]*\)?)?/g);
+          if (ocrSetMatches) {
+            for (const osm of ocrSetMatches) {
+              const clean = osm.trim();
+              if (clean.length >= 2 && !foundLabels.includes(clean)) {
+                foundLabels.push(clean);
+              }
+            }
+          }
         }
       }
 
