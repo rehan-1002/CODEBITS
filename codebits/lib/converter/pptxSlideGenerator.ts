@@ -16,8 +16,90 @@ export interface ParsedQuestion {
 }
 
 /**
- * Finds the index of the matching closing brace '}' taking nested braces into account.
+ * Parses raw matrix LaTeX content into structured 2D rows and columns, matching the docx engine.
  */
+function parseMatrixContent(content: string): string[][] {
+  const rawRows = content
+    .split(/(?:@|\\\\|\\cr|\r?\n)/)
+    .map((r) => r.trim())
+    .filter((r) => r.length > 0);
+
+  if (rawRows.length === 1) {
+    const parts = rawRows[0].split("&").map((p) => p.trim());
+    const rowList: string[][] = [];
+    let currentRow: string[] = [];
+    for (const part of parts) {
+      const subTokens = part.trim().split(/\s+/);
+      if (subTokens.length >= 2 && currentRow.length >= 1) {
+        currentRow.push(subTokens[0]);
+        rowList.push(currentRow);
+        currentRow = [subTokens.slice(1).join(" ")];
+      } else {
+        currentRow.push(part);
+      }
+    }
+    if (currentRow.length > 0) rowList.push(currentRow);
+
+    if (rowList.length > 1) return rowList;
+
+    // Fallback: tokenize standard 3x3 or 2x2 matrix elements
+    const allTokens = content.replace(/&/g, " ").trim().split(/\s+/).filter(Boolean);
+    if (allTokens.length === 9) {
+      return [allTokens.slice(0, 3), allTokens.slice(3, 6), allTokens.slice(6, 9)];
+    } else if (allTokens.length === 4) {
+      return [allTokens.slice(0, 2), allTokens.slice(2, 4)];
+    }
+  }
+
+  return rawRows.map((r) => r.split("&").map((c) => c.trim()).filter(Boolean));
+}
+
+/**
+ * Formats a 2D matrix with authentic tall mathematical brackets (⎡ ⎢ ⎣ and ⎤ ⎥ ⎦),
+ * with uniform column spacing and alignment matching professional math typography.
+ */
+function formatProperMatrix(rows: string[][], bracketType: string = "["): string {
+  if (!rows || rows.length === 0) return "";
+  const numCols = Math.max(...rows.map((r) => r.length));
+  const colWidths = Array(numCols).fill(0);
+  for (const row of rows) {
+    for (let c = 0; c < row.length; c++) {
+      colWidths[c] = Math.max(colWidths[c], (row[c] || "").length);
+    }
+  }
+
+  const paddedRows = rows.map((row) => {
+    return row.map((cell, c) => {
+      const w = colWidths[c];
+      return (cell || "").padStart(w, " ");
+    }).join("   ");
+  });
+
+  const n = paddedRows.length;
+  if (n === 1) {
+    return "[ " + paddedRows[0] + " ]";
+  }
+
+  let lTop = "⎡", lMid = "⎢", lBot = "⎣";
+  let rTop = "⎤", rMid = "⎥", rBot = "⎦";
+
+  const bLower = bracketType.toLowerCase();
+  if (bracketType === "(" || bLower === "pmatrix") {
+    lTop = "⎛"; lMid = "⎜"; lBot = "⎝";
+    rTop = "⎞"; rMid = "⎟"; rBot = "⎠";
+  } else if (bracketType === "|" || bLower === "vmatrix") {
+    lTop = "│"; lMid = "│"; lBot = "│";
+    rTop = "│"; rMid = "│"; rBot = "│";
+  }
+
+  const lines: string[] = [];
+  for (let i = 0; i < n; i++) {
+    const left = i === 0 ? lTop : i === n - 1 ? lBot : lMid;
+    const right = i === 0 ? rTop : i === n - 1 ? rBot : rMid;
+    lines.push(`  ${left}  ${paddedRows[i]}  ${right}`);
+  }
+  return "\n" + lines.join("\n") + "\n";
+}
 function findClosingBrace(str: string, startIdx: number): number {
   let depth = 0;
   for (let i = startIdx; i < str.length; i++) {
@@ -169,24 +251,11 @@ function cleanTextForSlide(raw: string): string {
   s = s.replace(/\\cos\^\{-?1\}|\\arccos/g, "cos⁻¹");
   s = s.replace(/\\(?:sin|cos|tan|log|ln|sinh|cosh|tanh|sec|csc|cosec|cot|det|exp)\b/g, (m) => m.slice(1));
 
-  // 5. Matrices: format LaTeX \begin{bmatrix} / beginbmatrix into clean aligned rows
-  s = s.replace(/(?:\\begin\{[a-zA-Z]*matrix\}|begin[a-zA-Z]*matrix)([\s\S]*?)(?:\\end\{[a-zA-Z]*matrix\}|end[a-zA-Z]*matrix)/gi, (_, body) => {
-    if (body.includes("\\\\") || body.includes("\n")) {
-      const rawRows = body.split(/\\\\|\n/).map((r: string) => r.trim()).filter(Boolean);
-      return "\n" + rawRows.map((r: string) => "  [  " + r.replace(/&/g, "    ").trim() + "  ]").join("\n");
-    }
-    const rawTokens = body.replace(/&/g, " ").trim().split(/\s+/).filter(Boolean);
-    if (rawTokens.length === 9) {
-      const r1 = rawTokens.slice(0, 3).join("     ");
-      const r2 = rawTokens.slice(3, 6).join("     ");
-      const r3 = rawTokens.slice(6, 9).join("     ");
-      return `\n  [  ${r1}  ]\n  [  ${r2}  ]\n  [  ${r3}  ]`;
-    } else if (rawTokens.length === 4) {
-      const r1 = rawTokens.slice(0, 2).join("     ");
-      const r2 = rawTokens.slice(2, 4).join("     ");
-      return `\n  [  ${r1}  ]\n  [  ${r2}  ]`;
-    }
-    return " [ " + body.replace(/&/g, "  ").trim() + " ]";
+  // 5. Matrices: format LaTeX \begin{bmatrix} / beginbmatrix into proper 2D matrices matching Word OMML
+  s = s.replace(/(?:\\begin\{([a-zA-Z]*matrix)\}|begin([a-zA-Z]*matrix))([\s\S]*?)(?:\\end\{\1\}|end\2)/gi, (_, b1, b2, body) => {
+    const bType = b1 || b2 || "bmatrix";
+    const rows = parseMatrixContent(body);
+    return formatProperMatrix(rows, bType);
   });
 
   // 6. Piecewise / Cases: format \begin{cases} / begincases cleanly
@@ -315,6 +384,13 @@ function isExamMetadataOrInstruction(line: string): boolean {
   if (l.includes("attempt any") || l.includes("answer any") || l.includes("solve any")) return true;
   if (l.includes("figures to the right indicate") || l.includes("indicate full marks")) return true;
   if (l.includes("assume suitable data") || l.includes("calculator is allowed") || l.includes("non-programmable")) return true;
+
+  // Page footers, paper codes (e.g. 14664) and page turnover notices
+  if (/^page\s*\d+\s*(?:of|\/)\s*\d+$/i.test(l)) return true;
+  if (/^page\s*[-:\s]*\d+$/i.test(l)) return true;
+  if (/^\[?\d{4,6}\]?$/.test(l)) return true;
+  if (/^(?:paper\s*code|q\.?p\.?\s*code|qp\s*code)\s*[:=]?\s*[a-z0-9\-]+/i.test(l)) return true;
+  if (/^(?:turn\s*over|p\.?t\.?o\.?|pto)$/i.test(l)) return true;
 
   return false;
 }
