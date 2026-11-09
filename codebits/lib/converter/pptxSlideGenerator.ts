@@ -1,7 +1,6 @@
 import pptxgen from "pptxgenjs";
 import fs from "fs";
 import path from "path";
-import sharp from "sharp";
 
 // Safe constructor resolver for ESM / CJS bundlers
 function createPresentationInstance(): pptxgen {
@@ -61,83 +60,6 @@ function parseMatrixContent(content: string): string[][] {
   }
 
   return rawRows.map((r) => r.split("&").map((c) => c.trim()).filter(Boolean));
-}
-
-/**
- * Renders an authentic, 100% solid, continuous 2D mathematical matrix as a razor-sharp
- * 300-DPI transparent PNG. Features a single solid continuous bracket from top to bottom
- * with zero line-gap breaks, perfectly formatted in Bookman Old Style yellow (#FFE600).
- */
-export async function generateMatrixPng(
-  rows: string[][],
-  bracketType = "["
-): Promise<{ data: string; w: number; h: number }> {
-  const fontSize = 72;
-  const rowHeight = 105;
-  const colPadding = 60;
-  const numRows = rows.length;
-  const numCols = Math.max(...rows.map((r) => r.length));
-
-  const colWidths = Array(numCols).fill(0);
-  for (const row of rows) {
-    for (let c = 0; c < row.length; c++) {
-      const len = (row[c] || "").length;
-      colWidths[c] = Math.max(colWidths[c], len * 44 + colPadding);
-    }
-  }
-
-  const matrixWidth = colWidths.reduce((a, b) => a + b, 0);
-  const matrixHeight = numRows * rowHeight;
-  const bracketWidth = 32;
-  const paddingX = 25;
-  const paddingY = 25;
-
-  const totalWidth = matrixWidth + paddingX * 2 + bracketWidth * 2;
-  const totalHeight = matrixHeight + paddingY * 2;
-
-  const leftX = paddingX + bracketWidth;
-  const rightX = totalWidth - paddingX - bracketWidth;
-  const topY = paddingY;
-  const botY = totalHeight - paddingY;
-  const tick = 26;
-
-  let leftBracketPath = `M ${leftX} ${topY} H ${leftX - tick} V ${botY} H ${leftX}`;
-  let rightBracketPath = `M ${rightX} ${topY} H ${rightX + tick} V ${botY} H ${rightX}`;
-
-  const bLower = bracketType.toLowerCase();
-  if (bracketType === "(" || bLower === "pmatrix") {
-    leftBracketPath = `M ${leftX} ${topY} C ${leftX - tick * 1.5} ${topY + matrixHeight * 0.2}, ${leftX - tick * 1.5} ${botY - matrixHeight * 0.2}, ${leftX} ${botY}`;
-    rightBracketPath = `M ${rightX} ${topY} C ${rightX + tick * 1.5} ${topY + matrixHeight * 0.2}, ${rightX + tick * 1.5} ${botY - matrixHeight * 0.2}, ${rightX} ${botY}`;
-  } else if (bracketType === "|" || bLower === "vmatrix") {
-    leftBracketPath = `M ${leftX - tick / 2} ${topY} V ${botY}`;
-    rightBracketPath = `M ${rightX + tick / 2} ${topY} V ${botY}`;
-  }
-
-  let texts = "";
-  for (let r = 0; r < numRows; r++) {
-    const y = paddingY + (r + 0.74) * rowHeight;
-    let currX = leftX + 15;
-    for (let c = 0; c < numCols; c++) {
-      const cellText = rows[r][c] || "";
-      const colW = colWidths[c];
-      const cellX = currX + colW / 2;
-      texts += `<text x="${cellX}" y="${y}" font-family="'Bookman Old Style', Georgia, serif" font-size="${fontSize}px" fill="#FFE600" font-weight="bold" text-anchor="middle">${cellText}</text>`;
-      currX += colW;
-    }
-  }
-
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}">
-  <path d="${leftBracketPath}" stroke="#FFE600" stroke-width="6.5" fill="none" stroke-linecap="square" stroke-linejoin="miter"/>
-  <path d="${rightBracketPath}" stroke="#FFE600" stroke-width="6.5" fill="none" stroke-linecap="square" stroke-linejoin="miter"/>
-  ${texts}
-</svg>`;
-
-  const pngBuffer = await sharp(Buffer.from(svg), { density: 300 }).png().toBuffer();
-  const base64 = `image/png;base64,${pngBuffer.toString("base64")}`;
-  const w = (totalWidth / 72) * 1.25;
-  const h = (totalHeight / 72) * 1.25;
-
-  return { data: base64, w, h };
 }
 
 /**
@@ -703,7 +625,7 @@ export async function buildPptxPresentation(
       color: "00C269",
     });
 
-    // 2. Continuous 2D Matrix Rendering (1 Single Solid Continuous Matrix Block)
+    // 2. Continuous 2D Matrix Rendering (Native Vector Brackets + Native Values)
     if (q.matrix) {
       let cursorY = 4.4;
 
@@ -721,19 +643,85 @@ export async function buildPptxPresentation(
         cursorY += 2.0;
       }
 
-      try {
-        const matrixImg = await generateMatrixPng(q.matrix.rows, q.matrix.bracketType);
-        slide.addImage({
-          data: matrixImg.data,
-          x: 2.5,
+      const rows = q.matrix.rows;
+      const numRows = rows.length;
+      const numCols = Math.max(...rows.map((r) => r.length));
+      const colW = Math.min(3.6, 32.0 / Math.max(numCols, 1));
+      const tableW = colW * numCols;
+      const rowH = 1.6;
+      const tableH = rowH * numRows;
+
+      const matrixW = tableW + 1.2;
+      const matrixH = tableH + 0.4;
+      const matrixX = 2.5;
+
+      const bLower = q.matrix.bracketType.toLowerCase();
+
+      // Draw continuous unbroken brackets natively
+      if (q.matrix.bracketType === "|" || bLower === "vmatrix") {
+        // Determinant vertical lines
+        slide.addShape(pres.ShapeType.line, {
+          x: matrixX,
           y: cursorY,
-          w: matrixImg.w,
-          h: matrixImg.h,
+          w: 0,
+          h: matrixH,
+          line: { color: "FFE600", width: 4.5 },
         });
-        cursorY += matrixImg.h + 0.5;
-      } catch (err) {
-        console.warn("Could not generate matrix PNG, using text fallback:", err);
+        slide.addShape(pres.ShapeType.line, {
+          x: matrixX + matrixW,
+          y: cursorY,
+          w: 0,
+          h: matrixH,
+          line: { color: "FFE600", width: 4.5 },
+        });
+      } else if (q.matrix.bracketType === "(" || bLower === "pmatrix") {
+        // Round parentheses / braces
+        slide.addShape(pres.ShapeType.bracePair, {
+          x: matrixX,
+          y: cursorY,
+          w: matrixW,
+          h: matrixH,
+          line: { color: "FFE600", width: 4.5 },
+          fill: { type: "none" },
+        });
+      } else {
+        // Default standard square matrix [ ... ] with continuous solid bracket pair
+        slide.addShape(pres.ShapeType.bracketPair, {
+          x: matrixX,
+          y: cursorY,
+          w: matrixW,
+          h: matrixH,
+          line: { color: "FFE600", width: 4.5 },
+          fill: { type: "none" },
+        });
       }
+
+      // Add native table inside with Bookman Old Style yellow numbers
+      const tableData = rows.map((r) =>
+        r.map((c) => ({
+          text: c,
+          options: {
+            fontFace: "Bookman Old Style",
+            fontSize: 64,
+            color: "FFE600",
+            bold: true,
+            align: "center" as const,
+            valign: "middle" as const,
+          },
+        }))
+      );
+
+      slide.addTable(tableData, {
+        x: matrixX + 0.6,
+        y: cursorY + 0.2,
+        w: tableW,
+        h: tableH,
+        colW: Array(numCols).fill(colW),
+        rowH: Array(numRows).fill(rowH),
+        border: { type: "none" },
+      });
+
+      cursorY += matrixH + 0.5;
 
       if (q.matrix.postText.trim().length > 0) {
         slide.addText(q.matrix.postText, {
