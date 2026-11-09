@@ -41,7 +41,7 @@ export default function DocumentConverterPage() {
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [isInspecting, setIsInspecting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [targetFormat, setTargetFormat] = useState<"docx" | "pdf">("docx");
+  const [targetFormat, setTargetFormat] = useState<"docx" | "pdf" | "pptx">("docx");
   const [isConverting, setIsConverting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
@@ -284,7 +284,11 @@ export default function DocumentConverterPage() {
     }
 
     // Assembly stage
-    setStatusMessage("Assembling unified Word document with math equation blocks...");
+    setStatusMessage(
+      targetFormat === "pptx"
+        ? "Generating CodeBits PowerPoint presentation (1 question per slide)..."
+        : "Assembling unified Word document with math equation blocks..."
+    );
     setProgress(93);
 
     const assembleRes = await fetch("/api/converter", {
@@ -293,6 +297,7 @@ export default function DocumentConverterPage() {
       body: JSON.stringify({
         mode: "assemble",
         title: baseName,
+        targetFormat,
         sections: extractedSections,
       }),
       signal: controller.signal,
@@ -300,12 +305,12 @@ export default function DocumentConverterPage() {
 
     if (!assembleRes.ok) {
       const errData = await assembleRes.json().catch(() => ({}));
-      throw new Error(errData.error || "Failed to assemble Word document.");
+      throw new Error(errData.error || `Failed to assemble ${targetFormat.toUpperCase()} document.`);
     }
 
     const docxBlob = await assembleRes.blob();
     const finalUrl = window.URL.createObjectURL(docxBlob);
-    const finalName = `${baseName}.docx`;
+    const finalName = `${baseName}.${targetFormat}`;
 
     setProgress(100);
     setStatusMessage("Conversion complete!");
@@ -408,7 +413,11 @@ export default function DocumentConverterPage() {
     }
 
     // Assembly stage
-    setStatusMessage("Assembling unified Word document with math equation formatting...");
+    setStatusMessage(
+      targetFormat === "pptx"
+        ? "Generating CodeBits PowerPoint presentation (1 question per slide)..."
+        : "Assembling unified Word document with math equation formatting..."
+    );
     setProgress(93);
 
     const assembleRes = await fetch("/api/converter", {
@@ -417,6 +426,7 @@ export default function DocumentConverterPage() {
       body: JSON.stringify({
         mode: "assemble",
         title: baseName,
+        targetFormat,
         sections: extractedSections,
       }),
       signal: controller.signal,
@@ -424,12 +434,12 @@ export default function DocumentConverterPage() {
 
     if (!assembleRes.ok) {
       const errData = await assembleRes.json().catch(() => ({}));
-      throw new Error(errData.error || "Failed to assemble Word document.");
+      throw new Error(errData.error || `Failed to assemble ${targetFormat.toUpperCase()} document.`);
     }
 
     const docxBlob = await assembleRes.blob();
     const finalUrl = window.URL.createObjectURL(docxBlob);
-    const finalName = `${baseName}.docx`;
+    const finalName = `${baseName}.${targetFormat}`;
 
     setProgress(100);
     setStatusMessage("Conversion complete!");
@@ -467,7 +477,7 @@ export default function DocumentConverterPage() {
       // Case 2: Large PDF with auto-chunking
       const isLargePdf =
         primaryFile.name.toLowerCase().endsWith(".pdf") &&
-        targetFormat === "docx" &&
+        (targetFormat === "docx" || targetFormat === "pptx") &&
         ((pdfPageCount && pdfPageCount > CHUNK_SIZE) || primaryFile.size > 4 * 1024 * 1024);
 
       if (isLargePdf && pdfPageCount && pdfPageCount > 0) {
@@ -498,7 +508,11 @@ export default function DocumentConverterPage() {
 
       setStatusMessage(
         isImageFile(primaryFile.name)
-          ? "Reconstructing text, math formulas & Venn diagrams with AI Vision..."
+          ? targetFormat === "pptx"
+            ? "Reconstructing questions onto CodeBits PowerPoint slides..."
+            : "Reconstructing text, math formulas & Venn diagrams with AI Vision..."
+          : targetFormat === "pptx"
+          ? "Generating PowerPoint presentation (1 question per slide)..."
           : "Converting document..."
       );
 
@@ -830,19 +844,27 @@ export default function DocumentConverterPage() {
                   <select
                     id="target-format-select"
                     value={targetFormat}
-                    onChange={(e) => setTargetFormat(e.target.value as "docx" | "pdf")}
+                    onChange={(e) => setTargetFormat(e.target.value as "docx" | "pdf" | "pptx")}
                     disabled={isConverting}
                     className="px-3 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-base)] text-[var(--text-primary)] text-sm font-mono font-bold focus:outline-none focus:border-[var(--brand-primary)] cursor-pointer disabled:opacity-50"
                   >
                     {isImageSelection ? (
                       <>
                         <option value="docx">.docx (Word Document with Math Equations)</option>
+                        <option value="pptx">.pptx (CodeBits Presentation • 1 Question per Slide)</option>
                         <option value="pdf">.pdf (PDF Document)</option>
                       </>
                     ) : firstFile?.name.toLowerCase().endsWith(".pdf") ? (
-                      <option value="docx">.docx (Word Document with Math Equations)</option>
+                      <>
+                        <option value="docx">.docx (Word Document with Math Equations)</option>
+                        <option value="pptx">.pptx (CodeBits Presentation • 1 Question per Slide)</option>
+                      </>
                     ) : (
-                      <option value="pdf">.pdf (PDF Document)</option>
+                      <>
+                        <option value="pdf">.pdf (PDF Document)</option>
+                        <option value="pptx">.pptx (CodeBits Presentation • 1 Question per Slide)</option>
+                        <option value="docx">.docx (Word Document)</option>
+                      </>
                     )}
                   </select>
                 </div>

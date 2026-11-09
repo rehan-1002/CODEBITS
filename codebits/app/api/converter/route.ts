@@ -4,6 +4,7 @@ import mammoth from "mammoth";
 import { jsPDF } from "jspdf";
 import { generateContentWithFailover } from "@/lib/ai/gemini";
 import { buildMathParagraph, cleanMathSymbols, buildDocumentElements } from "@/lib/converter/mathDocxFormatter";
+import { buildPptxPresentation } from "@/lib/converter/pptxSlideGenerator";
 import sharp from "sharp";
 import { verifySessionToken, COOKIE_NAME } from "@/lib/auth-server";
 
@@ -182,6 +183,23 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: "No text content provided for assembly." }, { status: 400 });
         }
 
+        const assembleTarget = (jsonBody.targetFormat || "docx").toLowerCase();
+
+        // PPTX Assembly (PowerPoint Slides • 1 Question per Slide on CodeBits Template)
+        if (assembleTarget === "pptx" || assembleTarget === "ppt" || assembleTarget === ".pptx") {
+          const pptxBuffer = await buildPptxPresentation(textToProcess, title);
+          const downloadName = `${title}.pptx`;
+          return new Response(pptxBuffer as any, {
+            status: 200,
+            headers: {
+              "Content-Type":
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+              "Content-Disposition": `attachment; filename="${encodeURIComponent(downloadName)}"`,
+              "Content-Length": pptxBuffer.length.toString(),
+            },
+          });
+        }
+
         const docElements = await buildDocumentElements(textToProcess, title);
 
         const doc = new Document({
@@ -319,9 +337,18 @@ export async function POST(req: NextRequest) {
     }
 
     // ==========================================
-    // 2. IMAGE TO DOCX (AI Optical Math & Handwriting to Word)
+    // 2. IMAGE TO DOCX / PPTX (AI Optical Math & Handwriting)
     // ==========================================
-    if (isImage && (targetFormat === "docx" || targetFormat === ".docx" || !targetFormat || targetFormat === "doc")) {
+    if (
+      isImage &&
+      (targetFormat === "docx" ||
+        targetFormat === ".docx" ||
+        targetFormat === "pptx" ||
+        targetFormat === ".pptx" ||
+        targetFormat === "ppt" ||
+        !targetFormat ||
+        targetFormat === "doc")
+    ) {
       let extractedText = "";
       let aiErrorMessage = "";
 
@@ -383,6 +410,21 @@ export async function POST(req: NextRequest) {
           },
           { status: 422 }
         );
+      }
+
+      // PPTX Output: PowerPoint Slide per Question with CodeBits Slide Template & Yellow Text
+      if (targetFormat === "pptx" || targetFormat === ".pptx" || targetFormat === "ppt") {
+        const pptxBuffer = await buildPptxPresentation(extractedText, baseName);
+        const downloadName = `${baseName}.pptx`;
+        return new Response(pptxBuffer as any, {
+          status: 200,
+          headers: {
+            "Content-Type":
+              "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "Content-Disposition": `attachment; filename="${encodeURIComponent(downloadName)}"`,
+            "Content-Length": pptxBuffer.length.toString(),
+          },
+        });
       }
 
       // Build formatted Word (.docx) document with native Math equations, Matrices, and Tables
@@ -583,6 +625,21 @@ export async function POST(req: NextRequest) {
           },
           { status: 422 }
         );
+      }
+
+      // PPTX Output from PDF: PowerPoint Slide per Question with CodeBits Slide Template & Yellow Text
+      if (targetFormat === "pptx" || targetFormat === ".pptx" || targetFormat === "ppt") {
+        const pptxBuffer = await buildPptxPresentation(extractedText, baseName);
+        const downloadName = `${baseName}.pptx`;
+        return new Response(pptxBuffer as any, {
+          status: 200,
+          headers: {
+            "Content-Type":
+              "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "Content-Disposition": `attachment; filename="${encodeURIComponent(downloadName)}"`,
+            "Content-Length": pptxBuffer.length.toString(),
+          },
+        });
       }
 
       // Step C: Build formatted Word (.docx) document with native Math equations, Matrices, and Tables
