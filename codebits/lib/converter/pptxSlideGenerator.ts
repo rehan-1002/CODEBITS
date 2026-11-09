@@ -16,7 +16,112 @@ export interface ParsedQuestion {
 }
 
 /**
+ * Finds the index of the matching closing brace '}' taking nested braces into account.
+ */
+function findClosingBrace(str: string, startIdx: number): number {
+  let depth = 0;
+  for (let i = startIdx; i < str.length; i++) {
+    if (str[i] === "{") depth++;
+    else if (str[i] === "}") {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
+const SUPERSCRIPT_MAP: Record<string, string> = {
+  "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴",
+  "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹",
+  "+": "⁺", "-": "⁻", "n": "ⁿ", "x": "ˣ", "i": "ⁱ",
+  "a": "ᵃ", "b": "ᵇ", "t": "ᵗ", "k": "ᵏ", "m": "ᵐ"
+};
+
+const SUBSCRIPT_MAP: Record<string, string> = {
+  "0": "₀", "1": "₁", "2": "₂", "3": "₃", "4": "₄",
+  "5": "₅", "6": "₆", "7": "₇", "8": "₈", "9": "₉",
+  "n": "ₙ", "i": "ᵢ", "j": "ⱼ", "k": "ₖ", "x": "ₓ", "y": "ᵧ"
+};
+
+/**
+ * Formats superscripts safely without corrupting subsequent arithmetic operators (+, -).
+ */
+function formatSuperscripts(text: string): string {
+  // 1. Explicit LaTeX braces: ^{...} (e.g. e^{-at} -> e⁻ᵃᵗ, x^{2} -> x²)
+  let s = text.replace(/\^\{([^{}]+)\}/g, (_, exp) => {
+    return exp.split("").map((c: string) => SUPERSCRIPT_MAP[c] || c).join("");
+  });
+
+  // 2. Negative single exponent: ^-1 -> ⁻¹, ^-2 -> ⁻²
+  s = s.replace(/\^-([0-9a-zA-Z])/g, (_, char) => "⁻" + (SUPERSCRIPT_MAP[char] || char));
+
+  // 3. Single digit or single variable: ^2 -> ², ^n -> ⁿ, ^x -> ˣ
+  // STRICT: only match a single alphanum character, NEVER match trailing + or -
+  s = s.replace(/\^([0-9a-zA-Z])/g, (_, char) => SUPERSCRIPT_MAP[char] || char);
+
+  return s;
+}
+
+/**
+ * Resolves LaTeX fractions (\frac{num}{den}, \dfrac, \tfrac) using balanced brace parsing.
+ * Formats numeric fractions into clean unicode (½, ¼, ¾) and algebraic expressions into
+ * authentic stacked vertical fractions with a continuous fraction line.
+ */
+function resolveFractions(text: string): string {
+  let s = text;
+  const fracRegex = /\\(?:d?frac|tfrac)\s*\{/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = fracRegex.exec(s)) !== null) {
+    const numStart = match.index + match[0].length - 1;
+    const numEnd = findClosingBrace(s, numStart);
+    if (numEnd === -1) break;
+
+    const numerator = s.slice(numStart + 1, numEnd);
+    const afterNum = s.slice(numEnd + 1).trimStart();
+    if (!afterNum.startsWith("{")) break;
+
+    const denStart = s.indexOf("{", numEnd + 1);
+    const denEnd = findClosingBrace(s, denStart);
+    if (denEnd === -1) break;
+
+    const denominator = s.slice(denStart + 1, denEnd);
+    const fullFrac = s.slice(match.index, denEnd + 1);
+
+    // Recursively clean numerator and denominator
+    const cNum = cleanTextForSlide(numerator);
+    const cDen = cleanTextForSlide(denominator);
+
+    let replacement = "";
+    // 1. Common numeric fractions
+    if (cNum === "1" && cDen === "2") replacement = "½";
+    else if (cNum === "1" && cDen === "4") replacement = "¼";
+    else if (cNum === "3" && cDen === "4") replacement = "¾";
+    else if (cNum === "1" && cDen === "3") replacement = "⅓";
+    else if (cNum === "2" && cDen === "3") replacement = "⅔";
+    // 2. Short single-variable inline fractions e.g. kx / y
+    else if (cNum.length <= 3 && cDen.length <= 3 && !cNum.includes(" ") && !cDen.includes(" ")) {
+      replacement = `(${cNum} / ${cDen})`;
+    }
+    // 3. Full algebraic / polynomial stacked vertical fraction
+    else {
+      const maxLen = Math.max(cNum.length, cDen.length) + 4;
+      const bar = "─".repeat(maxLen);
+      const padNum = " ".repeat(Math.floor((maxLen - cNum.length) / 2)) + cNum;
+      const padDen = " ".repeat(Math.floor((maxLen - cDen.length) / 2)) + cDen;
+      replacement = `\n${padNum}\n${bar}\n${padDen}\n`;
+    }
+
+    s = s.replace(fullFrac, replacement);
+    fracRegex.lastIndex = match.index + replacement.length;
+  }
+
+  return s;
+}
+
+/**
  * Normalizes text, matrices, and mathematical equations for clean presentation on PowerPoint slides.
+ * Replaces all raw LaTeX artifacts with authentic KaTeX-grade mathematical typography.
  */
 function cleanTextForSlide(raw: string): string {
   if (!raw) return "";
@@ -29,23 +134,54 @@ function cleanTextForSlide(raw: string): string {
   s = s.replace(/\*([^*]+)\*/g, "$1");
   s = s.replace(/`([^`]+)`/g, "$1");
 
-  // 2. Matrices: format LaTeX \begin{bmatrix} / beginbmatrix into clean aligned rows
+  // 2. Clean KaTeX Delimiters BEFORE stripping backslashes
+  s = s.replace(/\\left\s*\\?\[/g, "[");
+  s = s.replace(/\\right\s*\\?\]/g, "]");
+  s = s.replace(/\\left\s*\\?\(/g, "(");
+  s = s.replace(/\\right\s*\\?\)/g, ")");
+  s = s.replace(/\\left\s*\\?\{/g, "{");
+  s = s.replace(/\\right\s*\\?\}/g, "}");
+  s = s.replace(/\\left\s*\\?\|/g, "|");
+  s = s.replace(/\\right\s*\\?\|/g, "|");
+  s = s.replace(/\\left\s*\\?\./g, "");
+  s = s.replace(/\\right\s*\\?\./g, "");
+  s = s.replace(/\\(?:left|right)\b/g, "");
+
+  // Clean mangled remnants of delimiters (e.g. left\ or right\. or tright\.)
+  s = s.replace(/\bleft\\?/gi, "");
+  s = s.replace(/\bright\\?\.?/gi, "");
+  s = s.replace(/\btright\\?\.?/gi, "");
+
+  // 3. Laplace transforms and text modifiers
+  s = s.replace(/\\(?:mathcal|mathscr|mathbf)\{L\}/g, "L");
+  s = s.replace(/\\mathcal\{([A-Za-z])\}/g, "$1");
+  s = s.replace(/\\mathrm\{([^{}]+)\}/g, "$1");
+  s = s.replace(/\\text\{([^{}]+)\}/g, "$1");
+  s = s.replace(/\\bm\{([^{}]+)\}/g, "$1");
+  s = s.replace(/\\mathbf\{([^{}]+)\}/g, "$1");
+  s = s.replace(/\\displaystyle\b/g, "");
+  s = s.replace(/\\limits\b/g, "");
+  s = s.replace(/\\(?:qquad|quad)\b/g, "  ");
+
+  // 4. Trigonometric and standard transcendental functions
+  s = s.replace(/\\tan\^\{-?1\}|\\arctan/g, "tan⁻¹");
+  s = s.replace(/\\sin\^\{-?1\}|\\arcsin/g, "sin⁻¹");
+  s = s.replace(/\\cos\^\{-?1\}|\\arccos/g, "cos⁻¹");
+  s = s.replace(/\\(?:sin|cos|tan|log|ln|sinh|cosh|tanh|sec|csc|cosec|cot|det|exp)\b/g, (m) => m.slice(1));
+
+  // 5. Matrices: format LaTeX \begin{bmatrix} / beginbmatrix into clean aligned rows
   s = s.replace(/(?:\\begin\{[a-zA-Z]*matrix\}|begin[a-zA-Z]*matrix)([\s\S]*?)(?:\\end\{[a-zA-Z]*matrix\}|end[a-zA-Z]*matrix)/gi, (_, body) => {
-    // If rows separated by \\ or newlines
     if (body.includes("\\\\") || body.includes("\n")) {
       const rawRows = body.split(/\\\\|\n/).map((r: string) => r.trim()).filter(Boolean);
       return "\n" + rawRows.map((r: string) => "  [  " + r.replace(/&/g, "    ").trim() + "  ]").join("\n");
     }
-    // Tokenize elements
     const rawTokens = body.replace(/&/g, " ").trim().split(/\s+/).filter(Boolean);
     if (rawTokens.length === 9) {
-      // 3x3 matrix
       const r1 = rawTokens.slice(0, 3).join("     ");
       const r2 = rawTokens.slice(3, 6).join("     ");
       const r3 = rawTokens.slice(6, 9).join("     ");
       return `\n  [  ${r1}  ]\n  [  ${r2}  ]\n  [  ${r3}  ]`;
     } else if (rawTokens.length === 4) {
-      // 2x2 matrix
       const r1 = rawTokens.slice(0, 2).join("     ");
       const r2 = rawTokens.slice(2, 4).join("     ");
       return `\n  [  ${r1}  ]\n  [  ${r2}  ]`;
@@ -53,7 +189,7 @@ function cleanTextForSlide(raw: string): string {
     return " [ " + body.replace(/&/g, "  ").trim() + " ]";
   });
 
-  // 3. Piecewise / Cases: format \begin{cases} / begincases cleanly
+  // 6. Piecewise / Cases: format \begin{cases} / begincases cleanly
   s = s.replace(/(?:\\begin\{cases\}|begincases)([\s\S]*?)(?:\\end\{cases\}|endcases)/gi, (_, body) => {
     if (body.includes("\\\\") || body.includes("\n")) {
       const rawParts = body.split(/\\\\|\n/).map((p: string) => p.trim()).filter(Boolean);
@@ -66,47 +202,91 @@ function cleanTextForSlide(raw: string): string {
     return "\n   • " + body.replace(/&/g, "   ").trim();
   });
 
-  // 4. Fractions from LaTeX \frac{a}{b} -> (a / b)
-  s = s.replace(/\\(?:d?frac|tfrac)\{([^}]+)\}\{([^}]+)\}/g, "($1 / $2)");
+  // 7. Balanced LaTeX Fractions
+  s = resolveFractions(s);
 
-  // 5. Exponents / Superscripts: x^2 -> x², 5^11 -> 5¹¹, e^-x -> e⁻ˣ
-  const supMap: Record<string, string> = {
-    "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴",
-    "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹",
-    "+": "⁺", "-": "⁻", "n": "ⁿ", "x": "ˣ", "i": "ⁱ"
-  };
-  s = s.replace(/\^\{([0-9+\-nxi]+)\}/g, (_, exp) => exp.split("").map((c: string) => supMap[c] || c).join(""));
-  s = s.replace(/\^([0-9+\-nxi]+)/g, (_, exp) => exp.split("").map((c: string) => supMap[c] || c).join(""));
+  // 8. Exponents & Superscripts
+  s = formatSuperscripts(s);
 
-  // 6. Subscripts: a_n -> aₙ, x_1 -> x₁, x_2 -> x₂, x1 -> x₁, x2 -> x₂
-  const subMap: Record<string, string> = {
-    "0": "₀", "1": "₁", "2": "₂", "3": "₃", "4": "₄",
-    "5": "₅", "6": "₆", "7": "₇", "8": "₈", "9": "₉",
-    "n": "ₙ", "i": "ᵢ", "j": "ⱼ"
-  };
-  s = s.replace(/([a-zA-Z])_([0-9nij])/g, (_, v, idx) => v + (subMap[idx] || idx));
-  s = s.replace(/\b([xyz])([0-9])\b/g, (_, v, idx) => v + (subMap[idx] || idx));
+  // 9. Subscripts
+  s = s.replace(/_\{([^{}]+)\}/g, (_, sub) => {
+    return sub.split("").map((c: string) => SUBSCRIPT_MAP[c] || c).join("");
+  });
+  s = s.replace(/_([0-9nijkyx])/g, (_, idx) => SUBSCRIPT_MAP[idx] || idx);
+  s = s.replace(/\b([xyz])([0-9])\b/g, (_, v, idx) => v + (SUBSCRIPT_MAP[idx] || idx));
 
-  // 7. Standard mathematical symbols & greek letters
-  s = s.replace(/<=/g, "≤");
-  s = s.replace(/>=/g, "≥");
-  s = s.replace(/!=/g, "≠");
+  // 10. Greek Letters (all standard KaTeX symbols)
+  s = s.replace(/\\alpha\b/gi, "α");
+  s = s.replace(/\\beta\b/gi, "β");
+  s = s.replace(/\\gamma\b/gi, "γ");
+  s = s.replace(/\\delta\b/gi, "δ");
+  s = s.replace(/\\epsilon\b|\\varepsilon\b/gi, "ε");
+  s = s.replace(/\\zeta\b/gi, "ζ");
+  s = s.replace(/\\eta\b/gi, "η");
+  s = s.replace(/\\theta\b/gi, "θ");
+  s = s.replace(/\\iota\b/gi, "ι");
+  s = s.replace(/\\kappa\b/gi, "κ");
+  s = s.replace(/\\lambda\b/gi, "λ");
+  s = s.replace(/\\mu\b/gi, "μ");
+  s = s.replace(/\\nu\b/gi, "ν");
+  s = s.replace(/\\xi\b/gi, "ξ");
   s = s.replace(/\\pi\b|\bpi\b/gi, "π");
-  s = s.replace(/\\theta\b|\btheta\b/gi, "θ");
-  s = s.replace(/\\lambda\b|\blambda\b/gi, "λ");
-  s = s.replace(/\\alpha\b|\balpha\b/gi, "α");
-  s = s.replace(/\\beta\b|\bbeta\b/gi, "β");
+  s = s.replace(/\\rho\b/gi, "ρ");
+  s = s.replace(/\\sigma\b/gi, "σ");
+  s = s.replace(/\\tau\b/gi, "τ");
+  s = s.replace(/\\upsilon\b/gi, "υ");
+  s = s.replace(/\\phi\b|\\varphi\b/gi, "φ");
+  s = s.replace(/\\chi\b/gi, "χ");
+  s = s.replace(/\\psi\b/gi, "ψ");
+  s = s.replace(/\\omega\b/gi, "ω");
+  s = s.replace(/\\Gamma\b/g, "Γ");
+  s = s.replace(/\\Delta\b/g, "Δ");
+  s = s.replace(/\\Theta\b/g, "Θ");
+  s = s.replace(/\\Lambda\b/g, "Λ");
+  s = s.replace(/\\Sigma\b/g, "Σ");
+  s = s.replace(/\\Phi\b/g, "Φ");
+  s = s.replace(/\\Psi\b/g, "Ψ");
+  s = s.replace(/\\Omega\b/g, "Ω");
+
+  // 11. Calculus, Sets, and Comparison Operators
+  s = s.replace(/<=|\\le(?:q)?\b/g, "≤");
+  s = s.replace(/>=|\\ge(?:q)?\b/g, "≥");
+  s = s.replace(/!=|\\ne(?:q)?\b/g, "≠");
+  s = s.replace(/\\approx\b/g, "≈");
+  s = s.replace(/\\equiv\b/g, "≡");
+  s = s.replace(/\\infty\b/g, "∞");
+  s = s.replace(/\\partial\b/g, "∂");
+  s = s.replace(/\\nabla\b/g, "∇");
+  s = s.replace(/\\iiint\b/g, "∭");
+  s = s.replace(/\\iint\b/g, "∬");
   s = s.replace(/\\int\b/g, "∫");
+  s = s.replace(/\\oint\b/g, "∮");
   s = s.replace(/\\sum\b/g, "∑");
+  s = s.replace(/\\prod\b/g, "∏");
+  s = s.replace(/\\sqrt\b/g, "√");
   s = s.replace(/\\times\b/g, "×");
   s = s.replace(/\\div\b/g, "÷");
+  s = s.replace(/\\pm\b/g, "±");
+  s = s.replace(/\\mp\b/g, "∓");
+  s = s.replace(/\\cdot\b/g, "·");
+  s = s.replace(/\\to\b|\\rightarrow\b/g, "→");
+  s = s.replace(/\\leftarrow\b/g, "←");
+  s = s.replace(/\\Rightarrow\b/g, "⇒");
+  s = s.replace(/\\Leftrightarrow\b/g, "⇔");
+  s = s.replace(/\\in\b/g, "∈");
+  s = s.replace(/\\notin\b/g, "∉");
+  s = s.replace(/\\cap\b/g, "∩");
+  s = s.replace(/\\cup\b/g, "∪");
 
-  // 8. Clean leftover LaTeX escape backslashes and braces
+  // 12. Clean double parentheses like ((kx / y)) -> (kx / y)
+  s = s.replace(/\(\s*\(([^()]+)\)\s*\)/g, "($1)");
+
+  // 13. Clean leftover LaTeX escape backslashes and braces
   s = s.replace(/\\([a-zA-Z]+)/g, "$1");
   s = s.replace(/[{}]/g, "");
   s = s.replace(/\$+/g, "");
 
-  // 9. Normalize spacing
+  // 14. Clean double spaces and line gaps
   s = s.replace(/[ \t]+/g, " ");
   s = s.replace(/\n{3,}/g, "\n\n");
 
@@ -114,10 +294,37 @@ function cleanTextForSlide(raw: string): string {
 }
 
 /**
+ * Checks if a line is an administrative exam header or rule instruction
+ * (e.g. "Attempt any 5", "Time: 3 Hours", "Question 1 is compulsory")
+ * which must NOT appear on the question slides.
+ */
+function isExamMetadataOrInstruction(line: string): boolean {
+  const l = line.trim().toLowerCase();
+  if (!l) return false;
+
+  // University / College header lines
+  if (/^(?:university|institute|college|department|faculty|examination|semester|branch|subject\s*code|course\s*code)/i.test(l)) return true;
+  if (/^(?:time\s*[:=]|duration\s*[:=]|max(?:imum)?\s*marks|total\s*marks|date\s*[:=]|day\s*[:=])/i.test(l)) return true;
+
+  // Section / Part headers
+  if (/^(?:section|part|module)\s*[-–:]?\s*[0-9a-zivx]+/i.test(l) && l.length < 30) return true;
+
+  // General Instructions & Exam rules
+  if (/^(?:n\.?\s*b\.?|note\s*[:.]|instructions?\s*(?:to\s*candidates)?[:.])/i.test(l)) return true;
+  if (l.includes("compulsory") && (l.includes("question") || l.includes("q.1") || l.includes("q1"))) return true;
+  if (l.includes("attempt any") || l.includes("answer any") || l.includes("solve any")) return true;
+  if (l.includes("figures to the right indicate") || l.includes("indicate full marks")) return true;
+  if (l.includes("assume suitable data") || l.includes("calculator is allowed") || l.includes("non-programmable")) return true;
+
+  return false;
+}
+
+/**
  * Intelligent question & sub-question segmentation engine:
- * Splits raw exam paper text so that EVERY sub-question (e.g. Q.1 (a), Q.1 (b)...)
- * receives its own dedicated slide.
- * Also parses markdown tables and removes floating marks numbers.
+ * 1. Ensures EVERY sub-question receives its own dedicated slide.
+ * 2. Filters out all exam administration metadata and instructions ("add only questions nothing else").
+ * 3. Extracts marks counts ([3 MARKS], [5 MARKS]) into header badges.
+ * 4. Extracts Markdown tables into structured presentation tables.
  */
 export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
   if (!raw || !raw.trim()) return [];
@@ -151,6 +358,11 @@ export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
       const trimmed = bLine.trim();
       if (!trimmed) {
         if (textLines.length > 0) textLines.push("");
+        continue;
+      }
+
+      // Skip exam metadata or rules if accidentally caught in body
+      if (isExamMetadataOrInstruction(trimmed)) {
         continue;
       }
 
@@ -208,6 +420,11 @@ export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
       continue;
     }
 
+    // Skip all top-level exam administrative metadata and instructions
+    if (isExamMetadataOrInstruction(line)) {
+      continue;
+    }
+
     // 1. Check if line is a main question header
     const mainMatch = line.match(mainQRegex);
     if (mainMatch) {
@@ -221,25 +438,22 @@ export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
         currentMainQ = `Q.${qNum}`;
         currentSubQ = subMatchInRemainder[1] || subMatchInRemainder[2] || subMatchInRemainder[3];
         const subText = subMatchInRemainder[4];
-        if (subText) bodyLines.push(subText);
+        if (subText && !isExamMetadataOrInstruction(subText)) {
+          bodyLines.push(subText);
+        }
         continue;
       }
 
       // Check if remainder is just an instruction line (e.g. "Attempt any Five Questions from the following.")
-      const isInstruction =
-        remainder.toLowerCase().includes("attempt") ||
-        remainder.toLowerCase().includes("following") ||
-        remainder.length === 0;
-
-      if (isInstruction) {
+      if (isExamMetadataOrInstruction(remainder) || remainder.length === 0) {
         flush();
         currentMainQ = `Q.${qNum}`;
         currentSubQ = "";
-        // Do not create an empty slide for the instruction if sub-questions follow
+        // Do not create an empty slide for the instruction
         continue;
       }
 
-      // It's a complete standalone question without sub-parts
+      // Standalone main question without sub-parts
       flush();
       currentMainQ = `Q.${qNum}`;
       currentSubQ = "";
@@ -253,7 +467,9 @@ export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
       flush();
       currentSubQ = subMatch[1] || subMatch[2] || subMatch[3];
       const subText = subMatch[4];
-      if (subText) bodyLines.push(subText);
+      if (subText && !isExamMetadataOrInstruction(subText)) {
+        bodyLines.push(subText);
+      }
       continue;
     }
 
@@ -266,15 +482,15 @@ export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
       continue;
     }
 
-    // 4. Regular body line
+    // 4. Regular question statement line
     bodyLines.push(line);
   }
 
   flush();
 
-  // Fallback: If no question or sub-question was recognized, split by double newlines
+  // Fallback: If no question structure was detected, split by paragraphs
   if (questions.length === 0) {
-    const paragraphs = raw.split(/\n\s*\n/).filter((p) => p.trim().length > 10);
+    const paragraphs = raw.split(/\n\s*\n/).filter((p) => p.trim().length > 10 && !isExamMetadataOrInstruction(p));
     paragraphs.forEach((p, idx) => {
       questions.push({
         header: `QUESTION ${idx + 1}`,
@@ -310,11 +526,13 @@ function getTemplateBase64(): string {
 
 /**
  * Generates an institutional PowerPoint presentation where:
- * 1. Each sub-question is cleanly isolated onto its own slide.
- * 2. Font is Bookman Old Style, size 80 pt (scaled adaptively for long questions).
- * 3. Question text is high-contrast vibrant yellow (#FFE600).
- * 4. Markdown tables are cleanly rendered as native PowerPoint tables with emerald borders.
- * 5. Dimensions are exact user specs: 101.6 cm (40.0 inches) x 52.07 cm (20.5 inches).
+ * 1. ONLY real questions appear (all metadata, rules, instructions excluded).
+ * 2. Each sub-question is cleanly isolated onto its own slide.
+ * 3. Font is Bookman Old Style, size 80 pt (scaled adaptively for long questions).
+ * 4. Question text is high-contrast vibrant yellow (#FFE600).
+ * 5. Fractions are rendered as authentic KaTeX-grade stacked fractions.
+ * 6. Markdown tables are cleanly rendered as native PowerPoint tables with emerald borders.
+ * 7. Dimensions are exact user specs: 101.6 cm (40.0 inches) x 52.07 cm (20.5 inches).
  */
 export async function buildPptxPresentation(
   rawText: string,
@@ -389,7 +607,7 @@ export async function buildPptxPresentation(
     let lineSpacing = 104;
 
     if (hasTable) {
-      // With a table present, keep the question statement prominent at 60-68 pt so the table fits comfortably
+      // With a table present, keep the question statement prominent at 54-64 pt so the table fits comfortably
       fontSize = charCount > 180 ? 54 : 64;
       lineSpacing = 82;
     } else {
