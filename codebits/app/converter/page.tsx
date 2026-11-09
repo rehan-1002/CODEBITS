@@ -42,6 +42,7 @@ export default function DocumentConverterPage() {
   const [isInspecting, setIsInspecting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [targetFormat, setTargetFormat] = useState<"docx" | "pdf" | "pptx">("docx");
+  const [pptTemplate, setPptTemplate] = useState<"codebits" | "sonam">("codebits");
   const [isConverting, setIsConverting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
@@ -286,7 +287,7 @@ export default function DocumentConverterPage() {
     // Assembly stage
     setStatusMessage(
       targetFormat === "pptx"
-        ? "Generating CodeBits PowerPoint presentation (1 question per slide)..."
+        ? `Generating ${pptTemplate === "sonam" ? "Sonam" : "CodeBits"} PowerPoint presentation (1 question per slide)...`
         : "Assembling unified Word document with math equation blocks..."
     );
     setProgress(93);
@@ -298,6 +299,7 @@ export default function DocumentConverterPage() {
         mode: "assemble",
         title: baseName,
         targetFormat,
+        pptTemplate,
         sections: extractedSections,
       }),
       signal: controller.signal,
@@ -415,7 +417,7 @@ export default function DocumentConverterPage() {
     // Assembly stage
     setStatusMessage(
       targetFormat === "pptx"
-        ? "Generating CodeBits PowerPoint presentation (1 question per slide)..."
+        ? `Generating ${pptTemplate === "sonam" ? "Sonam" : "CodeBits"} PowerPoint presentation (1 question per slide)...`
         : "Assembling unified Word document with math equation formatting..."
     );
     setProgress(93);
@@ -427,6 +429,7 @@ export default function DocumentConverterPage() {
         mode: "assemble",
         title: baseName,
         targetFormat,
+        pptTemplate,
         sections: extractedSections,
       }),
       signal: controller.signal,
@@ -505,14 +508,17 @@ export default function DocumentConverterPage() {
       const formData = new FormData();
       formData.append("file", fileToUpload);
       formData.append("targetFormat", targetFormat);
+      if (targetFormat === "pptx") {
+        formData.append("pptTemplate", pptTemplate);
+      }
 
       setStatusMessage(
         isImageFile(primaryFile.name)
           ? targetFormat === "pptx"
-            ? "Reconstructing questions onto CodeBits PowerPoint slides..."
+            ? `Reconstructing questions onto ${pptTemplate === "sonam" ? "Sonam" : "CodeBits"} PowerPoint slides...`
             : "Reconstructing text, math formulas & Venn diagrams with AI Vision..."
           : targetFormat === "pptx"
-          ? "Generating PowerPoint presentation (1 question per slide)..."
+          ? `Generating ${pptTemplate === "sonam" ? "Sonam" : "CodeBits"} PowerPoint presentation (1 question per slide)...`
           : "Converting document..."
       );
 
@@ -837,36 +843,56 @@ export default function DocumentConverterPage() {
 
               {/* Conversion Target Controls */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)]">
-                <div className="flex items-center gap-3">
-                  <label htmlFor="target-format-select" className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--text-secondary)]">
-                    Convert to
-                  </label>
-                  <select
-                    id="target-format-select"
-                    value={targetFormat}
-                    onChange={(e) => setTargetFormat(e.target.value as "docx" | "pdf" | "pptx")}
-                    disabled={isConverting}
-                    className="px-3 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-base)] text-[var(--text-primary)] text-sm font-mono font-bold focus:outline-none focus:border-[var(--brand-primary)] cursor-pointer disabled:opacity-50"
-                  >
-                    {isImageSelection ? (
-                      <>
-                        <option value="docx">.docx (Word Document with Math Equations)</option>
-                        <option value="pptx">.pptx (CodeBits Presentation • 1 Question per Slide)</option>
-                        <option value="pdf">.pdf (PDF Document)</option>
-                      </>
-                    ) : firstFile?.name.toLowerCase().endsWith(".pdf") ? (
-                      <>
-                        <option value="docx">.docx (Word Document with Math Equations)</option>
-                        <option value="pptx">.pptx (CodeBits Presentation • 1 Question per Slide)</option>
-                      </>
-                    ) : (
-                      <>
-                        <option value="pdf">.pdf (PDF Document)</option>
-                        <option value="pptx">.pptx (CodeBits Presentation • 1 Question per Slide)</option>
-                        <option value="docx">.docx (Word Document)</option>
-                      </>
-                    )}
-                  </select>
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="target-format-select" className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                      Convert to
+                    </label>
+                    <select
+                      id="target-format-select"
+                      value={targetFormat}
+                      onChange={(e) => setTargetFormat(e.target.value as "docx" | "pdf" | "pptx")}
+                      disabled={isConverting}
+                      className="px-3 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-base)] text-[var(--text-primary)] text-sm font-mono font-bold focus:outline-none focus:border-[var(--brand-primary)] cursor-pointer disabled:opacity-50"
+                    >
+                      {isImageSelection ? (
+                        <>
+                          <option value="docx">.docx (Word Document with Math Equations)</option>
+                          <option value="pptx">.pptx (Presentation • 1 Question per Slide)</option>
+                          <option value="pdf">.pdf (PDF Document)</option>
+                        </>
+                      ) : firstFile?.name.toLowerCase().endsWith(".pdf") ? (
+                        <>
+                          <option value="docx">.docx (Word Document with Math Equations)</option>
+                          <option value="pptx">.pptx (Presentation • 1 Question per Slide)</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="pdf">.pdf (PDF Document)</option>
+                          <option value="pptx">.pptx (Presentation • 1 Question per Slide)</option>
+                          <option value="docx">.docx (Word Document)</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+
+                  {targetFormat === "pptx" && (
+                    <div className="flex items-center gap-2 animate-in fade-in duration-200">
+                      <label htmlFor="ppt-template-select" className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                        Template
+                      </label>
+                      <select
+                        id="ppt-template-select"
+                        value={pptTemplate}
+                        onChange={(e) => setPptTemplate(e.target.value as "codebits" | "sonam")}
+                        disabled={isConverting}
+                        className="px-3 py-1.5 rounded-lg border border-[var(--brand-primary)] bg-[var(--surface-base)] text-[var(--text-primary)] text-sm font-mono font-bold focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)] cursor-pointer disabled:opacity-50"
+                      >
+                        <option value="codebits">CodeBits</option>
+                        <option value="sonam">Sonam</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">

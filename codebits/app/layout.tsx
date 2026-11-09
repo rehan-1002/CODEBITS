@@ -1,12 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import {
-  Plus_Jakarta_Sans,
-  Space_Grotesk,
-  Newsreader,
-  Outfit,
-  JetBrains_Mono,
-} from "next/font/google";
+import { Inter, JetBrains_Mono, Geist } from "next/font/google";
 import "./globals.css";
 import "katex/dist/katex.min.css";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
@@ -14,33 +8,17 @@ import { SmoothScroll } from "@/components/providers/SmoothScroll";
 import { GlobalShell } from "@/components/providers/GlobalShell";
 import { cn } from "@/lib/utils";
 
-const plusJakartaSans = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  variable: "--font-jakarta",
-  display: "swap",
-});
+const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 
-const spaceGrotesk = Space_Grotesk({
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
-  variable: "--font-space",
-  display: "swap",
-});
-
-const newsreader = Newsreader({
-  subsets: ["latin"],
-  variable: "--font-newsreader",
-  display: "swap",
-});
-
-const outfit = Outfit({
-  subsets: ["latin"],
-  variable: "--font-outfit",
   display: "swap",
 });
 
 const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
-  variable: "--font-jetbrains",
   display: "swap",
 });
 
@@ -164,14 +142,7 @@ export default function RootLayout({
     <html
       lang="en"
       data-theme="light"
-      className={cn(
-        "antialiased font-sans light",
-        plusJakartaSans.variable,
-        spaceGrotesk.variable,
-        newsreader.variable,
-        outfit.variable,
-        jetbrainsMono.variable
-      )}
+      className={cn("antialiased", inter.variable, jetbrainsMono.variable, "font-sans", geist.variable, "light")}
       suppressHydrationWarning
     >
       <head>

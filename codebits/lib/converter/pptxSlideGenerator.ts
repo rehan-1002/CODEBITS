@@ -532,16 +532,17 @@ export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
 }
 
 /**
- * Loads the official CodeBits slide template image and converts to base64.
+ * Loads the official slide template image (CodeBits or Sonam) and converts to base64.
  */
-function getTemplateBase64(): string {
+function getTemplateBase64(template: "codebits" | "sonam" = "codebits"): string {
   try {
-    const publicPath = path.join(process.cwd(), "public", "templates", "codebits-slide-template.png");
+    const filename = template === "sonam" ? "sonam-slide-template.png" : "codebits-slide-template.png";
+    const publicPath = path.join(process.cwd(), "public", "templates", filename);
     if (fs.existsSync(publicPath)) {
       return fs.readFileSync(publicPath).toString("base64");
     }
 
-    const fallbackPath = path.join(process.cwd(), "codebits", "public", "templates", "codebits-slide-template.png");
+    const fallbackPath = path.join(process.cwd(), "codebits", "public", "templates", filename);
     if (fs.existsSync(fallbackPath)) {
       return fs.readFileSync(fallbackPath).toString("base64");
     }
@@ -559,19 +560,25 @@ function getTemplateBase64(): string {
  * 4. Question text is high-contrast vibrant yellow (#FFE600).
  * 5. Fractions are rendered as authentic KaTeX-grade stacked fractions.
  * 6. Matrices are rendered as one single, continuous, solid 2D block with zero line-gap breaks.
- * 7. Markdown tables are cleanly rendered as native PowerPoint tables with emerald borders.
+ * 7. Markdown tables are cleanly rendered as native PowerPoint tables with branded borders.
  * 8. Dimensions are exact user specs: 101.6 cm (40.0 inches) x 52.07 cm (20.5 inches).
+ * 9. Supports both "codebits" and "sonam" slide themes with authentic branding.
  */
 export async function buildPptxPresentation(
   rawText: string,
-  title = "CodeBits Question Paper"
+  title = "Question Paper",
+  template: "codebits" | "sonam" = "codebits"
 ): Promise<Buffer> {
   const pres = createPresentationInstance();
-  pres.defineLayout({ name: "CODEBITS_CUSTOM", width: 40.0, height: 20.5 });
-  pres.layout = "CODEBITS_CUSTOM";
+  const isSonam = template === "sonam";
+  const brandAccent = isSonam ? "F11D27" : "00C269";
+  const layoutName = isSonam ? "SONAM_CUSTOM" : "CODEBITS_CUSTOM";
+
+  pres.defineLayout({ name: layoutName, width: 40.0, height: 20.5 });
+  pres.layout = layoutName;
   pres.title = title;
 
-  const bgBase64 = getTemplateBase64();
+  const bgBase64 = getTemplateBase64(template);
   const backgroundOption = bgBase64
     ? { data: `image/png;base64,${bgBase64}` }
     : { color: "0B0F0E" };
@@ -581,7 +588,7 @@ export async function buildPptxPresentation(
   if (questions.length === 0) {
     const slide = pres.addSlide();
     slide.background = backgroundOption;
-    slide.addText("CodeBits Presentation", {
+    slide.addText(isSonam ? "Sonam Tuitions Presentation" : "CodeBits Presentation", {
       x: 2.5,
       y: 4.0,
       w: 35.0,
@@ -589,7 +596,7 @@ export async function buildPptxPresentation(
       fontFace: "Bookman Old Style",
       fontSize: 80,
       bold: true,
-      color: "00C269",
+      color: brandAccent,
     });
     slide.addText("No questions were detected in this document.", {
       x: 2.5,
@@ -609,7 +616,7 @@ export async function buildPptxPresentation(
     const slide = pres.addSlide();
     slide.background = backgroundOption;
 
-    // 1. Question Header Badge (Positioned safely below the green banner at y: 3.0 in)
+    // 1. Question Header Badge (Positioned safely below banner at y: 3.0 in)
     const headerTitle = q.marks
       ? `${q.header.toUpperCase()}   •   [${q.marks.toUpperCase()}]`
       : q.header.toUpperCase();
@@ -622,7 +629,7 @@ export async function buildPptxPresentation(
       fontFace: "Bookman Old Style",
       fontSize: 34,
       bold: true,
-      color: "00C269",
+      color: brandAccent,
     });
 
     // 2. Continuous 2D Matrix Rendering (Native Vector Brackets + Native Values)
@@ -810,7 +817,7 @@ export async function buildPptxPresentation(
         w: totalTableWidth,
         colW: Array(numCols).fill(colWidth),
         rowH: 1.8,
-        border: { pt: 2.5, color: "00C269" },
+        border: { pt: 2.5, color: brandAccent },
       });
     }
   }

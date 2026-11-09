@@ -184,10 +184,11 @@ export async function POST(req: NextRequest) {
         }
 
         const assembleTarget = (jsonBody.targetFormat || "docx").toLowerCase();
+        const pptTemplate = ((jsonBody.pptTemplate as string) || "codebits").toLowerCase() === "sonam" ? "sonam" : "codebits";
 
-        // PPTX Assembly (PowerPoint Slides • 1 Question per Slide on CodeBits Template)
+        // PPTX Assembly (PowerPoint Slides • 1 Question per Slide on Template)
         if (assembleTarget === "pptx" || assembleTarget === "ppt" || assembleTarget === ".pptx") {
-          const pptxBuffer = await buildPptxPresentation(textToProcess, title);
+          const pptxBuffer = await buildPptxPresentation(textToProcess, title, pptTemplate);
           const downloadName = `${title}.pptx`;
           return new Response(pptxBuffer as any, {
             status: 200,
@@ -238,6 +239,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const targetFormat = (formData.get("targetFormat") as string || "").toLowerCase();
+    const pptTemplate = ((formData.get("pptTemplate") as string) || "codebits").toLowerCase() === "sonam" ? "sonam" : "codebits";
     const mode = (formData.get("mode") as string || "").toLowerCase();
     const chunkIndex = formData.get("chunkIndex") as string | null;
     const pageRange = formData.get("pageRange") as string | null;
@@ -412,9 +414,9 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // PPTX Output: PowerPoint Slide per Question with CodeBits Slide Template & Yellow Text
+      // PPTX Output: PowerPoint Slide per Question with Branded Slide Template & Yellow Text
       if (targetFormat === "pptx" || targetFormat === ".pptx" || targetFormat === "ppt") {
-        const pptxBuffer = await buildPptxPresentation(extractedText, baseName);
+        const pptxBuffer = await buildPptxPresentation(extractedText, baseName, pptTemplate);
         const downloadName = `${baseName}.pptx`;
         return new Response(pptxBuffer as any, {
           status: 200,
@@ -627,9 +629,9 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // PPTX Output from PDF: PowerPoint Slide per Question with CodeBits Slide Template & Yellow Text
+      // PPTX Output from PDF: PowerPoint Slide per Question with Branded Slide Template & Yellow Text
       if (targetFormat === "pptx" || targetFormat === ".pptx" || targetFormat === "ppt") {
-        const pptxBuffer = await buildPptxPresentation(extractedText, baseName);
+        const pptxBuffer = await buildPptxPresentation(extractedText, baseName, pptTemplate);
         const downloadName = `${baseName}.pptx`;
         return new Response(pptxBuffer as any, {
           status: 200,
