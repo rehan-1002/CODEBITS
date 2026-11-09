@@ -1,6 +1,7 @@
 import pptxgen from "pptxgenjs";
 import fs from "fs";
 import path from "path";
+import sharp from "sharp";
 
 // Safe constructor resolver for ESM / CJS bundlers
 function createPresentationInstance(): pptxgen {
@@ -8,15 +9,23 @@ function createPresentationInstance(): pptxgen {
   return new ctor();
 }
 
+export interface MatrixQuestionData {
+  preText: string;
+  postText: string;
+  rows: string[][];
+  bracketType: string;
+}
+
 export interface ParsedQuestion {
   header: string;
   marks?: string;
   body: string;
   table?: string[][];
+  matrix?: MatrixQuestionData;
 }
 
 /**
- * Parses raw matrix LaTeX content into structured 2D rows and columns, matching the docx engine.
+ * Parses raw matrix LaTeX content into structured 2D rows and columns.
  */
 function parseMatrixContent(content: string): string[][] {
   const rawRows = content
@@ -55,51 +64,85 @@ function parseMatrixContent(content: string): string[][] {
 }
 
 /**
- * Formats a 2D matrix with authentic tall mathematical brackets (⎡ ⎢ ⎣ and ⎤ ⎥ ⎦),
- * with uniform column spacing and alignment matching professional math typography.
+ * Renders an authentic, 100% solid, continuous 2D mathematical matrix as a razor-sharp
+ * 300-DPI transparent PNG. Features a single solid continuous bracket from top to bottom
+ * with zero line-gap breaks, perfectly formatted in Bookman Old Style yellow (#FFE600).
  */
-function formatProperMatrix(rows: string[][], bracketType: string = "["): string {
-  if (!rows || rows.length === 0) return "";
+export async function generateMatrixPng(
+  rows: string[][],
+  bracketType = "["
+): Promise<{ data: string; w: number; h: number }> {
+  const fontSize = 72;
+  const rowHeight = 105;
+  const colPadding = 60;
+  const numRows = rows.length;
   const numCols = Math.max(...rows.map((r) => r.length));
+
   const colWidths = Array(numCols).fill(0);
   for (const row of rows) {
     for (let c = 0; c < row.length; c++) {
-      colWidths[c] = Math.max(colWidths[c], (row[c] || "").length);
+      const len = (row[c] || "").length;
+      colWidths[c] = Math.max(colWidths[c], len * 44 + colPadding);
     }
   }
 
-  const paddedRows = rows.map((row) => {
-    return row.map((cell, c) => {
-      const w = colWidths[c];
-      return (cell || "").padStart(w, " ");
-    }).join("   ");
-  });
+  const matrixWidth = colWidths.reduce((a, b) => a + b, 0);
+  const matrixHeight = numRows * rowHeight;
+  const bracketWidth = 32;
+  const paddingX = 25;
+  const paddingY = 25;
 
-  const n = paddedRows.length;
-  if (n === 1) {
-    return "[ " + paddedRows[0] + " ]";
-  }
+  const totalWidth = matrixWidth + paddingX * 2 + bracketWidth * 2;
+  const totalHeight = matrixHeight + paddingY * 2;
 
-  let lTop = "⎡", lMid = "⎢", lBot = "⎣";
-  let rTop = "⎤", rMid = "⎥", rBot = "⎦";
+  const leftX = paddingX + bracketWidth;
+  const rightX = totalWidth - paddingX - bracketWidth;
+  const topY = paddingY;
+  const botY = totalHeight - paddingY;
+  const tick = 26;
+
+  let leftBracketPath = `M ${leftX} ${topY} H ${leftX - tick} V ${botY} H ${leftX}`;
+  let rightBracketPath = `M ${rightX} ${topY} H ${rightX + tick} V ${botY} H ${rightX}`;
 
   const bLower = bracketType.toLowerCase();
   if (bracketType === "(" || bLower === "pmatrix") {
-    lTop = "⎛"; lMid = "⎜"; lBot = "⎝";
-    rTop = "⎞"; rMid = "⎟"; rBot = "⎠";
+    leftBracketPath = `M ${leftX} ${topY} C ${leftX - tick * 1.5} ${topY + matrixHeight * 0.2}, ${leftX - tick * 1.5} ${botY - matrixHeight * 0.2}, ${leftX} ${botY}`;
+    rightBracketPath = `M ${rightX} ${topY} C ${rightX + tick * 1.5} ${topY + matrixHeight * 0.2}, ${rightX + tick * 1.5} ${botY - matrixHeight * 0.2}, ${rightX} ${botY}`;
   } else if (bracketType === "|" || bLower === "vmatrix") {
-    lTop = "│"; lMid = "│"; lBot = "│";
-    rTop = "│"; rMid = "│"; rBot = "│";
+    leftBracketPath = `M ${leftX - tick / 2} ${topY} V ${botY}`;
+    rightBracketPath = `M ${rightX + tick / 2} ${topY} V ${botY}`;
   }
 
-  const lines: string[] = [];
-  for (let i = 0; i < n; i++) {
-    const left = i === 0 ? lTop : i === n - 1 ? lBot : lMid;
-    const right = i === 0 ? rTop : i === n - 1 ? rBot : rMid;
-    lines.push(`  ${left}  ${paddedRows[i]}  ${right}`);
+  let texts = "";
+  for (let r = 0; r < numRows; r++) {
+    const y = paddingY + (r + 0.74) * rowHeight;
+    let currX = leftX + 15;
+    for (let c = 0; c < numCols; c++) {
+      const cellText = rows[r][c] || "";
+      const colW = colWidths[c];
+      const cellX = currX + colW / 2;
+      texts += `<text x="${cellX}" y="${y}" font-family="'Bookman Old Style', Georgia, serif" font-size="${fontSize}px" fill="#FFE600" font-weight="bold" text-anchor="middle">${cellText}</text>`;
+      currX += colW;
+    }
   }
-  return "\n" + lines.join("\n") + "\n";
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}">
+  <path d="${leftBracketPath}" stroke="#FFE600" stroke-width="6.5" fill="none" stroke-linecap="square" stroke-linejoin="miter"/>
+  <path d="${rightBracketPath}" stroke="#FFE600" stroke-width="6.5" fill="none" stroke-linecap="square" stroke-linejoin="miter"/>
+  ${texts}
+</svg>`;
+
+  const pngBuffer = await sharp(Buffer.from(svg), { density: 300 }).png().toBuffer();
+  const base64 = `image/png;base64,${pngBuffer.toString("base64")}`;
+  const w = (totalWidth / 72) * 1.25;
+  const h = (totalHeight / 72) * 1.25;
+
+  return { data: base64, w, h };
 }
+
+/**
+ * Finds the index of the matching closing brace '}' taking nested braces into account.
+ */
 function findClosingBrace(str: string, startIdx: number): number {
   let depth = 0;
   for (let i = startIdx; i < str.length; i++) {
@@ -129,16 +172,11 @@ const SUBSCRIPT_MAP: Record<string, string> = {
  * Formats superscripts safely without corrupting subsequent arithmetic operators (+, -).
  */
 function formatSuperscripts(text: string): string {
-  // 1. Explicit LaTeX braces: ^{...} (e.g. e^{-at} -> e⁻ᵃᵗ, x^{2} -> x²)
   let s = text.replace(/\^\{([^{}]+)\}/g, (_, exp) => {
     return exp.split("").map((c: string) => SUPERSCRIPT_MAP[c] || c).join("");
   });
 
-  // 2. Negative single exponent: ^-1 -> ⁻¹, ^-2 -> ⁻²
   s = s.replace(/\^-([0-9a-zA-Z])/g, (_, char) => "⁻" + (SUPERSCRIPT_MAP[char] || char));
-
-  // 3. Single digit or single variable: ^2 -> ², ^n -> ⁿ, ^x -> ˣ
-  // STRICT: only match a single alphanum character, NEVER match trailing + or -
   s = s.replace(/\^([0-9a-zA-Z])/g, (_, char) => SUPERSCRIPT_MAP[char] || char);
 
   return s;
@@ -170,23 +208,18 @@ function resolveFractions(text: string): string {
     const denominator = s.slice(denStart + 1, denEnd);
     const fullFrac = s.slice(match.index, denEnd + 1);
 
-    // Recursively clean numerator and denominator
     const cNum = cleanTextForSlide(numerator);
     const cDen = cleanTextForSlide(denominator);
 
     let replacement = "";
-    // 1. Common numeric fractions
     if (cNum === "1" && cDen === "2") replacement = "½";
     else if (cNum === "1" && cDen === "4") replacement = "¼";
     else if (cNum === "3" && cDen === "4") replacement = "¾";
     else if (cNum === "1" && cDen === "3") replacement = "⅓";
     else if (cNum === "2" && cDen === "3") replacement = "⅔";
-    // 2. Short single-variable inline fractions e.g. kx / y
     else if (cNum.length <= 3 && cDen.length <= 3 && !cNum.includes(" ") && !cDen.includes(" ")) {
       replacement = `(${cNum} / ${cDen})`;
-    }
-    // 3. Full algebraic / polynomial stacked vertical fraction
-    else {
+    } else {
       const maxLen = Math.max(cNum.length, cDen.length) + 4;
       const bar = "─".repeat(maxLen);
       const padNum = " ".repeat(Math.floor((maxLen - cNum.length) / 2)) + cNum;
@@ -202,8 +235,7 @@ function resolveFractions(text: string): string {
 }
 
 /**
- * Normalizes text, matrices, and mathematical equations for clean presentation on PowerPoint slides.
- * Replaces all raw LaTeX artifacts with authentic KaTeX-grade mathematical typography.
+ * Normalizes text, symbols, and mathematical equations for clean presentation on PowerPoint slides.
  */
 function cleanTextForSlide(raw: string): string {
   if (!raw) return "";
@@ -229,7 +261,6 @@ function cleanTextForSlide(raw: string): string {
   s = s.replace(/\\right\s*\\?\./g, "");
   s = s.replace(/\\(?:left|right)\b/g, "");
 
-  // Clean mangled remnants of delimiters (e.g. left\ or right\. or tright\.)
   s = s.replace(/\bleft\\?/gi, "");
   s = s.replace(/\bright\\?\.?/gi, "");
   s = s.replace(/\btright\\?\.?/gi, "");
@@ -251,14 +282,7 @@ function cleanTextForSlide(raw: string): string {
   s = s.replace(/\\cos\^\{-?1\}|\\arccos/g, "cos⁻¹");
   s = s.replace(/\\(?:sin|cos|tan|log|ln|sinh|cosh|tanh|sec|csc|cosec|cot|det|exp)\b/g, (m) => m.slice(1));
 
-  // 5. Matrices: format LaTeX \begin{bmatrix} / beginbmatrix into proper 2D matrices matching Word OMML
-  s = s.replace(/(?:\\begin\{([a-zA-Z]*matrix)\}|begin([a-zA-Z]*matrix))([\s\S]*?)(?:\\end\{\1\}|end\2)/gi, (_, b1, b2, body) => {
-    const bType = b1 || b2 || "bmatrix";
-    const rows = parseMatrixContent(body);
-    return formatProperMatrix(rows, bType);
-  });
-
-  // 6. Piecewise / Cases: format \begin{cases} / begincases cleanly
+  // 5. Piecewise / Cases: format \begin{cases} / begincases cleanly
   s = s.replace(/(?:\\begin\{cases\}|begincases)([\s\S]*?)(?:\\end\{cases\}|endcases)/gi, (_, body) => {
     if (body.includes("\\\\") || body.includes("\n")) {
       const rawParts = body.split(/\\\\|\n/).map((p: string) => p.trim()).filter(Boolean);
@@ -271,20 +295,20 @@ function cleanTextForSlide(raw: string): string {
     return "\n   • " + body.replace(/&/g, "   ").trim();
   });
 
-  // 7. Balanced LaTeX Fractions
+  // 6. Balanced LaTeX Fractions
   s = resolveFractions(s);
 
-  // 8. Exponents & Superscripts
+  // 7. Exponents & Superscripts
   s = formatSuperscripts(s);
 
-  // 9. Subscripts
+  // 8. Subscripts
   s = s.replace(/_\{([^{}]+)\}/g, (_, sub) => {
     return sub.split("").map((c: string) => SUBSCRIPT_MAP[c] || c).join("");
   });
   s = s.replace(/_([0-9nijkyx])/g, (_, idx) => SUBSCRIPT_MAP[idx] || idx);
   s = s.replace(/\b([xyz])([0-9])\b/g, (_, v, idx) => v + (SUBSCRIPT_MAP[idx] || idx));
 
-  // 10. Greek Letters (all standard KaTeX symbols)
+  // 9. Greek Letters (all standard KaTeX symbols)
   s = s.replace(/\\alpha\b/gi, "α");
   s = s.replace(/\\beta\b/gi, "β");
   s = s.replace(/\\gamma\b/gi, "γ");
@@ -317,7 +341,7 @@ function cleanTextForSlide(raw: string): string {
   s = s.replace(/\\Psi\b/g, "Ψ");
   s = s.replace(/\\Omega\b/g, "Ω");
 
-  // 11. Calculus, Sets, and Comparison Operators
+  // 10. Calculus, Sets, and Comparison Operators
   s = s.replace(/<=|\\le(?:q)?\b/g, "≤");
   s = s.replace(/>=|\\ge(?:q)?\b/g, "≥");
   s = s.replace(/!=|\\ne(?:q)?\b/g, "≠");
@@ -347,15 +371,15 @@ function cleanTextForSlide(raw: string): string {
   s = s.replace(/\\cap\b/g, "∩");
   s = s.replace(/\\cup\b/g, "∪");
 
-  // 12. Clean double parentheses like ((kx / y)) -> (kx / y)
+  // 11. Clean double parentheses like ((kx / y)) -> (kx / y)
   s = s.replace(/\(\s*\(([^()]+)\)\s*\)/g, "($1)");
 
-  // 13. Clean leftover LaTeX escape backslashes and braces
+  // 12. Clean leftover LaTeX escape backslashes and braces
   s = s.replace(/\\([a-zA-Z]+)/g, "$1");
   s = s.replace(/[{}]/g, "");
   s = s.replace(/\$+/g, "");
 
-  // 14. Clean double spaces and line gaps
+  // 13. Clean double spaces and line gaps
   s = s.replace(/[ \t]+/g, " ");
   s = s.replace(/\n{3,}/g, "\n\n");
 
@@ -363,9 +387,7 @@ function cleanTextForSlide(raw: string): string {
 }
 
 /**
- * Checks if a line is an administrative exam header or rule instruction
- * (e.g. "Attempt any 5", "Time: 3 Hours", "Question 1 is compulsory")
- * which must NOT appear on the question slides.
+ * Checks if a line is an administrative exam header, footer, or rule instruction.
  */
 function isExamMetadataOrInstruction(line: string): boolean {
   const l = line.trim().toLowerCase();
@@ -398,9 +420,10 @@ function isExamMetadataOrInstruction(line: string): boolean {
 /**
  * Intelligent question & sub-question segmentation engine:
  * 1. Ensures EVERY sub-question receives its own dedicated slide.
- * 2. Filters out all exam administration metadata and instructions ("add only questions nothing else").
- * 3. Extracts marks counts ([3 MARKS], [5 MARKS]) into header badges.
- * 4. Extracts Markdown tables into structured presentation tables.
+ * 2. Filters out all exam administration metadata and instructions.
+ * 3. Extracts matrix blocks into single continuous 2D matrix definitions.
+ * 4. Extracts marks counts ([3 MARKS], [5 MARKS]) into header badges.
+ * 5. Extracts Markdown tables into structured presentation tables.
  */
 export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
   if (!raw || !raw.trim()) return [];
@@ -413,20 +436,13 @@ export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
   let currentMarks = "";
   let bodyLines: string[] = [];
 
-  // Matches main question headers: "Q.1", "Q. 1", "Question 1:", "1.", "Problem 2"
   const mainQRegex = /^(?:Q(?:uestion)?\.?\s*(\d+)[:\.]?|(\d+)\.|Problem\s*(\d+)[:\.]?)\s*(.*)$/i;
-
-  // Matches sub-question markers:
-  // "a)", "(a)", "a.", "[a]", "i)", "(i)"
   const subQRegex = /^(?:(?:\(([a-z0-9]+)\)|([a-z0-9]+)\)|([a-z])\.)\s*(.*))$/i;
-
-  // Matches isolated marks lines: "3", "5", "[3]", "[5 Marks]", "[10 M]"
   const marksRegex = /^\[?(\d{1,2})\s*(?:Marks?|M)?\]?$/i;
 
   function flush() {
     if (bodyLines.length === 0) return;
 
-    // Separate text lines, table lines, and isolated marks lines
     const textLines: string[] = [];
     const tableRows: string[][] = [];
 
@@ -437,12 +453,10 @@ export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
         continue;
       }
 
-      // Skip exam metadata or rules if accidentally caught in body
       if (isExamMetadataOrInstruction(trimmed)) {
         continue;
       }
 
-      // Check if this line is an isolated marks count (e.g. "3" or "5")
       const mMatch = trimmed.match(marksRegex);
       if (mMatch && trimmed.length <= 10) {
         if (!currentMarks) {
@@ -451,9 +465,7 @@ export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
         continue;
       }
 
-      // Check if this line is part of a Markdown Table (e.g. | X | 21 | ... |)
       if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
-        // Skip separator row (|---|---|---|)
         if (trimmed.match(/^\|\s*[-:\s|]+\|$/)) {
           continue;
         }
@@ -470,8 +482,35 @@ export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
       textLines.push(bLine);
     }
 
-    const fullBody = cleanTextForSlide(textLines.join("\n"));
-    if (fullBody.length > 0 || tableRows.length > 0) {
+    const rawBody = textLines.join("\n");
+    const matrixRegex = /(?:\\begin\{([a-zA-Z]*matrix)\}|begin([a-zA-Z]*matrix))([\s\S]*?)(?:\\end\{\1\}|end\2)/i;
+    const matrixMatch = rawBody.match(matrixRegex);
+
+    let matrixData: MatrixQuestionData | undefined = undefined;
+    let fullBody = "";
+
+    if (matrixMatch && matrixMatch.index !== undefined) {
+      const preTextRaw = rawBody.slice(0, matrixMatch.index);
+      const postTextRaw = rawBody.slice(matrixMatch.index + matrixMatch[0].length);
+      const matrixBody = matrixMatch[3];
+      const bType = matrixMatch[1] || matrixMatch[2] || "bmatrix";
+      const rows = parseMatrixContent(matrixBody);
+
+      if (rows.length > 0) {
+        matrixData = {
+          preText: cleanTextForSlide(preTextRaw),
+          postText: cleanTextForSlide(postTextRaw),
+          rows,
+          bracketType: bType,
+        };
+      } else {
+        fullBody = cleanTextForSlide(rawBody);
+      }
+    } else {
+      fullBody = cleanTextForSlide(rawBody);
+    }
+
+    if (fullBody.length > 0 || tableRows.length > 0 || matrixData) {
       let header = currentMainQ || "QUESTION";
       if (currentSubQ) {
         header = `${header} (${currentSubQ.toUpperCase()})`;
@@ -482,6 +521,7 @@ export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
         marks: currentMarks,
         body: fullBody,
         table: tableRows.length > 0 ? tableRows : undefined,
+        matrix: matrixData,
       });
     }
 
@@ -496,18 +536,15 @@ export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
       continue;
     }
 
-    // Skip all top-level exam administrative metadata and instructions
     if (isExamMetadataOrInstruction(line)) {
       continue;
     }
 
-    // 1. Check if line is a main question header
     const mainMatch = line.match(mainQRegex);
     if (mainMatch) {
       const qNum = mainMatch[1] || mainMatch[2] || mainMatch[3];
       const remainder = (mainMatch[4] || "").trim();
 
-      // Check if remainder immediately starts with a sub-question like "(a)" or "a)"
       const subMatchInRemainder = remainder.match(subQRegex);
       if (subMatchInRemainder) {
         flush();
@@ -520,16 +557,13 @@ export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
         continue;
       }
 
-      // Check if remainder is just an instruction line (e.g. "Attempt any Five Questions from the following.")
       if (isExamMetadataOrInstruction(remainder) || remainder.length === 0) {
         flush();
         currentMainQ = `Q.${qNum}`;
         currentSubQ = "";
-        // Do not create an empty slide for the instruction
         continue;
       }
 
-      // Standalone main question without sub-parts
       flush();
       currentMainQ = `Q.${qNum}`;
       currentSubQ = "";
@@ -537,7 +571,6 @@ export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
       continue;
     }
 
-    // 2. Check if line starts a sub-question (e.g. "a) Find sum...", "(b) ...")
     const subMatch = line.match(subQRegex);
     if (subMatch) {
       flush();
@@ -549,7 +582,6 @@ export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
       continue;
     }
 
-    // 3. Check for standalone marks line e.g. "3" or "5"
     const mMatch = line.match(marksRegex);
     if (mMatch && line.length <= 10) {
       if (!currentMarks) {
@@ -558,13 +590,11 @@ export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
       continue;
     }
 
-    // 4. Regular question statement line
     bodyLines.push(line);
   }
 
   flush();
 
-  // Fallback: If no question structure was detected, split by paragraphs
   if (questions.length === 0) {
     const paragraphs = raw.split(/\n\s*\n/).filter((p) => p.trim().length > 10 && !isExamMetadataOrInstruction(p));
     paragraphs.forEach((p, idx) => {
@@ -589,7 +619,6 @@ function getTemplateBase64(): string {
       return fs.readFileSync(publicPath).toString("base64");
     }
 
-    // Secondary fallback to root public path
     const fallbackPath = path.join(process.cwd(), "codebits", "public", "templates", "codebits-slide-template.png");
     if (fs.existsSync(fallbackPath)) {
       return fs.readFileSync(fallbackPath).toString("base64");
@@ -607,15 +636,15 @@ function getTemplateBase64(): string {
  * 3. Font is Bookman Old Style, size 80 pt (scaled adaptively for long questions).
  * 4. Question text is high-contrast vibrant yellow (#FFE600).
  * 5. Fractions are rendered as authentic KaTeX-grade stacked fractions.
- * 6. Markdown tables are cleanly rendered as native PowerPoint tables with emerald borders.
- * 7. Dimensions are exact user specs: 101.6 cm (40.0 inches) x 52.07 cm (20.5 inches).
+ * 6. Matrices are rendered as one single, continuous, solid 2D block with zero line-gap breaks.
+ * 7. Markdown tables are cleanly rendered as native PowerPoint tables with emerald borders.
+ * 8. Dimensions are exact user specs: 101.6 cm (40.0 inches) x 52.07 cm (20.5 inches).
  */
 export async function buildPptxPresentation(
   rawText: string,
   title = "CodeBits Question Paper"
 ): Promise<Buffer> {
   const pres = createPresentationInstance();
-  // Exact user requested dimensions: Width = 101.6 cm (40.0 inches), Height = 52.07 cm (20.5 inches)
   pres.defineLayout({ name: "CODEBITS_CUSTOM", width: 40.0, height: 20.5 });
   pres.layout = "CODEBITS_CUSTOM";
   pres.title = title;
@@ -623,11 +652,10 @@ export async function buildPptxPresentation(
   const bgBase64 = getTemplateBase64();
   const backgroundOption = bgBase64
     ? { data: `image/png;base64,${bgBase64}` }
-    : { color: "0B0F0E" }; // Obsidian fallback if template image unavailable
+    : { color: "0B0F0E" };
 
   const questions = splitTextIntoQuestions(rawText);
 
-  // If text was completely empty, generate at least one title slide
   if (questions.length === 0) {
     const slide = pres.addSlide();
     slide.background = backgroundOption;
@@ -672,22 +700,69 @@ export async function buildPptxPresentation(
       fontFace: "Bookman Old Style",
       fontSize: 34,
       bold: true,
-      color: "00C269", // Emerald green accent matching CodeBits identity
+      color: "00C269",
     });
 
+    // 2. Continuous 2D Matrix Rendering (1 Single Solid Continuous Matrix Block)
+    if (q.matrix) {
+      let cursorY = 4.4;
+
+      if (q.matrix.preText.trim().length > 0) {
+        slide.addText(q.matrix.preText, {
+          x: 2.5,
+          y: cursorY,
+          w: 35.0,
+          h: 1.8,
+          fontFace: "Bookman Old Style",
+          fontSize: 80,
+          color: "FFE600",
+          valign: "top",
+        });
+        cursorY += 2.0;
+      }
+
+      try {
+        const matrixImg = await generateMatrixPng(q.matrix.rows, q.matrix.bracketType);
+        slide.addImage({
+          data: matrixImg.data,
+          x: 2.5,
+          y: cursorY,
+          w: matrixImg.w,
+          h: matrixImg.h,
+        });
+        cursorY += matrixImg.h + 0.5;
+      } catch (err) {
+        console.warn("Could not generate matrix PNG, using text fallback:", err);
+      }
+
+      if (q.matrix.postText.trim().length > 0) {
+        slide.addText(q.matrix.postText, {
+          x: 2.5,
+          y: cursorY,
+          w: 35.0,
+          h: 4.5,
+          fontFace: "Bookman Old Style",
+          fontSize: 80,
+          lineSpacing: 104,
+          color: "FFE600",
+          valign: "top",
+          wrap: true,
+        });
+      }
+      continue;
+    }
+
+    // 3. Normal Question Body & Presentation Tables
     const hasTable = Boolean(q.table && q.table.length > 0);
     const charCount = q.body.length;
 
-    // 2. Calibrate font sizing: default is 80 pt as requested!
     let fontSize = 80;
     let lineSpacing = 104;
 
     if (hasTable) {
-      // With a table present, keep the question statement prominent at 54-64 pt so the table fits comfortably
       fontSize = charCount > 180 ? 54 : 64;
       lineSpacing = 82;
     } else {
-      // Normal question slides: 80 pt default, scaling smoothly for very lengthy texts
       if (charCount > 650) {
         fontSize = 48;
         lineSpacing = 64;
@@ -703,7 +778,6 @@ export async function buildPptxPresentation(
       }
     }
 
-    // 3. Question Body in Vibrant High-Contrast Yellow (#FFE600) with Bookman Old Style
     const textHeight = hasTable ? 4.5 : 14.5;
     if (q.body.trim().length > 0) {
       slide.addText(q.body, {
@@ -713,14 +787,13 @@ export async function buildPptxPresentation(
         h: textHeight,
         fontFace: "Bookman Old Style",
         fontSize,
-        color: "FFE600", // High-contrast lecture yellow
+        color: "FFE600",
         lineSpacing,
         valign: "top",
         wrap: true,
       });
     }
 
-    // 4. Clean Native Presentation Table Rendering
     if (hasTable && q.table) {
       const tableData = q.table.map((row) =>
         row.map((cell) => ({
@@ -732,16 +805,15 @@ export async function buildPptxPresentation(
             bold: true,
             align: "center" as const,
             valign: "middle" as const,
-            fill: { color: "111816" }, // Subtle obsidian fill matching CodeBits dark background
+            fill: { color: "111816" },
           },
         }))
       );
 
-      // Calculate table width & position
       const numCols = Math.max(...q.table.map((r) => r.length));
       const colWidth = Math.min(3.5, 34.0 / Math.max(numCols, 1));
       const totalTableWidth = colWidth * numCols;
-      const tableX = Math.max(2.5, (40.0 - totalTableWidth) / 2); // Center table horizontally
+      const tableX = Math.max(2.5, (40.0 - totalTableWidth) / 2);
       const tableY = q.body.trim().length > 0 ? 9.5 : 5.5;
 
       slide.addTable(tableData, {
@@ -750,7 +822,7 @@ export async function buildPptxPresentation(
         w: totalTableWidth,
         colW: Array(numCols).fill(colWidth),
         rowH: 1.8,
-        border: { pt: 2.5, color: "00C269" }, // Emerald green cell borders
+        border: { pt: 2.5, color: "00C269" },
       });
     }
   }
