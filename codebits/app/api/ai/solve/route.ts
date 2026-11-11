@@ -142,9 +142,9 @@ Structure & Components:
 """
 ${diagramContent}
 """
-CRITICAL SOLVING INSTRUCTION: The question relies on the figure described above. You MUST solve the problem specifically using these exact vertices, edges, circuit components, or numerical values! In your answer, include a clear visual ASCII / text schematic diagram showing the student exactly how to sketch and label it in the exam booklet.`
+CRITICAL SOLVING INSTRUCTION: The question relies on the figure described above. You MUST solve the problem specifically using these exact vertices, edges, circuit components, or numerical values! In your answer, include a dedicated, clean, clearly labeled diagrammatic specification showing the student exactly how to sketch and label it in the exam booklet (strictly no broken ASCII or raw SVG).`
     : hasDiagram
-    ? `NOTE ON DIAGRAM: This question references an electrical circuit, graph, or flowchart. Include a dedicated section describing the essential diagram components, labels, and an ASCII / structured diagram layout so the student knows exactly what to draw in the exam booklet.`
+    ? `NOTE ON DIAGRAM: This question references an electrical circuit, graph, or flowchart. Include a dedicated section with clean, clearly labeled diagram components, node values, and drawing steps so the student knows exactly what to draw in the exam booklet (strictly no broken ASCII or raw SVG).`
     : ''
 }
 

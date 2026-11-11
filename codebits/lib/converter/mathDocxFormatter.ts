@@ -16,6 +16,7 @@ import {
 } from "docx";
 import sharp from "sharp";
 import { generateVennSvg } from "./vennDiagramGenerator";
+import { cleanAndSanitizeSvg } from "./pptxSlideGenerator";
 
 // ==========================================
 // 1. MOJIBAKE & CORRUPTED CHARACTER REPAIR
@@ -108,8 +109,8 @@ export function repairMojibakeAndHtmlEntities(text: string): string {
     [/Â¼/g, "¼"],
     [/Â¾/g, "¾"],
     // Punctuation & quotes
-    [/â€“/g, "–"],
-    [/â€”/g, "—"],
+    [/â€“/g, "-"],
+    [/â€”/g, "-"],
     [/â€˜/g, "‘"],
     [/â€™/g, "’"],
     [/â€œ/g, "“"],
@@ -188,6 +189,9 @@ export function repairMojibakeAndHtmlEntities(text: string): string {
 
   // Strip unprintable control characters (except newline \n and tab \t)
   s = s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+
+  // Replace em-dashes and en-dashes with standard hyphens
+  s = s.replace(/[\u2013\u2014]/g, "-");
 
   return s;
 }
@@ -1593,16 +1597,120 @@ export function buildWordTable(lines: string[]): Table {
 // ==========================================
 // 7. SVG SCHEMATIC TO WORD IMAGE RENDERER
 // ==========================================
+
+/**
+ * Converts a raster diagram (scanned paper crop) into a razor-sharp, high-definition transparent PNG with black (#000000) lines and text.
+ * Performs Lanczos3 super-sampling upscaling to ensure pristine 300+ DPI clarity in Word.
+ * High-luminance paper background becomes alpha 0 (invisible).
+ * Dark ink lines and text become deep crisp black with smooth anti-aliased edges.
+ */
+export async function makeRasterDiagramBlackTransparent(inputBuffer: Buffer): Promise<Buffer> {
+  const origMeta = await sharp(inputBuffer).metadata();
+  const origW = origMeta.width || 600;
+
+  // Super-sample low-resolution crops to high-definition (minimum 2400px width)
+  const targetW = Math.max(2400, Math.min(3600, origW * 4));
+
+  const upscaled = await sharp(inputBuffer)
+    .resize({ width: targetW, kernel: sharp.kernel.lanczos3 })
+    .normalize()
+    .blur(0.5) // anti-grain smoothing to eliminate paper texture and scan noise
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const { data, info } = upscaled;
+  const { width, height } = info;
+  const out = Buffer.alloc(width * height * 4);
+
+  const tHigh = 220;
+  const tLow = 110;
+
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    const origA = data[i + 3];
+
+    if (origA === 0) {
+      out[i] = 0;
+      out[i + 1] = 0;
+      out[i + 2] = 0;
+      out[i + 3] = 0;
+      continue;
+    }
+
+    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+
+    let inkAlpha = 0;
+    if (lum >= tHigh) {
+      inkAlpha = 0;
+    } else if (lum <= tLow) {
+      inkAlpha = 255;
+    } else {
+      const ratio = (tHigh - lum) / (tHigh - tLow);
+      inkAlpha = Math.round(255 * Math.pow(ratio, 0.95));
+    }
+
+    const finalAlpha = Math.round((inkAlpha * origA) / 255);
+
+    if (finalAlpha === 0) {
+      out[i] = 0;
+      out[i + 1] = 0;
+      out[i + 2] = 0;
+      out[i + 3] = 0;
+    } else {
+      // Crisp black for Word document on white page
+      out[i] = 0;
+      out[i + 1] = 0;
+      out[i + 2] = 0;
+      out[i + 3] = finalAlpha;
+    }
+  }
+
+  return await sharp(out, {
+    raw: {
+      width,
+      height,
+      channels: 4,
+    },
+  })
+    .sharpen({ sigma: 1.2, m1: 1.0, m2: 2.0 })
+    .png({ compressionLevel: 8 })
+    .toBuffer();
+}
+
+/**
+ * Converts an SVG diagram to an invisible transparent background with crisp black (#000000) strokes and text.
+ */
+export async function convertSvgToBlackTransparent(svgStr: string): Promise<Buffer> {
+  let cleaned = cleanAndSanitizeSvg(svgStr);
+
+  // Strip all background rectangles
+  cleaned = cleaned.replace(/<rect[^>]*width=["']100%["'][^>]*height=["']100%["'][^>]*\/?>/gi, "");
+  cleaned = cleaned.replace(/<rect[^>]*fill=["'](?:#ffffff|white|#fff)["'][^>]*\/?>/gi, "");
+
+  // Convert stroke colors to black #000000
+  cleaned = cleaned.replace(/stroke=["'](?:#FFE600|yellow|currentColor)["']/gi, 'stroke="#000000"');
+  cleaned = cleaned.replace(/stroke:\s*(?:#FFE600|yellow)/gi, 'stroke: #000000');
+
+  // Convert fill colors for text, arrows, and dots to black #000000
+  cleaned = cleaned.replace(/fill=["'](?:#FFE600|yellow|currentColor)["']/gi, 'fill="#000000"');
+  cleaned = cleaned.replace(/fill:\s*(?:#FFE600|yellow)/gi, 'fill: #000000');
+
+  // Make white component interior fills transparent
+  cleaned = cleaned.replace(/fill=["'](?:#ffffff|white|#fff)["']/gi, 'fill="none"');
+
+  return await sharp(Buffer.from(cleaned), { density: 300 })
+    .png()
+    .toBuffer();
+}
+
 // Renders vector SVG electrical circuits, graphs, and academic diagrams into
 // razor-sharp 300-DPI PNG ImageRuns embedded natively into Microsoft Word documents.
 export async function renderSvgToDocxElements(svgString: string, defaultCaption?: string): Promise<Paragraph[]> {
   try {
-    let cleanSvg = svgString.trim();
-
-    // Ensure xmlns attribute exists for valid SVG processing
-    if (!cleanSvg.includes("xmlns=")) {
-      cleanSvg = cleanSvg.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"');
-    }
+    let cleanSvg = cleanAndSanitizeSvg(svgString);
 
     // Default dimensions
     let width = 480;
@@ -1633,17 +1741,15 @@ export async function renderSvgToDocxElements(svgString: string, defaultCaption?
       }
     }
 
-    // Rasterize vector SVG into high-DPI (300 DPI) PNG buffer
-    const pngBuffer = await sharp(Buffer.from(cleanSvg), { density: 300 })
-      .png()
-      .toBuffer();
+    // Rasterize vector SVG into high-DPI (300 DPI) transparent PNG buffer with black lines
+    const pngBuffer = await convertSvgToBlackTransparent(cleanSvg);
 
     const imageParagraph = new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: { before: 240, after: 100 },
       children: [
         new ImageRun({
-          data: pngBuffer,
+          data: pngBuffer as any,
           type: "png",
           transformation: {
             width,
@@ -1919,6 +2025,64 @@ export async function buildDocumentElements(text: string, title?: string): Promi
       continue;
     }
 
+    // Ignore raw bounding box markers if any remain unprocessed
+    if (/^\[(?:EXTRACT_BOX|DIAGRAM):/i.test(line)) {
+      continue;
+    }
+
+    // Direct Base64 Diagram Image (e.g. cropped circuits, FBDs, or diagrams)
+    const diagramImgMatch = line.match(/\[(?:DIAGRAM_IMAGE|IMAGE_ATTACHMENT):\s*(?:data:image\/[^;]+;base64,)?([A-Za-z0-9+/=]+)\]/);
+    if (diagramImgMatch) {
+      try {
+        const b64 = diagramImgMatch[1];
+        const rawBuffer = Buffer.from(b64, "base64");
+        let imgBuffer: Buffer = rawBuffer;
+        try {
+          imgBuffer = (await makeRasterDiagramBlackTransparent(rawBuffer)) as Buffer;
+        } catch (procErr) {
+          console.warn("Could not make raster diagram black transparent for Word:", procErr);
+        }
+
+        let docxW = 460;
+        let docxH = 320;
+        try {
+          const meta = await sharp(imgBuffer).metadata();
+          if (meta.width && meta.height) {
+            const aspect = meta.width / meta.height;
+            if (aspect >= 1) {
+              docxW = Math.min(480, meta.width);
+              docxH = Math.round(docxW / aspect);
+            } else {
+              docxH = Math.min(420, meta.height);
+              docxW = Math.round(docxH * aspect);
+            }
+          }
+        } catch {
+          // fallback to default docxW, docxH
+        }
+
+        elements.push(
+          new Paragraph({
+            children: [
+              new ImageRun({
+                data: imgBuffer as any,
+                type: "png",
+                transformation: {
+                  width: docxW,
+                  height: docxH,
+                },
+              }),
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: { before: 200, after: 200 },
+          })
+        );
+        continue;
+      } catch (err) {
+        console.warn("Could not embed diagram image in Word doc:", err);
+      }
+    }
+
     // Direct raw SVG element outside code blocks
     if (line.startsWith("<svg") || (line.includes("<svg") && !line.startsWith("$$"))) {
       const svgLines: string[] = [line];
@@ -1959,6 +2123,14 @@ export async function buildDocumentElements(text: string, title?: string): Promi
     // Bullet List item
     else if (/^[-*•]\s+/.test(line)) {
       elements.push(buildMathParagraph(line.replace(/^[-*•]\s+/, "")));
+    }
+    // Skip stray diagram annotations (like "Weight", "kAC", "y", "XAC XAB") when a diagram is already present
+    else if (
+      (text.includes("[DIAGRAM_IMAGE:") || text.includes("<svg")) &&
+      (/^(?:weight|diagram|figure|xac|xab|kac|kab|kad|[a-z]{1,2}|[a-z]_[a-z0-9]+)\s*$/i.test(line) ||
+        /^(?:xac\s+xab|kac\s+kab|kab\s+kad)\s*$/i.test(line))
+    ) {
+      continue;
     }
     // Standard Paragraph or Equation / Matrix Line
     else {

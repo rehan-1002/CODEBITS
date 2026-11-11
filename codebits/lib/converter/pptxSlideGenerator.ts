@@ -1,6 +1,8 @@
 import pptxgen from "pptxgenjs";
 import fs from "fs";
 import path from "path";
+import sharp from "sharp";
+import { generateVennSvg } from "./vennDiagramGenerator";
 
 // Safe constructor resolver for ESM / CJS bundlers
 function createPresentationInstance(): pptxgen {
@@ -21,6 +23,7 @@ export interface ParsedQuestion {
   body: string;
   table?: string[][];
   matrix?: MatrixQuestionData;
+  diagramPngBase64?: string;
 }
 
 /**
@@ -220,48 +223,62 @@ function cleanTextForSlide(raw: string): string {
   // 6. Balanced LaTeX Fractions
   s = resolveFractions(s);
 
-  // 7. Exponents & Superscripts
+  // 7. Degree symbols (65^\circ, 65^{\circ}, 65\degree, 65^circ -> 65°)
+  s = s.replace(/(\d+)\s*(?:\^\{?\\*(?:circ|degree)\}?|\^\\*(?:circ|degree)\b|\^circ\b|\\*(?:circ|degree)\b)/gi, "$1°");
+  s = s.replace(/\\(?:circ|degree)(?![a-zA-Z])|\^\\*circ/gi, "°");
+
+  // 8. Exponents & Superscripts
   s = formatSuperscripts(s);
 
-  // 8. Subscripts
+  // 9. Subscripts
   s = s.replace(/_\{([^{}]+)\}/g, (_, sub) => {
     return sub.split("").map((c: string) => SUBSCRIPT_MAP[c] || c).join("");
   });
   s = s.replace(/_([0-9nijkyx])/g, (_, idx) => SUBSCRIPT_MAP[idx] || idx);
   s = s.replace(/\b([xyz])([0-9])\b/g, (_, v, idx) => v + (SUBSCRIPT_MAP[idx] || idx));
 
-  // 9. Greek Letters (all standard KaTeX symbols)
-  s = s.replace(/\\alpha\b/gi, "α");
-  s = s.replace(/\\beta\b/gi, "β");
-  s = s.replace(/\\gamma\b/gi, "γ");
-  s = s.replace(/\\delta\b/gi, "δ");
-  s = s.replace(/\\epsilon\b|\\varepsilon\b/gi, "ε");
-  s = s.replace(/\\zeta\b/gi, "ζ");
-  s = s.replace(/\\eta\b/gi, "η");
-  s = s.replace(/\\theta\b/gi, "θ");
-  s = s.replace(/\\iota\b/gi, "ι");
-  s = s.replace(/\\kappa\b/gi, "κ");
-  s = s.replace(/\\lambda\b/gi, "λ");
-  s = s.replace(/\\mu\b/gi, "μ");
-  s = s.replace(/\\nu\b/gi, "ν");
-  s = s.replace(/\\xi\b/gi, "ξ");
-  s = s.replace(/\\pi\b|\bpi\b/gi, "π");
-  s = s.replace(/\\rho\b/gi, "ρ");
-  s = s.replace(/\\sigma\b/gi, "σ");
-  s = s.replace(/\\tau\b/gi, "τ");
-  s = s.replace(/\\upsilon\b/gi, "υ");
-  s = s.replace(/\\phi\b|\\varphi\b/gi, "φ");
-  s = s.replace(/\\chi\b/gi, "χ");
-  s = s.replace(/\\psi\b/gi, "ψ");
-  s = s.replace(/\\omega\b/gi, "ω");
-  s = s.replace(/\\Gamma\b/g, "Γ");
-  s = s.replace(/\\Delta\b/g, "Δ");
-  s = s.replace(/\\Theta\b/g, "Θ");
-  s = s.replace(/\\Lambda\b/g, "Λ");
-  s = s.replace(/\\Sigma\b/g, "Σ");
-  s = s.replace(/\\Phi\b/g, "Φ");
-  s = s.replace(/\\Psi\b/g, "Ψ");
-  s = s.replace(/\\Omega\b/g, "Ω");
+  // 10. Greek Letters (all standard KaTeX symbols; use (?![a-zA-Z]) so \theta_x, \theta_\gamma, \alpha_1 match properly)
+  s = s.replace(/\\alpha(?![a-zA-Z])/gi, "α");
+  s = s.replace(/\\beta(?![a-zA-Z])/gi, "β");
+  s = s.replace(/\\gamma(?![a-zA-Z])/gi, "γ");
+  s = s.replace(/\\delta(?![a-zA-Z])/gi, "δ");
+  s = s.replace(/\\epsilon(?![a-zA-Z])|\\varepsilon(?![a-zA-Z])/gi, "ε");
+  s = s.replace(/\\zeta(?![a-zA-Z])/gi, "ζ");
+  s = s.replace(/\\eta(?![a-zA-Z])/gi, "η");
+  s = s.replace(/\\theta(?![a-zA-Z])|\\vartheta(?![a-zA-Z])/gi, "θ");
+  s = s.replace(/\\iota(?![a-zA-Z])/gi, "ι");
+  s = s.replace(/\\kappa(?![a-zA-Z])/gi, "κ");
+  s = s.replace(/\\lambda(?![a-zA-Z])/gi, "λ");
+  s = s.replace(/\\mu(?![a-zA-Z])/gi, "μ");
+  s = s.replace(/\\nu(?![a-zA-Z])/gi, "ν");
+  s = s.replace(/\\xi(?![a-zA-Z])/gi, "ξ");
+  s = s.replace(/\\pi(?![a-zA-Z])|\bpi\b/gi, "π");
+  s = s.replace(/\\rho(?![a-zA-Z])/gi, "ρ");
+  s = s.replace(/\\sigma(?![a-zA-Z])/gi, "σ");
+  s = s.replace(/\\tau(?![a-zA-Z])/gi, "τ");
+  s = s.replace(/\\upsilon(?![a-zA-Z])/gi, "υ");
+  s = s.replace(/\\phi(?![a-zA-Z])|\\varphi(?![a-zA-Z])/gi, "φ");
+  s = s.replace(/\\chi(?![a-zA-Z])/gi, "χ");
+  s = s.replace(/\\psi(?![a-zA-Z])/gi, "ψ");
+  s = s.replace(/(\d+)\s*\\*(?:omega|Omega|ohm|ohms)\b/gi, "$1 Ω");
+  s = s.replace(/\\Omega(?![a-zA-Z])/g, "Ω");
+  s = s.replace(/\\omega(?![a-zA-Z])/g, "ω");
+  s = s.replace(/\\Gamma(?![a-zA-Z])/g, "Γ");
+  s = s.replace(/\\Delta(?![a-zA-Z])/g, "Δ");
+  s = s.replace(/\\Theta(?![a-zA-Z])/g, "Θ");
+  s = s.replace(/\\Lambda(?![a-zA-Z])/g, "Λ");
+  s = s.replace(/\\Sigma(?![a-zA-Z])/g, "Σ");
+  s = s.replace(/\\Phi(?![a-zA-Z])/g, "Φ");
+  s = s.replace(/\\Psi(?![a-zA-Z])/g, "Ψ");
+
+  // Bare Greek names before subscript or math operator (e.g. theta_z, theta_x, alpha_1)
+  s = s.replace(/\btheta(?=[_0-9\^])/gi, "θ");
+  s = s.replace(/\balpha(?=[_0-9\^])/gi, "α");
+  s = s.replace(/\bbeta(?=[_0-9\^])/gi, "β");
+  s = s.replace(/\bgamma(?=[_0-9\^])/gi, "γ");
+  s = s.replace(/\blambda(?=[_0-9\^])/gi, "λ");
+  s = s.replace(/\bomega(?=[_0-9\^])/gi, "ω");
+  s = s.replace(/\bphi(?=[_0-9\^])/gi, "φ");
 
   // 10. Calculus, Sets, and Comparison Operators
   s = s.replace(/<=|\\le(?:q)?\b/g, "≤");
@@ -320,7 +337,7 @@ function isExamMetadataOrInstruction(line: string): boolean {
   if (/^(?:time\s*[:=]|duration\s*[:=]|max(?:imum)?\s*marks|total\s*marks|date\s*[:=]|day\s*[:=])/i.test(l)) return true;
 
   // Section / Part headers
-  if (/^(?:section|part|module)\s*[-–:]?\s*[0-9a-zivx]+/i.test(l) && l.length < 30) return true;
+  if (/^(?:section|part|module)\s*[-:]?\s*[0-9a-zivx]+/i.test(l) && l.length < 30) return true;
 
   // General Instructions & Exam rules
   if (/^(?:n\.?\s*b\.?|note\s*[:.]|instructions?\s*(?:to\s*candidates)?[:.])/i.test(l)) return true;
@@ -339,6 +356,159 @@ function isExamMetadataOrInstruction(line: string): boolean {
   return false;
 }
 
+export function cleanAndSanitizeSvg(svgStr: string): string {
+  let cleaned = svgStr.trim();
+
+  // Ensure valid xmlns
+  if (!cleaned.includes("xmlns=")) {
+    cleaned = cleaned.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"');
+  }
+
+  // 1. Sanitize all <text> elements: replace raw LaTeX math and dollar signs
+  cleaned = cleaned.replace(/<text([^>]*)>([\s\S]*?)<\/text>/gi, (_m, attrs, textContent) => {
+    let t = textContent;
+    // Replace LaTeX Omega and Ohm symbols
+    t = t.replace(/\$*\\*(?:Omega|omega|ohm|ohms)\$*/gi, "Ω");
+    t = t.replace(/\$*\\*mu\$*/gi, "μ");
+    t = t.replace(/\$*\\*theta\$*/gi, "θ");
+    t = t.replace(/\$*\\*alpha\$*/gi, "α");
+    t = t.replace(/\$*\\*beta\$*/gi, "β");
+    t = t.replace(/\$*\\*Delta\$*/gi, "Δ");
+    t = t.replace(/\$*\\*degree\$*/gi, "°");
+    t = t.replace(/\$*\\*(?:le|leq)\$*/gi, "≤");
+    t = t.replace(/\$*\\*(?:ge|geq)\$*/gi, "≥");
+    t = t.replace(/\$*\\*pm\$*/gi, "±");
+    t = t.replace(/\$*\\*times\$*/gi, "×");
+    t = t.replace(/\$*\\*div\$*/gi, "÷");
+    t = t.replace(/\$*\\*sqrt\{([^}]+)\}\$*/gi, "√($1)");
+    t = t.replace(/\$([^\$]+)\$/g, "$1"); // remove any leftover $ signs
+    t = t.replace(/\\[a-zA-Z]+/g, "");   // strip any stray unrecognized LaTeX slashes
+    t = t.trim();
+
+    let newAttrs = attrs;
+    if (!newAttrs.includes("font-family")) {
+      newAttrs += ' font-family="system-ui, -apple-system, sans-serif"';
+    } else {
+      newAttrs = newAttrs.replace(/font-family=["'][^"']*["']/gi, 'font-family="system-ui, -apple-system, sans-serif"');
+    }
+    return `<text${newAttrs}>${t}</text>`;
+  });
+
+  // 2. Strip background cards so diagram background remains 100% transparent
+  cleaned = cleaned.replace(/<rect[^>]*width=["']100%["'][^>]*height=["']100%["'][^>]*\/?>/gi, "");
+  cleaned = cleaned.replace(/<rect[^>]*fill=["'](?:#ffffff|white|#fff)["'][^>]*\/?>/gi, "");
+
+  return cleaned;
+}
+
+/**
+ * Converts a raster diagram (scanned paper crop) into a razor-sharp, high-definition transparent PNG with yellow (#FFE600) lines and text.
+ * Performs Lanczos3 super-sampling upscaling to ensure pristine 300+ DPI clarity on widescreen slides.
+ * High-luminance paper background becomes alpha 0 (invisible).
+ * Dark ink lines and text become Bookman yellow #FFE600 with smooth anti-aliased edges and zero pixelation.
+ */
+export async function makeRasterDiagramYellowTransparent(inputBuffer: Buffer): Promise<Buffer> {
+  const origMeta = await sharp(inputBuffer).metadata();
+  const origW = origMeta.width || 600;
+
+  // Super-sample low-resolution crops to high-definition (minimum 2400px width for crystal-clear 4K slides)
+  const targetW = Math.max(2400, Math.min(3600, origW * 4));
+
+  const upscaled = await sharp(inputBuffer)
+    .resize({ width: targetW, kernel: sharp.kernel.lanczos3 })
+    .normalize()
+    .blur(0.5) // anti-grain smoothing to eliminate paper texture and scan noise
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const { data, info } = upscaled;
+  const { width, height } = info;
+  const out = Buffer.alloc(width * height * 4);
+
+  const tHigh = 220;
+  const tLow = 110;
+
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    const origA = data[i + 3];
+
+    if (origA === 0) {
+      out[i] = 0;
+      out[i + 1] = 0;
+      out[i + 2] = 0;
+      out[i + 3] = 0;
+      continue;
+    }
+
+    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+
+    let inkAlpha = 0;
+    if (lum >= tHigh) {
+      inkAlpha = 0;
+    } else if (lum <= tLow) {
+      inkAlpha = 255;
+    } else {
+      const ratio = (tHigh - lum) / (tHigh - tLow);
+      inkAlpha = Math.round(255 * Math.pow(ratio, 0.95));
+    }
+
+    const finalAlpha = Math.round((inkAlpha * origA) / 255);
+
+    if (finalAlpha === 0) {
+      out[i] = 0;
+      out[i + 1] = 0;
+      out[i + 2] = 0;
+      out[i + 3] = 0;
+    } else {
+      // Yellow color #FFE600 matches Bookman Old Style yellow question font
+      out[i] = 255;
+      out[i + 1] = 230;
+      out[i + 2] = 0;
+      out[i + 3] = finalAlpha;
+    }
+  }
+
+  return await sharp(out, {
+    raw: {
+      width,
+      height,
+      channels: 4,
+    },
+  })
+    .sharpen({ sigma: 1.2, m1: 1.0, m2: 2.0 })
+    .png({ compressionLevel: 8 })
+    .toBuffer();
+}
+
+/**
+ * Converts an SVG diagram to an invisible transparent background with yellow (#FFE600) strokes and text.
+ */
+export async function convertSvgToYellowTransparent(svgStr: string): Promise<Buffer> {
+  let cleaned = cleanAndSanitizeSvg(svgStr);
+
+  // Strip all background rectangles
+  cleaned = cleaned.replace(/<rect[^>]*width=["']100%["'][^>]*height=["']100%["'][^>]*\/?>/gi, "");
+  cleaned = cleaned.replace(/<rect[^>]*fill=["'](?:#ffffff|white|#fff)["'][^>]*\/?>/gi, "");
+
+  // Convert stroke colors to yellow #FFE600
+  cleaned = cleaned.replace(/stroke=["'](?:#0f172a|#000000|#000|black|#1e293b|#334155|#475569|currentColor)["']/gi, 'stroke="#FFE600"');
+  cleaned = cleaned.replace(/stroke:\s*(?:#0f172a|#000000|#000|black|#1e293b|#334155|#475569)/gi, 'stroke: #FFE600');
+
+  // Convert fill colors for text, arrows, and dots to yellow #FFE600
+  cleaned = cleaned.replace(/fill=["'](?:#0f172a|#000000|#000|black|#1e293b|#334155|#475569|currentColor)["']/gi, 'fill="#FFE600"');
+  cleaned = cleaned.replace(/fill:\s*(?:#0f172a|#000000|#000|black|#1e293b|#334155|#475569)/gi, 'fill: #FFE600');
+
+  // Make white component interior fills transparent
+  cleaned = cleaned.replace(/fill=["'](?:#ffffff|white|#fff)["']/gi, 'fill="none"');
+
+  return await sharp(Buffer.from(cleaned), { density: 300 })
+    .png()
+    .toBuffer();
+}
+
 /**
  * Intelligent question & sub-question segmentation engine:
  * 1. Ensures EVERY sub-question receives its own dedicated slide.
@@ -347,10 +517,12 @@ function isExamMetadataOrInstruction(line: string): boolean {
  * 4. Extracts marks counts ([3 MARKS], [5 MARKS]) into header badges.
  * 5. Extracts Markdown tables into structured presentation tables.
  */
-export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
+export async function splitTextIntoQuestions(raw: string): Promise<ParsedQuestion[]> {
   if (!raw || !raw.trim()) return [];
 
-  const lines = raw.split("\n");
+  // Normalize all em-dashes and en-dashes to standard hyphens
+  const normalizedRaw = raw.replace(/[\u2013\u2014]/g, "-");
+  const lines = normalizedRaw.split("\n");
   const questions: ParsedQuestion[] = [];
 
   let currentMainQ = ""; // e.g. "Q.1"
@@ -362,7 +534,7 @@ export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
   const subQRegex = /^(?:(?:\(([a-z0-9]+)\)|([a-z0-9]+)\)|([a-z])\.)\s*(.*))$/i;
   const marksRegex = /^\[?(\d{1,2})\s*(?:Marks?|M)?\]?$/i;
 
-  function flush() {
+  async function flush() {
     if (bodyLines.length === 0) return;
 
     const textLines: string[] = [];
@@ -405,15 +577,61 @@ export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
     }
 
     const rawBody = textLines.join("\n");
+
+    // 1. Check for attached diagram image [DIAGRAM_IMAGE: ...] or [IMAGE_ATTACHMENT: ...]
+    let diagramPngBase64 = "";
+    const diagramImgMatch = rawBody.match(/\[(?:DIAGRAM_IMAGE|IMAGE_ATTACHMENT):\s*(?:data:image\/[^;]+;base64,)?([A-Za-z0-9+/=]+)\]/);
+    if (diagramImgMatch) {
+      try {
+        const rawBuf = Buffer.from(diagramImgMatch[1], "base64");
+        const yellowTransparentBuf = await makeRasterDiagramYellowTransparent(rawBuf);
+        diagramPngBase64 = yellowTransparentBuf.toString("base64");
+      } catch (procErr) {
+        console.warn("Could not convert diagram to yellow transparent:", procErr);
+        diagramPngBase64 = diagramImgMatch[1];
+      }
+    }
+
+    // 2. Check for SVG diagram in code block or raw tag: <svg ... </svg>
+    const svgMatch = rawBody.match(/<svg[\s\S]*?<\/svg>/i);
+    if (!diagramPngBase64 && svgMatch) {
+      try {
+        const rasterBuf = await convertSvgToYellowTransparent(svgMatch[0]);
+        diagramPngBase64 = rasterBuf.toString("base64");
+      } catch (svgErr) {
+        console.warn("Could not rasterize SVG diagram for slide:", svgErr);
+      }
+    }
+
+    // 3. Check for Venn diagram request in text (e.g. "Using Venn diagram...", "Venn diagram for A \\ B")
+    if (!diagramPngBase64 && /venn\s*diagram/i.test(rawBody)) {
+      try {
+        const exprMatch = rawBody.match(/(?:for|represent|verify|prove|show|that)\s+([A-Za-z()\\+\-∖⊕∪∩'̄\s]+)/i);
+        const expr = exprMatch ? exprMatch[1].trim() : "A ∩ B";
+        const vennSvg = generateVennSvg(expr, `Figure: ${expr}`);
+        const rasterBuf = await convertSvgToYellowTransparent(vennSvg);
+        diagramPngBase64 = rasterBuf.toString("base64");
+      } catch (vennErr) {
+        console.warn("Could not generate Venn diagram for slide:", vennErr);
+      }
+    }
+
+    // Clean out diagram markers and raw SVGs from body text
+    const cleanRawBody = rawBody
+      .replace(/\[(?:DIAGRAM_IMAGE|IMAGE_ATTACHMENT|EXTRACT_BOX|DIAGRAM):[\s\S]*?\]/g, "")
+      .replace(/```(?:svg|xml)?[\s\S]*?<svg[\s\S]*?<\/svg>[\s\S]*?```/gi, "")
+      .replace(/<svg[\s\S]*?<\/svg>/gi, "")
+      .trim();
+
     const matrixRegex = /(?:\\begin\{([a-zA-Z]*matrix)\}|begin([a-zA-Z]*matrix))([\s\S]*?)(?:\\end\{\1\}|end\2)/i;
-    const matrixMatch = rawBody.match(matrixRegex);
+    const matrixMatch = cleanRawBody.match(matrixRegex);
 
     let matrixData: MatrixQuestionData | undefined = undefined;
     let fullBody = "";
 
     if (matrixMatch && matrixMatch.index !== undefined) {
-      const preTextRaw = rawBody.slice(0, matrixMatch.index);
-      const postTextRaw = rawBody.slice(matrixMatch.index + matrixMatch[0].length);
+      const preTextRaw = cleanRawBody.slice(0, matrixMatch.index);
+      const postTextRaw = cleanRawBody.slice(matrixMatch.index + matrixMatch[0].length);
       const matrixBody = matrixMatch[3];
       const bType = matrixMatch[1] || matrixMatch[2] || "bmatrix";
       const rows = parseMatrixContent(matrixBody);
@@ -426,13 +644,13 @@ export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
           bracketType: bType,
         };
       } else {
-        fullBody = cleanTextForSlide(rawBody);
+        fullBody = cleanTextForSlide(cleanRawBody);
       }
     } else {
-      fullBody = cleanTextForSlide(rawBody);
+      fullBody = cleanTextForSlide(cleanRawBody);
     }
 
-    if (fullBody.length > 0 || tableRows.length > 0 || matrixData) {
+    if (fullBody.length > 0 || tableRows.length > 0 || matrixData || diagramPngBase64) {
       let header = currentMainQ || "QUESTION";
       if (currentSubQ) {
         header = `${header} (${currentSubQ.toUpperCase()})`;
@@ -444,6 +662,7 @@ export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
         body: fullBody,
         table: tableRows.length > 0 ? tableRows : undefined,
         matrix: matrixData,
+        diagramPngBase64: diagramPngBase64 || undefined,
       });
     }
 
@@ -469,7 +688,7 @@ export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
 
       const subMatchInRemainder = remainder.match(subQRegex);
       if (subMatchInRemainder) {
-        flush();
+        await flush();
         currentMainQ = `Q.${qNum}`;
         currentSubQ = subMatchInRemainder[1] || subMatchInRemainder[2] || subMatchInRemainder[3];
         const subText = subMatchInRemainder[4];
@@ -480,13 +699,13 @@ export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
       }
 
       if (isExamMetadataOrInstruction(remainder) || remainder.length === 0) {
-        flush();
+        await flush();
         currentMainQ = `Q.${qNum}`;
         currentSubQ = "";
         continue;
       }
 
-      flush();
+      await flush();
       currentMainQ = `Q.${qNum}`;
       currentSubQ = "";
       bodyLines.push(remainder);
@@ -495,7 +714,7 @@ export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
 
     const subMatch = line.match(subQRegex);
     if (subMatch) {
-      flush();
+      await flush();
       currentSubQ = subMatch[1] || subMatch[2] || subMatch[3];
       const subText = subMatch[4];
       if (subText && !isExamMetadataOrInstruction(subText)) {
@@ -515,7 +734,7 @@ export function splitTextIntoQuestions(raw: string): ParsedQuestion[] {
     bodyLines.push(line);
   }
 
-  flush();
+  await flush();
 
   if (questions.length === 0) {
     const paragraphs = raw.split(/\n\s*\n/).filter((p) => p.trim().length > 10 && !isExamMetadataOrInstruction(p));
@@ -583,7 +802,7 @@ export async function buildPptxPresentation(
     ? { data: `image/png;base64,${bgBase64}` }
     : { color: "0B0F0E" };
 
-  const questions = splitTextIntoQuestions(rawText);
+  const questions = await splitTextIntoQuestions(rawText);
 
   if (questions.length === 0) {
     const slide = pres.addSlide();
@@ -747,7 +966,85 @@ export async function buildPptxPresentation(
       continue;
     }
 
-    // 3. Normal Question Body & Presentation Tables
+    // 3. Diagram Rendering (Venn diagrams, BEE circuits, FBDs, Trusses, Schematics)
+    if (q.diagramPngBase64) {
+      const charLen = q.body.length;
+      let diagFontSize = 72;
+      let diagLineSpacing = 94;
+      let textH = 3.5;
+
+      if (charLen > 250) {
+        diagFontSize = 54;
+        diagLineSpacing = 72;
+        textH = 4.2;
+      } else if (charLen > 120) {
+        diagFontSize = 62;
+        diagLineSpacing = 82;
+        textH = 3.8;
+      }
+
+      // Check if body is just isolated diagram labels (like "Weight", "Diagram", "Figure", etc.)
+      const isJustLabel = /^(?:weight|diagram|figure|xac|xab|kac|kab|kad|[a-z]{1,3}|[a-z]_[a-z0-9]+)\s*$/i.test(q.body.trim());
+      const hasRealText = q.body.trim().length > 0 && !isJustLabel;
+
+      if (hasRealText) {
+        slide.addText(q.body, {
+          x: 2.5,
+          y: 4.4,
+          w: 35.0,
+          h: textH,
+          fontFace: "Bookman Old Style",
+          fontSize: diagFontSize,
+          color: "FFE600",
+          lineSpacing: diagLineSpacing,
+          valign: "top",
+          wrap: true,
+        });
+      }
+
+      const diagY = hasRealText ? (4.4 + textH + 0.3) : 4.4;
+      const maxAvailableH = Math.min(14.8, 20.2 - diagY);
+
+      let imgW = 20.0;
+      let imgH = Math.min(11.5, maxAvailableH);
+      let imgX = (40.0 - imgW) / 2;
+
+      try {
+        const buf = Buffer.from(q.diagramPngBase64, "base64");
+        const meta = await sharp(buf).metadata();
+        if (meta.width && meta.height) {
+          const aspect = meta.width / meta.height;
+          const maxDiagW = 22.0;
+          const maxDiagH = Math.min(12.0, maxAvailableH);
+
+          imgW = maxDiagW;
+          imgH = imgW / aspect;
+
+          if (imgH > maxDiagH) {
+            imgH = maxDiagH;
+            imgW = imgH * aspect;
+          }
+          if (imgW > maxDiagW) {
+            imgW = maxDiagW;
+            imgH = imgW / aspect;
+          }
+          imgX = (40.0 - imgW) / 2;
+        }
+      } catch (aspectErr) {
+        console.warn("Could not calculate diagram aspect ratio:", aspectErr);
+      }
+
+      slide.addImage({
+        data: `image/png;base64,${q.diagramPngBase64}`,
+        x: imgX,
+        y: diagY,
+        w: imgW,
+        h: imgH,
+      });
+      continue;
+    }
+
+    // 4. Normal Question Body & Presentation Tables
     const hasTable = Boolean(q.table && q.table.length > 0);
     const charCount = q.body.length;
 

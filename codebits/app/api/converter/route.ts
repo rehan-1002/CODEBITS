@@ -58,6 +58,65 @@ function stripAiGeneratedSolutions(text: string): string {
   return cleaned.trim();
 }
 
+async function processDiagramBoundingBoxes(text: string, imageBuffer: Buffer): Promise<string> {
+  if (!text || (!text.includes("[EXTRACT_BOX:") && !text.includes("[DIAGRAM:"))) return text;
+  try {
+    const meta = await sharp(imageBuffer).metadata();
+    const imgW = meta.width || 1000;
+    const imgH = meta.height || 1000;
+
+    const regex = /\[(?:EXTRACT_BOX|DIAGRAM):\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\]/gi;
+    let match: RegExpExecArray | null;
+    let resultText = text;
+
+    while ((match = regex.exec(text)) !== null) {
+      const fullMatch = match[0];
+      const ymin = parseInt(match[1], 10);
+      const xmin = parseInt(match[2], 10);
+      const ymax = parseInt(match[3], 10);
+      const xmax = parseInt(match[4], 10);
+
+      // If bounding box spans most of the image (>70% width and height) or is [0, 0, 1000, 1000],
+      // use the full image directly without cropping, cleaned and normalized!
+      if ((xmax - xmin >= 700 && ymax - ymin >= 700) || (ymin === 0 && xmin === 0 && ymax === 1000 && xmax === 1000)) {
+        const fullCleaned = await sharp(imageBuffer)
+          .normalize()
+          .sharpen()
+          .png()
+          .toBuffer();
+        resultText = resultText.replace(fullMatch, `[DIAGRAM_IMAGE: ${fullCleaned.toString("base64")}]`);
+        continue;
+      }
+
+      // Add a 5% margin to prevent cutting off hooks, pins, or labels at the edges
+      const padY = Math.round((ymax - ymin) * 0.05);
+      const padX = Math.round((xmax - xmin) * 0.05);
+      const safeYmin = Math.max(0, ymin - padY);
+      const safeXmin = Math.max(0, xmin - padX);
+      const safeYmax = Math.min(1000, ymax + padY);
+      const safeXmax = Math.min(1000, xmax + padX);
+
+      const top = Math.max(0, Math.min(imgH - 10, Math.round((safeYmin / 1000) * imgH)));
+      const left = Math.max(0, Math.min(imgW - 10, Math.round((safeXmin / 1000) * imgW)));
+      const w = Math.max(20, Math.min(imgW - left, Math.round(((safeXmax - safeXmin) / 1000) * imgW)));
+      const h = Math.max(20, Math.min(imgH - top, Math.round(((safeYmax - safeYmin) / 1000) * imgH)));
+
+      const cropped = await sharp(imageBuffer)
+        .extract({ left, top, width: w, height: h })
+        .png()
+        .toBuffer();
+
+      const b64 = cropped.toString("base64");
+      resultText = resultText.replace(fullMatch, `[DIAGRAM_IMAGE: ${b64}]`);
+    }
+
+    return resultText;
+  } catch (err) {
+    console.warn("Could not crop diagram bounding box:", err);
+    return text;
+  }
+}
+
 function getAcademicReconstructionPrompt(options: { isImage: boolean; rangeLabel?: string }) {
   const { isImage, rangeLabel } = options;
   const label = rangeLabel ? ` for ${rangeLabel}` : "";
@@ -91,14 +150,25 @@ CRITICAL MATHEMATICS, PHYSICS, CHEMISTRY & EQUATION RULES:
   - Time derivatives: \\dot{x}, \\ddot{x}, \\dot{\\theta}
   - Quantum & atomic symbols: \\hbar (reduced Planck constant), \\lambda (wavelength), \\nu (frequency), \\psi/\\Psi (wavefunction), \\rho, \\sigma, \\tau, \\mu_0, \\epsilon_0.
 
-3. ELECTRICAL & ELECTRONICS CIRCUITS (BEEE):
-- Reconstruct the verbatim question text and any given parameters (e.g. "If $I = 2\\text{ A}$, find the value of the battery voltage $V$").
-- If the question refers to a figure or circuit diagram:
-  - DO NOT solve or derive the circuit solution.
-  - DO NOT invent component summaries or node voltage derivations.
-  - DO NOT draw inaccurate approximations or ASCII circuits.
-  - The authentic source schematic is automatically embedded directly with the question.
-  - Output ONLY the question statement, sub-parts, given parameters, and multiple-choice options verbatim.
+3. ACADEMIC DIAGRAMS, CIRCUITS, MECHANICS & SCHEMATICS:
+- PROTOCOL A: ADAPTIVE EXTRACTION (MANDATORY FOR SCANNED EXAM PAPERS & IMAGES):
+  * If the input image or page contains an existing diagram, circuit (BEEE ladder, bridge, mesh, AC/DC), mechanics diagram (pulleys, cables, trusses, beams, friction blocks, FBDs), graph, or figure:
+    DO NOT GUESS OR ESTIMATE ARBITRARY COORDINATES!
+    DO NOT TRY TO REDRAW COMPLEX CIRCUITS OR MECHANICS NETWORKS FROM SCRATCH!
+    Locate the diagram on the page and output its exact bounding box coordinates:
+    [EXTRACT_BOX: ymin, xmin, ymax, xmax]
+    (normalized coordinates 0 to 1000: ymin, xmin, ymax, xmax).
+    The backend vision pipeline will extract the exact 100% accurate diagram, remove all paper background so it is completely transparent, and recolor lines cleanly (yellow for PPTX, black for Word).
+  * If the uploaded image is solely a diagram without question text:
+    Output: [EXTRACT_BOX: 0, 0, 1000, 1000].
+- PROTOCOL B: PROGRAMMATIC COMPILATION / VECTOR BLUEPRINT (ONLY FOR BRAND NEW FIGURES FROM TEXT):
+  * If the user input is pure text without an existing image, or explicitly asks to draw a brand-new figure from scratch:
+    Output a clean vector SVG graphic block without white background cards: \`\`\`svg <svg viewBox="0 0 W H" xmlns="http://www.w3.org/2000/svg"> ... </svg> \`\`\`.
+    - Never include white background cards (<rect width="100%" height="100%" fill="#ffffff"/>). Background must remain transparent.
+    - All rails and vertical rungs must form closed, complete circuits with continuous orthogonal wiring.
+    - Resistors must connect solidly from top rail to bottom rail with zero gaps.
+    - Use font-family="system-ui, -apple-system, sans-serif" and plain text Unicode characters (e.g. "8 Ω", "100 V", "12 Ω").
+- For Venn Diagrams: Universal rectangle with clean overlapping circles and labeled sets (U, A, B, C).
 
 4. CHEMISTRY EQUATIONS & REACTION MECHANISMS:
 - Reconstruct all chemical formulas, stoichiometry, ionic charges, and reactions verbatim:
@@ -318,6 +388,9 @@ export async function POST(req: NextRequest) {
 
         if (aiResult?.text && aiResult.text.trim().length > 0) {
           extractedText = stripAiGeneratedSolutions(aiResult.text.trim());
+          if (isImage) {
+            extractedText = await processDiagramBoundingBoxes(extractedText, bufferToProcess);
+          }
         }
       } catch (aiErr: any) {
         console.warn("AI chunk extraction failed, attempting fallback:", aiErr?.message || aiErr);
@@ -397,6 +470,7 @@ export async function POST(req: NextRequest) {
 
         if (aiResult?.text && aiResult.text.trim().length > 0) {
           extractedText = stripAiGeneratedSolutions(aiResult.text.trim());
+          extractedText = await processDiagramBoundingBoxes(extractedText, bufferToProcess);
         }
       } catch (aiErr: any) {
         console.error("AI Image-to-DOCX extraction failed:", aiErr);
@@ -432,58 +506,61 @@ export async function POST(req: NextRequest) {
       // Build formatted Word (.docx) document with native Math equations, Matrices, and Tables
       const docElements = await buildDocumentElements(extractedText, baseName);
 
-      // Embed the source image (diagrams, circuits, handwriting) directly into the Word document
-      try {
-        let embedBuffer = buffer;
-        let imgType: "jpg" | "png" | "gif" | "bmp" = "jpg";
-
+      // Embed the source image directly only if no diagram was already embedded
+      const alreadyHasDiagram = extractedText.includes("[DIAGRAM_IMAGE:") || extractedText.includes("<svg");
+      if (!alreadyHasDiagram) {
         try {
-          embedBuffer = await sharp(buffer)
-            .resize({ width: 1000, height: 700, fit: "inside", withoutEnlargement: true })
-            .jpeg({ quality: 85 })
-            .toBuffer();
-          imgType = "jpg";
-        } catch {
-          const ext = (originalName.split(".").pop() || "").toLowerCase();
-          imgType = ext === "png" ? "png" : ext === "gif" ? "gif" : ext === "bmp" ? "bmp" : "jpg";
-        }
+          let embedBuffer = buffer;
+          let imgType: "jpg" | "png" | "gif" | "bmp" = "jpg";
 
-        const imageParagraph = new Paragraph({
-          alignment: AlignmentType.CENTER,
-          spacing: { before: 240, after: 120 },
-          children: [
-            new ImageRun({
-              data: embedBuffer,
-              type: imgType,
-              transformation: {
-                width: 520,
-                height: 320,
-              },
-            }),
-          ],
-        });
-        const captionParagraph = new Paragraph({
-          alignment: AlignmentType.CENTER,
-          spacing: { after: 240 },
-          children: [
-            new TextRun({
-              text: "Figure: Source Reference & Schematic Diagram",
-              italics: true,
-              size: 18,
-              color: "666666",
-            }),
-          ],
-        });
-        // Place the source reference image right below the question header so it looks like an authentic exam sheet
-        if (docElements.length > 2) {
-          docElements.splice(2, 0, imageParagraph, captionParagraph);
-        } else if (docElements.length > 1) {
-          docElements.splice(1, 0, imageParagraph, captionParagraph);
-        } else {
-          docElements.push(imageParagraph, captionParagraph);
+          try {
+            embedBuffer = await sharp(buffer)
+              .resize({ width: 1000, height: 700, fit: "inside", withoutEnlargement: true })
+              .jpeg({ quality: 85 })
+              .toBuffer();
+            imgType = "jpg";
+          } catch {
+            const ext = (originalName.split(".").pop() || "").toLowerCase();
+            imgType = ext === "png" ? "png" : ext === "gif" ? "gif" : ext === "bmp" ? "bmp" : "jpg";
+          }
+
+          const imageParagraph = new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { before: 240, after: 120 },
+            children: [
+              new ImageRun({
+                data: embedBuffer,
+                type: imgType,
+                transformation: {
+                  width: 520,
+                  height: 320,
+                },
+              }),
+            ],
+          });
+          const captionParagraph = new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 240 },
+            children: [
+              new TextRun({
+                text: "Figure: Source Reference & Schematic Diagram",
+                italics: true,
+                size: 18,
+                color: "666666",
+              }),
+            ],
+          });
+          // Place the source reference image right below the question header so it looks like an authentic exam sheet
+          if (docElements.length > 2) {
+            docElements.splice(2, 0, imageParagraph, captionParagraph);
+          } else if (docElements.length > 1) {
+            docElements.splice(1, 0, imageParagraph, captionParagraph);
+          } else {
+            docElements.push(imageParagraph, captionParagraph);
+          }
+        } catch (imgErr) {
+          console.warn("Could not embed image into docx:", imgErr);
         }
-      } catch (imgErr) {
-        console.warn("Could not embed image into docx:", imgErr);
       }
 
       const doc = new Document({

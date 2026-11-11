@@ -200,7 +200,7 @@ STRICT CRITERIA & ANTI-HALLUCINATION RULES:
    - 3 MARKS: Definition + governing principle/equation + 1 concise application or example. (Keep under 110 words).
    - 4 or 5 MARKS: 
      * Definition & Working Principle
-     * Circuit / Block Diagram description (or ASCI/schematic representation where helpful)
+     * Clean, explicitly labeled diagram breakdown or compilable LaTeX TikZ/Circuitikz code (strictly NO raw HTML, broken SVG, or ASCII text-art)
      * 4-5 bulleted operational points / derivation steps
      * Advantages / Industrial Applications. (Keep under 240 words).
    - 10 MARKS:
@@ -209,4 +209,8 @@ STRICT CRITERIA & ANTI-HALLUCINATION RULES:
      * Complete Step-by-Step Derivation or Numerical Solution with each formula step clearly stated
      * Tabular Comparison or Key Parameters
      * Practical Engineering Significance & Conclusion.
+6. DIAGRAMS & SCHEMATICS PROTOCOL:
+   - Strictly forbidden from generating raw HTML, SVG coordinates (<svg>, <path>, <rect>), or ASCII text-art.
+   - For questions with existing figures, use [EXTRACT_BOX: ymin, xmin, ymax, xmax] so the backend extracts the 100% accurate original diagram.
+   - For solutions requiring newly generated diagrams, provide a clean, professionally labeled diagram specification or pure LaTeX code wrapped in \\documentclass{standalone} using \\usepackage{circuitikz} for electrical circuits or \\usepackage{tikz} for mechanics/structural/Venn diagrams.
 `;
