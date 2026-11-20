@@ -83,8 +83,20 @@ function findClosingBrace(str: string, startIdx: number): number {
 const SUPERSCRIPT_MAP: Record<string, string> = {
   "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴",
   "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹",
-  "+": "⁺", "-": "⁻", "n": "ⁿ", "x": "ˣ", "i": "ⁱ",
-  "a": "ᵃ", "b": "ᵇ", "t": "ᵗ", "k": "ᵏ", "m": "ᵐ"
+  "+": "⁺", "-": "⁻", "=": "⁼", "(": "⁽", ")": "⁾", "/": "ᐟ",
+  "a": "ᵃ", "b": "ᵇ", "c": "ᶜ", "d": "ᵈ", "e": "ᵉ",
+  "f": "ᶠ", "g": "ᵍ", "h": "ʰ", "i": "ⁱ", "j": "ʲ",
+  "k": "ᵏ", "l": "ˡ", "m": "ᵐ", "n": "ⁿ", "o": "ᵒ",
+  "p": "ᵖ", "r": "ʳ", "s": "ˢ", "t": "ᵗ", "u": "ᵘ",
+  "v": "ᵛ", "w": "ʷ", "x": "ˣ", "y": "ʸ", "z": "ᶻ",
+  "θ": "ᶿ", "φ": "ᵠ", "α": "ᵅ", "β": "ᵝ", "γ": "ᵞ"
+};
+
+const BLACKBOARD_BOLD_MAP: Record<string, string> = {
+  R: "ℝ", C: "ℂ", Z: "ℤ", N: "ℕ", Q: "ℚ", P: "ℙ", H: "ℍ", U: "𝕌",
+  A: "𝔸", B: "𝔹", D: "𝔻", E: "𝔼", F: "𝔽", G: "𝔾", I: "𝕀", J: "𝕁",
+  K: "𝕂", L: "𝕃", M: "𝕄", O: "𝕆", S: "𝕊", T: "𝕋", V: "𝕍", W: "𝕎",
+  X: "𝕏", Y: "𝕐"
 };
 
 const SUBSCRIPT_MAP: Record<string, string> = {
@@ -97,9 +109,15 @@ const SUBSCRIPT_MAP: Record<string, string> = {
  * Formats superscripts safely without corrupting subsequent arithmetic operators (+, -).
  */
 function formatSuperscripts(text: string): string {
-  let s = text.replace(/\^\{([^{}]+)\}/g, (_, exp) => {
-    return exp.split("").map((c: string) => SUPERSCRIPT_MAP[c] || c).join("");
-  });
+  // Normalize unbraced fractional powers e.g. ^\frac{3}{2} -> ^{3/2}, ^-\frac{3}{2} -> ^{-3/2}
+  let s = text
+    .replace(/\^-\\?(?:d?frac)\{([^{}]+)\}\{([^{}]+)\}/g, "^{-$1/$2}")
+    .replace(/\^\\?(?:d?frac)\{([^{}]+)\}\{([^{}]+)\}/g, "^{$1/$2}")
+    .replace(/\^\{([^{}]+)\}/g, (_, exp) => {
+      // If exp contains a fraction command, simplify it
+      const cleanExp = exp.replace(/\\?(?:d?frac)\{([^{}]+)\}\{([^{}]+)\}/g, "$1/$2");
+      return cleanExp.split("").map((c: string) => SUPERSCRIPT_MAP[c] || c).join("");
+    });
 
   s = s.replace(/\^-([0-9a-zA-Z])/g, (_, char) => "⁻" + (SUPERSCRIPT_MAP[char] || char));
   s = s.replace(/\^([0-9a-zA-Z])/g, (_, char) => SUPERSCRIPT_MAP[char] || char);
@@ -309,6 +327,13 @@ function cleanTextForSlide(raw: string): string {
   s = s.replace(/\\notin\b/g, "∉");
   s = s.replace(/\\cap\b/g, "∩");
   s = s.replace(/\\cup\b/g, "∪");
+
+  // Blackboard Bold Sets & Number Systems (\mathbb{R}, \mathbb{C}, \mathbb{Z}, \mathbb{N}, \mathbb{Q}, \mathbb{P}, etc.)
+  s = s.replace(/\\mathbb\{([A-Za-z])\}/g, (_, ch) => BLACKBOARD_BOLD_MAP[ch] || ch);
+  s = s.replace(/\\mathbb\s+([A-Za-z])(?![a-zA-Z])/g, (_, ch) => BLACKBOARD_BOLD_MAP[ch] || ch);
+  s = s.replace(/\bmathbb([A-Za-z])\b/g, (_, ch) => BLACKBOARD_BOLD_MAP[ch] || ch);
+  s = s.replace(/(?:\\in|∈|\\notin|∉)\s*\\mathbf\{([RCZNQ])\}/g, (_, ch) => `∈ ${BLACKBOARD_BOLD_MAP[ch] || ch}`);
+  s = s.replace(/\\mathbf\{([RCZNQ])\}(?=\s*[,.)\]\}]|\s*$)/g, (_, ch) => BLACKBOARD_BOLD_MAP[ch] || ch);
 
   // 11. Clean double parentheses like ((kx / y)) -> (kx / y)
   s = s.replace(/\(\s*\(([^()]+)\)\s*\)/g, "($1)");

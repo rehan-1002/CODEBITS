@@ -26,6 +26,14 @@ export function formatMathText(rawText: string): string {
   processed = processed.replace(/\b([A-Z0-9\)])\s+oplus\s+([A-Z0-9\(])/gi, "$1 \\oplus $2");
   processed = processed.replace(/\boverline([A-Za-z0-9])\b/g, "\\overline{$1}");
   processed = processed.replace(/\\?overline\s*\{?([A-Za-z0-9])\}?/g, "\\overline{$1}");
+  // Blackboard bold sets
+  processed = processed.replace(/\bmathbb([A-Za-z])\b/g, "\\mathbb{$1}");
+  processed = processed.replace(/\\mathbb\s+([A-Za-z])(?![a-zA-Z])/g, "\\mathbb{$1}");
+  // Pre-clean degrees and unbackslashed Greek variable subscripts
+  processed = processed.replace(/(\d+)\s*\^circ\b/g, "$1^\\circ");
+  processed = processed.replace(/\btheta_([a-zA-Z0-9])/g, "\\theta_$1");
+  processed = processed.replace(/\balpha_([a-zA-Z0-9])/g, "\\alpha_$1");
+  processed = processed.replace(/\bbeta_([a-zA-Z0-9])/g, "\\beta_$1");
   // Convert bare set difference and symmetric difference statements into inline math if not already delimited
   processed = processed.replace(/(?<!\$)\b([A-C]\s*(?:\\setminus|∖|\\oplus|⊕)\s*\(?[A-C][\s\w()\\∖\-∩∪⊕]*\)?)(?!\$)/gi, "$ $1 $");
 
@@ -54,7 +62,7 @@ export function formatMathText(rawText: string): string {
   });
 
   // 3. Fallback: Auto-detect any leftover LaTeX expressions containing \frac, \sqrt, \csc, \sin, \cos, \tan, etc.
-  processed = processed.replace(/\\(sqrt|frac|csc|sin|cos|tan|log|lim|int|sum|prod|theta|alpha|beta|lambda|pi|infty|partial|setminus|oplus|cup|cap|subset|subseteq|emptyset|overline|therefore|because)\b[^\s<]*/g, (match) => {
+  processed = processed.replace(/\\(sqrt|frac|csc|sin|cos|tan|log|lim|int|sum|prod|theta|alpha|beta|lambda|pi|infty|partial|setminus|oplus|cup|cap|subset|subseteq|emptyset|overline|therefore|because|mathbb|mathbf)\b[^\s<]*/g, (match) => {
     try {
       return `<span class="inline-math px-0.5 inline-block align-baseline">${katex.renderToString(
         match.trim(),

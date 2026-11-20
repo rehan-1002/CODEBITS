@@ -187,13 +187,22 @@ CRITICAL MATHEMATICS, PHYSICS, CHEMISTRY & EQUATION RULES:
   - Double-bar norm matrix: \\begin{Vmatrix} ... \\end{Vmatrix}
 - Always separate columns with & and rows with \\\\. Preserve every single row and column without collapsing entries.
 
-6. SET THEORY, BOOLEAN ALGEBRA & LOGIC (MANDATORY):
-- Reconstruct all set operations using authentic LaTeX math symbols inside $...$:
+6. SET THEORY, NUMBER SYSTEMS & BLACKBOARD BOLD (MANDATORY):
+- Number systems & Sets: ALWAYS use authentic standard LaTeX inside $...$:
+  - Real numbers: \\mathbb{R} (e.g. $(x \\in \\mathbb{R})$, $(a, b, c \\in \\mathbb{R})$). NEVER write bare "mathbbR" or "mathbf{R}"!
+  - Complex numbers: \\mathbb{C} (e.g. $(z \\in \\mathbb{C})$)
+  - Integers: \\mathbb{Z}, Natural numbers: \\mathbb{N}, Rational numbers: \\mathbb{Q}, Primes: \\mathbb{P}
+  - Universal set: $U$ (or \\mathbb{U}), Empty set: \\emptyset ($\\emptyset$).
+- Powers and fractional exponents:
+  - ALWAYS enclose fractional exponents in braces: $\\alpha^{\\frac{3}{2}}$, $\\beta^{\\frac{3}{2}}$, $\\alpha\\beta^{-\\frac{3}{2}}$, $\\alpha^{\\frac{1}{2}}\\beta$. NEVER write unbraced exponents like "\\alpha^3/2" or "\\alpha^ 3/2".
+- Greek variables and angle measurements:
+  - ALWAYS backslash Greek letters: \\theta_x, \\theta_z, \\theta_\\gamma, \\alpha, \\beta, \\lambda, \\omega. NEVER write unbackslashed "theta_z".
+  - Degree symbols: $65^\\circ$, $40^\\circ$. NEVER write "65^circ".
+- Set operations:
   - Set difference / relative complement: ALWAYS use vertical set difference \\setminus (e.g. $A \\setminus B$, $A \\setminus (B \\setminus C)$). NEVER write the bare English word "setminus" or "set minus"!
   - Symmetric difference: ALWAYS use circled plus \\oplus (e.g. $A \\oplus B$, $A \\oplus (B \\oplus C)$). NEVER write the bare word "oplus"!
   - Union & Intersection: ALWAYS use \\cup ($A \\cup B$) and \\cap ($A \\cap B$).
   - Set Complements: ALWAYS use \\overline{A} (or $A'$). NEVER write bare "overlineA"!
-  - Universal set: $U$ (or \\mathbb{U}), Empty set: \\emptyset ($\\emptyset$).
   - Subsets & membership: \\subset ($\\subset$), \\subseteq ($\\subseteq$), \\in ($\\in$), \\notin ($\\notin$).
   - Logical statements: \\therefore ($\\therefore$), \\because ($\\because$), \\implies ($\\implies$), \\iff ($\\iff$).
 

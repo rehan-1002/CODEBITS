@@ -35,6 +35,12 @@ function renderInlineContent(text: string): string {
     .replace(/\boverline([A-Za-z0-9])\b/g, "\\overline{$1}")
     .replace(/\\?overline\s*\{?([A-Za-z0-9])\}?/g, "\\overline{$1}")
     .replace(/\\therefore\b/g, "\\therefore ")
+    .replace(/\bmathbb([A-Za-z])\b/g, "\\mathbb{$1}")
+    .replace(/\\mathbb\s+([A-Za-z])(?![a-zA-Z])/g, "\\mathbb{$1}")
+    .replace(/(\d+)\s*\^circ\b/g, "$1^\\circ")
+    .replace(/\btheta_([a-zA-Z0-9])/g, "\\theta_$1")
+    .replace(/\balpha_([a-zA-Z0-9])/g, "\\alpha_$1")
+    .replace(/\bbeta_([a-zA-Z0-9])/g, "\\beta_$1")
     .replace(/(?<!\$)\b([A-C]\s*(?:\\setminus|∖|\\oplus|⊕)\s*\(?[A-C][\s\w()\\∖\-∩∪⊕]*\)?)(?!\$)/gi, "$ $1 $");
 
   // 1. Single-line display math if embedded in paragraph: $$math$$
@@ -57,7 +63,9 @@ function renderInlineContent(text: string): string {
       processed.includes("\\setminus") ||
       processed.includes("\\oplus") ||
       processed.includes("\\overline") ||
-      processed.includes("\\therefore"))
+      processed.includes("\\therefore") ||
+      processed.includes("\\mathbb") ||
+      processed.includes("\\mathbf"))
   ) {
     const trailMatch = processed.match(/^(.*?)(\s+(?:By|by|where|since|is)\s+.*)$/i);
     if (trailMatch && (trailMatch[1].includes("\\") || trailMatch[1].includes("="))) {

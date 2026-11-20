@@ -226,8 +226,9 @@ const SUBSCRIPT_MAP: Record<string, string> = {
 };
 
 export function toSuperscript(str: string): string {
-  // First normalize \theta, \alpha etc. inside superscript
+  // First normalize fractions, powers, and Greek letters inside superscript
   const normalized = str
+    .replace(/\\?(?:d?frac)\{([^{}]+)\}\{([^{}]+)\}/g, "$1/$2")
     .replace(/\\*(?:theta|θ)/gi, "θ")
     .replace(/\\*(?:phi|φ)/gi, "φ")
     .replace(/\\*(?:alpha|α)/gi, "α")
@@ -240,6 +241,13 @@ export function toSuperscript(str: string): string {
     .map((char) => SUPERSCRIPT_MAP[char] || char)
     .join("");
 }
+
+export const BLACKBOARD_BOLD_MAP: Record<string, string> = {
+  R: "ℝ", C: "ℂ", Z: "ℤ", N: "ℕ", Q: "ℚ", P: "ℙ", H: "ℍ", U: "𝕌",
+  A: "𝔸", B: "𝔹", D: "𝔻", E: "𝔼", F: "𝔽", G: "𝔾", I: "𝕀", J: "𝕁",
+  K: "𝕂", L: "𝕃", M: "𝕄", O: "𝕆", S: "𝕊", T: "𝕋", V: "𝕍", W: "𝕎",
+  X: "𝕏", Y: "𝕐",
+};
 
 export function toSubscript(str: string): string {
   const normalized = str
@@ -379,13 +387,19 @@ export function normalizeLinearFractionsToLatex(s: string): string {
     );
   } while (result !== prev);
 
-  // 2. Standalone numeric & simple variable fractions: e.g. 1/2, 3/4, 1/8, \pi/10, \pi / 10
+  // 2. Fractions with radical denominators: e.g. 1/\sqrt{\alpha}, 1/\sqrt{\beta}, 1/\sqrt{2}, x/\sqrt{y}
   result = result.replace(
-    /\b(\\pi|\d+|[a-zA-Z])\s*\/\s*(\d+)\b/g,
+    /(\b(?:\\pi|\d+|[a-zA-Z]))\s*\/\s*(\\sqrt\{[^{}]+\}|\\sqrt\s*[a-zA-Z0-9]+)/g,
     (_m, num, den) => `\\frac{${num.trim()}}{${den.trim()}}`
   );
 
-  // 3. Clean redundant double parentheses around fractions: e.g. (( \frac{...}{...} ) -> ( \frac{...}{...}
+  // 3. Standalone numeric & simple variable fractions: e.g. 1/2, 3/4, 1/8, \pi/10, \pi / 10, 1/x
+  result = result.replace(
+    /\b(\\pi|\d+|[a-zA-Z])\s*\/\s*(\d+|[a-zA-Z])\b/g,
+    (_m, num, den) => `\\frac{${num.trim()}}{${den.trim()}}`
+  );
+
+  // 4. Clean redundant double parentheses around fractions: e.g. (( \frac{...}{...} ) -> ( \frac{...}{...}
   result = result.replace(
     /\(\s*\(\s*(\\frac\{[^{}]+\}\{[^{}]+\})\s*\)/g,
     "($1)"
@@ -615,6 +629,13 @@ export function cleanMathSymbolsForMatrixCell(cell: string): string {
     .replace(/\\in(?![a-zA-Z])/g, "∈")
     .replace(/\\notin(?![a-zA-Z])/g, "∉")
     .replace(/\\emptyset(?![a-zA-Z])|\\varnothing(?![a-zA-Z])/g, "∅");
+
+  // Blackboard Bold Sets & Number Systems (\mathbb{R}, \mathbb{C}, \mathbb{Z}, \mathbb{N}, \mathbb{Q}, \mathbb{P}, etc.)
+  s = s.replace(/\\mathbb\{([A-Za-z])\}/g, (_, ch) => BLACKBOARD_BOLD_MAP[ch] || ch);
+  s = s.replace(/\\mathbb\s+([A-Za-z])(?![a-zA-Z])/g, (_, ch) => BLACKBOARD_BOLD_MAP[ch] || ch);
+  s = s.replace(/\bmathbb([A-Za-z])\b/g, (_, ch) => BLACKBOARD_BOLD_MAP[ch] || ch);
+  s = s.replace(/(?:\\in|∈|\\notin|∉)\s*\\mathbf\{([RCZNQ])\}/g, (_, ch) => `∈ ${BLACKBOARD_BOLD_MAP[ch] || ch}`);
+  s = s.replace(/\\mathbf\{([RCZNQ])\}(?=\s*[,.)\]\}]|\s*$)/g, (_, ch) => BLACKBOARD_BOLD_MAP[ch] || ch);
 
   // Clean unbackslashed set theory operations & overlines from OCR
   s = s.replace(/\\?overline\s*\{?([A-Za-z0-9])\}?/g, "$1̄");
@@ -995,6 +1016,95 @@ export function parseMathTokens(rawFormula: string): (MathRun | BuilderElement)[
       }
     }
 
+    // 5. Degree symbols attached to numbers or standalone: e.g. 65^\circ, 65^{\circ}, 65^circ
+    const degMatch = formula.slice(i).match(/^\^\{?\\*(?:circ|degree)\}?|^\^circ\b/i);
+    if (degMatch) {
+      textBuf += "°";
+      i += degMatch[0].length;
+      continue;
+    }
+
+    // 6. Generalized Superscripts (^) and Subscripts (_)
+    if (formula[i] === "^" || formula[i] === "_") {
+      const isSup = formula[i] === "^";
+      i++;
+      while (i < formula.length && /\s/.test(formula[i])) i++;
+
+      // Extract trailing base from textBuf or previous node from children
+      let baseNode: MathRun | BuilderElement;
+      if (textBuf.length > 0) {
+        const macroMatch = textBuf.match(/\\[a-zA-Z]+$/);
+        const parenMatch = textBuf.match(/\([^()]+\)$/);
+        const singleMatch = textBuf.match(/[a-zA-Z0-9]$/);
+
+        if (macroMatch) {
+          const baseText = macroMatch[0];
+          textBuf = textBuf.slice(0, -baseText.length);
+          flushText();
+          baseNode = new MathRun(cleanMathSymbols(baseText, true));
+        } else if (parenMatch) {
+          const baseText = parenMatch[0];
+          textBuf = textBuf.slice(0, -baseText.length);
+          flushText();
+          const inner = baseText.slice(1, -1);
+          baseNode = createOmmlDelimiterElement(parseMathTokens(inner), "(", ")");
+        } else if (singleMatch) {
+          const baseText = singleMatch[0];
+          textBuf = textBuf.slice(0, -baseText.length);
+          flushText();
+          baseNode = new MathRun(cleanMathSymbols(baseText, true));
+        } else {
+          const baseText = textBuf;
+          textBuf = "";
+          baseNode = new MathRun(cleanMathSymbols(baseText, true));
+        }
+      } else if (children.length > 0) {
+        baseNode = children.pop()!;
+      } else {
+        baseNode = new MathRun(" ");
+      }
+
+      // Extract exponent or subscript content
+      let scriptStr = "";
+      if (formula[i] === "{") {
+        const endIdx = findMatchingBrace(formula, i);
+        if (endIdx !== -1) {
+          scriptStr = formula.slice(i + 1, endIdx);
+          i = endIdx + 1;
+        } else {
+          scriptStr = formula.slice(i + 1);
+          i = formula.length;
+        }
+      } else if (formula.slice(i).match(/^(-\\(?:d?frac)\{[^{}]+\}\{[^{}]+\}|\\(?:d?frac)\{[^{}]+\}\{[^{}]+\})/)) {
+        const fracMatch = formula.slice(i).match(/^(-\\(?:d?frac)\{[^{}]+\}\{[^{}]+\}|\\(?:d?frac)\{[^{}]+\}\{[^{}]+\})/)!;
+        scriptStr = fracMatch[0];
+        i += fracMatch[0].length;
+      } else if (formula.slice(i).match(/^(-\d+\/\d+|\d+\/\d+)/)) {
+        const linFracMatch = formula.slice(i).match(/^(-\d+\/\d+|\d+\/\d+)/)!;
+        scriptStr = normalizeLinearFractionsToLatex(linFracMatch[0]);
+        i += linFracMatch[0].length;
+      } else if (formula.slice(i).match(/^(-\\[a-zA-Z]+|\\[a-zA-Z]+)/)) {
+        const macroMatch = formula.slice(i).match(/^(-\\[a-zA-Z]+|\\[a-zA-Z]+)/)!;
+        scriptStr = macroMatch[0];
+        i += macroMatch[0].length;
+      } else if (formula.slice(i).match(/^([+\-]?[0-9a-zA-Z])/)) {
+        const charMatch = formula.slice(i).match(/^([+\-]?[0-9a-zA-Z])/)!;
+        scriptStr = charMatch[0];
+        i += charMatch[0].length;
+      } else if (i < formula.length) {
+        scriptStr = formula[i];
+        i++;
+      }
+
+      scriptStr = normalizeLinearFractionsToLatex(scriptStr);
+      const scriptChildren = parseMathTokens(scriptStr);
+      const resultNode = isSup
+        ? createOmmlSuperscriptElement(baseNode, scriptChildren)
+        : createOmmlSubscriptElement(baseNode, scriptChildren);
+      children.push(resultNode);
+      continue;
+    }
+
     textBuf += formula[i];
     i++;
   }
@@ -1235,7 +1345,16 @@ export function cleanMathSymbols(raw: string, preserveWhitespace: boolean = fals
     .replace(/\\supset(?![a-zA-Z])/g, "⊃")
     .replace(/\\supseteq(?![a-zA-Z])/g, "⊇")
     .replace(/\\cup(?![a-zA-Z])|\bcup\b/gi, "∪")
-    .replace(/\\cap(?![a-zA-Z])|\bcap\b/gi, "∩")
+    .replace(/\\cap(?![a-zA-Z])|\bcap\b/gi, "∩");
+
+  // Blackboard Bold Sets & Number Systems (\mathbb{R}, \mathbb{C}, \mathbb{Z}, \mathbb{N}, \mathbb{Q}, \mathbb{P}, etc.)
+  s = s.replace(/\\mathbb\{([A-Za-z])\}/g, (_, ch) => BLACKBOARD_BOLD_MAP[ch] || ch);
+  s = s.replace(/\\mathbb\s+([A-Za-z])(?![a-zA-Z])/g, (_, ch) => BLACKBOARD_BOLD_MAP[ch] || ch);
+  s = s.replace(/\bmathbb([A-Za-z])\b/g, (_, ch) => BLACKBOARD_BOLD_MAP[ch] || ch);
+  s = s.replace(/(?:\\in|∈|\\notin|∉)\s*\\mathbf\{([RCZNQ])\}/g, (_, ch) => `∈ ${BLACKBOARD_BOLD_MAP[ch] || ch}`);
+  s = s.replace(/\\mathbf\{([RCZNQ])\}(?=\s*[,.)\]\}]|\s*$)/g, (_, ch) => BLACKBOARD_BOLD_MAP[ch] || ch);
+
+  s = s
     .replace(/\boverline([A-Za-z0-9])\b/g, "$1̄")
     .replace(/\\overline\{([A-Za-z0-9])\}/g, "$1̄")
     .replace(/\\forall(?![a-zA-Z])/g, "∀")
@@ -1258,8 +1377,19 @@ export function cleanMathSymbols(raw: string, preserveWhitespace: boolean = fals
     .replace(/\\because(?![a-zA-Z])/g, "∵")
     .replace(/\\perp(?![a-zA-Z])/g, "⊥")
     .replace(/\\parallel(?![a-zA-Z])/g, "∥")
-    .replace(/\\angle(?![a-zA-Z])/g, "∠")
-    .replace(/\\degree(?![a-zA-Z])|\^\\circ(?![a-zA-Z])|\^\{?\\circ\}?/g, "°");
+    .replace(/\\angle(?![a-zA-Z])/g, "∠");
+
+  s = s.replace(/(\d+)\s*(?:\^\{?\\*(?:circ|degree)\}?|\^\\*(?:circ|degree)\b|\^circ\b|\\*(?:circ|degree)\b)/gi, "$1°");
+  s = s.replace(/\\degree(?![a-zA-Z])|\^\\circ(?![a-zA-Z])|\^\{?\\circ\}?|\^circ\b/gi, "°");
+
+  // Bare Greek names before subscript or math operator (e.g. theta_z, theta_x, alpha_1)
+  s = s.replace(/\btheta(?=[_0-9\^])/gi, "θ");
+  s = s.replace(/\balpha(?=[_0-9\^])/gi, "α");
+  s = s.replace(/\bbeta(?=[_0-9\^])/gi, "β");
+  s = s.replace(/\bgamma(?=[_0-9\^])/gi, "γ");
+  s = s.replace(/\blambda(?=[_0-9\^])/gi, "λ");
+  s = s.replace(/\bomega(?=[_0-9\^])/gi, "ω");
+  s = s.replace(/\bphi(?=[_0-9\^])/gi, "φ");
 
   // Step 7: Trigonometric, hyperbolic, log, limit functions
   s = s
@@ -1293,8 +1423,11 @@ export function cleanMathSymbols(raw: string, preserveWhitespace: boolean = fals
   s = s.replace(/\^([0-9a-zA-Z+\-()])/g, (_, char) => toSuperscript(char));
 
   // Step 9: Standard Subscripts with braces: _{...} or single char: _x
-  s = s.replace(/_\{([^}]+)\}/g, (_, content) => toSubscript(content));
-  s = s.replace(/_([0-9a-zA-Z+\-()])/g, (_, char) => toSubscript(char));
+  s = s.replace(/_\{([^}]+)\}/g, (_, content) => {
+    const sub = toSubscript(content);
+    return sub === content ? `_${content}` : sub;
+  });
+  s = s.replace(/_([0-9a-zA-Z+\-()])/g, (_, char) => SUBSCRIPT_MAP[char] || `_${char}`);
 
   // Step 9.5: Clean unbackslashed set theory operations & overlines from OCR
   s = s.replace(/\\?overline\s*\{?([A-Za-z0-9])\}?/g, "$1̄");
@@ -1377,9 +1510,19 @@ export function buildMathParagraph(
     cleanedLine = `$$${cleanedLine}$$`;
     isDisplayEquation = true;
   } else if (!cleanedLine.includes("$")) {
+    // Auto-wrap un-dollared powers and compound exponents (e.g. \alpha^\frac{3}{2}, \alpha\beta^{-\frac{3}{2}}, x^{3/2})
+    cleanedLine = cleanedLine.replace(
+      /(\b[a-zA-Z\\]+(?:\^|\_)(?:-?\\(?:d?frac)\{[^{}]+\}\{[^{}]+\}|-?\{[^{}]+\}|-?[a-zA-Z0-9\/]+))/g,
+      "$$$1$"
+    );
     // Auto-wrap un-dollared LaTeX fractions with $...$
     cleanedLine = cleanedLine.replace(
       /(\\(?:d?frac)\{[^{}]+\}\{[^{}]+\})/g,
+      "$$$1$"
+    );
+    // Auto-wrap un-dollared radicals with $...$
+    cleanedLine = cleanedLine.replace(
+      /(\\(?:sqrt)(?:\[[^\]]+\])?\{[^{}]+\})/g,
       "$$$1$"
     );
     // Auto-wrap parenthesized fractional powers: e.g. ((1 / 2) + i (\sqrt(3) / 2))^{3/4}
@@ -1387,7 +1530,17 @@ export function buildMathParagraph(
       /(\(\s*\(?[^()]*\/[^()]*\)?\s*[\+\-\*\/][^)]+\)\^\{?[0-9\/]+\}?)/g,
       "$$$1$"
     );
+    // Auto-wrap set membership statements: e.g. (x \in \mathbb{R}) or a, b \in \mathbb{R}
+    cleanedLine = cleanedLine.replace(
+      /(\b[a-zA-Z0-9,\s]+\s*(?:\\in|∈)\s*(?:\\mathbb\{[A-Z]\}|\\mathbb\s+[A-Z]|mathbb[A-Z]|\\mathbf\{[A-Z]\}|[A-Z]))/g,
+      "$$$1$"
+    );
   }
+
+  // Normalize unbraced fractional superscripts before tokenization: e.g. \alpha^\frac{3}{2} -> \alpha^{\frac{3}{2}}
+  cleanedLine = cleanedLine
+    .replace(/\^(-\\(?:d?frac)\{[^{}]+\}\{[^{}]+\})/g, "^{$1}")
+    .replace(/\^(\\(?:d?frac)\{[^{}]+\}\{[^{}]+\})/g, "^{$1}");
 
   // Check if line represents a Question Number in a Question Bank (e.g. "Q1.", "Q.1", "Question 1:", "1.")
   const questionHeaderMatch = cleanedLine.match(/^(\*{0,2}(?:Q(?:uestion|\.)?\s*\d+[\w.]*|Problem\s*\d+[\w.]*|\d+\.)\*{0,2})(.*)/i);
