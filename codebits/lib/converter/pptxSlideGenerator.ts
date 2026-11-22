@@ -338,7 +338,9 @@ function cleanTextForSlide(raw: string): string {
   // 11. Clean double parentheses like ((kx / y)) -> (kx / y)
   s = s.replace(/\(\s*\(([^()]+)\)\s*\)/g, "($1)");
 
-  // 12. Clean leftover LaTeX escape backslashes and braces
+  // 12. Clean leftover LaTeX escape backslashes, braces, and isolated symbols
+  s = s.replace(/\$\s*(∴|∵|→|←|⇒|⇔)\s*\$/g, " $1 ");
+  s = s.replace(/\$\s*:\s*\$/g, ":");
   s = s.replace(/\\([a-zA-Z]+)/g, "$1");
   s = s.replace(/[{}]/g, "");
   s = s.replace(/\$+/g, "");

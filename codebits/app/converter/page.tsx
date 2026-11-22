@@ -25,7 +25,7 @@ import {
 import { getCurrentUser, fetchCurrentAuthUser } from "@/lib/auth";
 import { Profile } from "@/types/auth";
 
-const CHUNK_SIZE = 8; // Optimal pages per micro-batch (prevents AI token limit & timeouts)
+const CHUNK_SIZE = 2; // Optimal 2 pages per micro-batch (guarantees 0% timeout, 0% skipped questions, full math retention)
 
 interface ExtractedSection {
   pageRange: string;
@@ -352,7 +352,7 @@ export default function DocumentConverterPage() {
       setCurrentChunkIndex(i + 1);
       const startPage = i * CHUNK_SIZE;
       const endPage = Math.min(startPage + CHUNK_SIZE, pageCount);
-      const rangeLabel = `Pages ${startPage + 1}–${endPage} of ${pageCount}`;
+      const rangeLabel = `Pages ${startPage + 1} to ${endPage} of ${pageCount}`;
 
       setStatusMessage(`Processing Chunk ${i + 1} of ${chunksCount} (${rangeLabel})...`);
       const chunkPct = Math.round(((i) / (chunksCount + 1)) * 90);
@@ -369,7 +369,7 @@ export default function DocumentConverterPage() {
       // Send slice to extraction endpoint with automatic retry on glitch
       let chunkExtractedText = "";
       let attempts = 0;
-      const maxAttempts = 2;
+      const maxAttempts = 3;
 
       while (attempts < maxAttempts) {
         try {

@@ -644,7 +644,7 @@ export function cleanMathSymbolsForMatrixCell(cell: string): string {
   s = s.replace(/([A-Z0-9\)])\s*setminus\s*([A-Z0-9\(])/gi, "$1 ∖ $2");
   s = s.replace(/([A-Z0-9\)])\s*oplus\s*([A-Z0-9\(])/gi, "$1 ⊕ $2");
 
-  s = s.replace(/[{}]/g, "").replace(/\\([a-zA-Z]+)/g, "$1").replace(/\\/g, "");
+  s = s.replace(/[{}]/g, "").replace(/\\([a-zA-Z]+)/g, "$1").replace(/\\/g, "").replace(/\$+/g, "");
   return s.trim();
 }
 
@@ -1454,6 +1454,9 @@ export function cleanMathSymbols(raw: string, preserveWhitespace: boolean = fals
     .replace(/\\([a-zA-Z]+)/g, "$1") // Clean any unrecognized LaTeX commands
     .replace(/\\/g, ""); // Clean any stray backslashes
 
+  // Step 11: Strip all residual dollar signs from plain text runs
+  s = s.replace(/\$+/g, "");
+
   s = s.replace(/[ \t]{2,}/g, " ");
   return preserveWhitespace ? s : s.trim();
 }
@@ -1503,6 +1506,10 @@ export function buildMathParagraph(
   // First clean encoding and mojibake from the entire line
   let cleanedLine = repairMojibakeAndHtmlEntities(line);
   cleanedLine = unfuseWordBoundaries(cleanedLine);
+
+  // Pre-clean isolated dollar signs around standalone symbols (e.g. "$∴ $", "$ ∴ $", "$ : $")
+  cleanedLine = cleanedLine.replace(/\$\s*(∴|∵|→|←|⇒|⇔)\s*\$/g, " $1 ");
+  cleanedLine = cleanedLine.replace(/\$\s*:\s*\$/g, ":");
 
   // Check if line is a standalone mathematical equation (e.g. from display equation derivation steps)
   let isDisplayEquation = false;
@@ -1567,7 +1574,7 @@ export function buildMathParagraph(
     if (matchStart > lastIndex) {
       let text = cleanedLine.slice(lastIndex, matchStart);
       if (!/[\s\(\[\{]$/.test(text)) text += " ";
-      const cleaned = cleanMathSymbols(text, true);
+      const cleaned = cleanMathSymbols(text, true).replace(/\$+/g, "");
       if (cleaned) {
         children.push(
           new TextRun({
@@ -1608,7 +1615,7 @@ export function buildMathParagraph(
   if (lastIndex < cleanedLine.length) {
     let text = cleanedLine.slice(lastIndex);
     if (children.length > 0 && !/^[\s.,\)\]\}:;?!]/.test(text)) text = " " + text;
-    const cleaned = cleanMathSymbols(text, true);
+    const cleaned = cleanMathSymbols(text, true).replace(/\$+/g, "");
     if (cleaned) {
       children.push(
         new TextRun({
@@ -1627,7 +1634,7 @@ export function buildMathParagraph(
     const hasMathSymbols = /[√∛∫∬∭∮∑∏∞∂∇±∓×÷≠≤≥≈≡∼≅∝∈∉⊂⊆∪∩∀∃→←⇒⇔∴∵⊥∥∠°αβγδεζηθικλμνξπρστυφχψωΓΔΘΛΞΠΣΥΦΨΩ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿⁱᶿ₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ᵢⱼ]/.test(
       cleanedLine
     );
-    const cleaned = cleanMathSymbols(cleanedLine, true);
+    const cleaned = cleanMathSymbols(cleanedLine, true).replace(/\$+/g, "");
     children.push(
       new TextRun({
         text: cleaned,

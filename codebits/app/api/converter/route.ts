@@ -42,7 +42,7 @@ function extractRawTextFromPdfBuffer(buffer: Buffer): string {
 }
 
 const VERBATIM_SYSTEM_INSTRUCTION =
-  "You are a strict verbatim OCR document scanner and transcriber. Under NO circumstances should you solve, calculate, or answer any questions or circuits. DO NOT write solutions, derivations, circuit analyses, or answers. Transcribe ONLY the printed questions, formulas, numbers, and options verbatim like a photocopier.";
+  "You are a strict verbatim OCR document scanner and transcriber. Transcribe all printed text, questions, options, formulas, answer keys, and printed solutions verbatim like a photocopier. In multi-column pages, always transcribe the left column completely from top to bottom before moving to the right column. Do not invent your own solutions; faithfully transcribe whatever is printed on the pages verbatim.";
 
 function stripAiGeneratedSolutions(text: string): string {
   if (!text) return "";
@@ -121,16 +121,29 @@ function getAcademicReconstructionPrompt(options: { isImage: boolean; rangeLabel
   const { isImage, rangeLabel } = options;
   const label = rangeLabel ? ` for ${rangeLabel}` : "";
   const intro = isImage
-    ? `You are an elite academic document and mathematical question scanner. Reconstruct all printed text, handwritten equations, questions, matrices, and tables from this image${label} verbatim like a photocopier. DO NOT SOLVE OR ANSWER ANY QUESTIONS.`
-    : `You are a master academic document and mathematical question bank reconstruction engine. Reconstruct all text, sections, questions, matrices, and tables from this document${label} verbatim like a photocopier. DO NOT SOLVE OR ANSWER ANY QUESTIONS.`;
+    ? `You are an elite academic document and mathematical question scanner. Reconstruct all printed text, handwritten equations, questions, matrices, and tables from this image${label} verbatim like a photocopier.`
+    : `You are a master academic document and mathematical question bank reconstruction engine. Reconstruct all text, sections, questions, matrices, and tables from this document${label} verbatim like a photocopier.`;
 
   return `${intro}
 
-CRITICAL INSTRUCTION - NEVER SOLVE OR ANSWER QUESTIONS:
-- YOU ARE A VERBATIM DOCUMENT RECONSTRUCTION ENGINE, NOT A HOMEWORK SOLVER.
-- DO NOT solve, calculate, answer, or derive solutions to any question or circuit.
-- DO NOT write "Circuit Analysis", step-by-step derivations, KVL/KCL solutions, or answers unless they are ALREADY explicitly written out verbatim in the user's source paper.
-- Reconstruct ONLY the question statement, question number, given parameters, and options verbatim as an unsolved assignment/question paper.
+CRITICAL INSTRUCTION: 100% VERBATIM RECONSTRUCTION (ZERO SKIPPED QUESTIONS):
+- YOU ARE A STRICT VERBATIM DOCUMENT RECONSTRUCTION ENGINE.
+- Do NOT invent unprinted solutions or calculate answers on your own.
+- Transcribe ALL printed questions, options, answer key tables, and printed hints and solutions verbatim as they appear on the pages.
+- NEVER skip or truncate any question or option. Every single question must be captured.
+
+CRITICAL TWO-COLUMN AND MULTI-COLUMN READING ORDER:
+- When a page has two columns (Left Column and Right Column):
+  * You MUST transcribe COLUMN 1 (LEFT COLUMN) completely from top to bottom first.
+  * Only after the left column is completely finished, transcribe COLUMN 2 (RIGHT COLUMN) from top to bottom.
+  * UNDER NO CIRCUMSTANCES should you read horizontally across both columns (Z-pattern). Never interweave Question 1 on the left with Question 7 on the right.
+  * Always preserve natural sequential question ordering: Question 1, 2, 3, 4, 5, 6... then Question 7, 8, 9, 10, 11, 12...
+
+CRITICAL FRACTION AND RADICAL INTEGRITY (NO COLLAPSED NUMBERS):
+- Every fraction MUST be formatted as vertical LaTeX \\frac{numerator}{denominator} (e.g. \\frac{12}{13}\\cos x + \\frac{5}{13}\\sin x). NEVER fuse numbers into "1213cos x" or "513sin x"!
+- Every square root MUST be formatted as \\sqrt{...} (e.g. \\frac{\\sqrt{3}-1}{2\\sqrt{2}}). NEVER drop radicals or collapse to "3-122"!
+- Every exponent MUST be formatted with braces (e.g. a^2 + b^2). NEVER flatten to "a2 + b2"!
+- Inverse trigonometric functions MUST use proper backslash notation: \\sin^{-1}, \\cos^{-1}, \\tan^{-1}, \\cot^{-1}, \\sec^{-1}, \\csc^{-1}.
 
 CRITICAL MATHEMATICS, PHYSICS, CHEMISTRY & EQUATION RULES:
 1. MATHEMATICAL SYMBOLS & ADVANCED CALCULUS:
