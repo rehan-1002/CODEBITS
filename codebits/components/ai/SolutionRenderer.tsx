@@ -595,10 +595,15 @@ export function SolutionRenderer({
                     }
 
                     const isOverleafTikz =
-                      block.language === "latex" ||
-                      block.language === "tex" ||
+                      block.language.toLowerCase() === "latex" ||
+                      block.language.toLowerCase() === "tex" ||
                       block.code.includes("\\begin{tikzpicture}") ||
-                      block.code.includes("\\usepackage{tikz}");
+                      block.code.includes("\\usepackage{tikz}") ||
+                      block.code.includes("\\documentclass{standalone}");
+
+                    if (isOverleafTikz) {
+                      return null;
+                    }
 
                     return (
                       <div
@@ -608,11 +613,7 @@ export function SolutionRenderer({
                         <div className="px-3 py-2 border-b border-slate-800 bg-slate-900 flex items-center justify-between text-xs font-mono">
                           <div className="flex items-center space-x-2 text-emerald-400 font-bold">
                             <Layers className="w-3.5 h-3.5" />
-                            <span>
-                              {isOverleafTikz
-                                ? "OVERLEAF LATEX TIKZ CODE (ACADEMIC READY)"
-                                : "EXAM SKETCH / CIRCUIT SCHEMATIC BLUEPRINT"}
-                            </span>
+                            <span>EXAM SKETCH / CIRCUIT SCHEMATIC BLUEPRINT</span>
                           </div>
                           <button
                             type="button"
@@ -624,13 +625,7 @@ export function SolutionRenderer({
                             ) : (
                               <Copy className="w-3 h-3" />
                             )}
-                            <span>
-                              {copiedCode === `code_${idx}_${bIdx}`
-                                ? "Copied"
-                                : isOverleafTikz
-                                ? "Copy Overleaf Code"
-                                : "Copy"}
-                            </span>
+                            <span>{copiedCode === `code_${idx}_${bIdx}` ? "Copied" : "Copy"}</span>
                           </button>
                         </div>
                         <pre className="p-3.5 font-mono text-[11px] sm:text-xs text-emerald-400 leading-snug whitespace-pre overflow-x-auto">

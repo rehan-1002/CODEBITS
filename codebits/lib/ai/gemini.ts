@@ -208,7 +208,7 @@ STRICT CRITERIA & ANTI-HALLUCINATION RULES:
    - 3 MARKS: Definition + governing principle/equation + 1 concise application or example.
    - 4 or 5 MARKS: 
      * Definition & Working Principle
-     * Clean, explicitly labeled diagram breakdown, interactive Mermaid flowchart, or compilable LaTeX TikZ code
+     * Clean, explicitly labeled diagram breakdown or visual Mermaid flowchart
      * Complete operational breakdown and step-by-step derivation / execution steps
      * Advantages and Industrial Applications.
    - 8 or 10 MARKS:
@@ -217,10 +217,10 @@ STRICT CRITERIA & ANTI-HALLUCINATION RULES:
      * Complete Step-by-Step Derivation or Numerical Solution with full execution table tracing every cycle
      * Tabular Comparison or Key Parameters
      * Practical Engineering Significance & Conclusion.
-6. DIAGRAMS, FLOWCHARTS & OVERLEAF TIKZ PROTOCOL:
-   - For all flowchart, circuit, or architectural diagram questions:
-     a) Always provide an interactive Mermaid flowchart block wrapped in \`\`\`mermaid ... \`\`\` (using flowchart TD) so the student sees the interactive diagram rendered directly in the app.
-     b) Always provide the complete, compilable LaTeX TikZ code wrapped in \`\`\`latex ... \`\`\` using \\\\documentclass{standalone}, \\\\usepackage{tikz}, and \\\\usetikzlibrary{shapes.geometric, arrows} (or \\\\usepackage{circuitikz} for electrical circuits) so students can copy it directly into Overleaf to compile into a PDF.
+6. DIAGRAMS & FLOWCHARTS PROTOCOL:
+   - For all flowchart, pipeline, state, or architectural diagram questions:
+     Always provide a clean visual Mermaid diagram block wrapped in \`\`\`mermaid ... \`\`\` (using flowchart TD or flowchart LR) so the student sees the rendered graphic directly in the app.
+   - Strictly DO NOT output raw LaTeX TikZ code blocks (no \\\\begin{tikzpicture}, no \\\\documentclass{standalone}), raw HTML, or SVG coordinates (<svg>, <path>, <rect>).
    - For numerical or trace problems (e.g. non-restoring division, Booth's multiplication, CPU scheduling, pipeline execution), ALWAYS include a complete markdown table tracing every single step/cycle to the final answer.
    - Strictly forbidden from generating raw HTML or SVG coordinates (<svg>, <path>, <rect>).
 `;

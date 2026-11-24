@@ -204,16 +204,10 @@ CRITICAL FORMATTING & STRUCTURE INSTRUCTIONS:
    1. **Condition Name**: Explanation with math.
    2. **Condition Name**: Explanation with math.
 4. FLOWCHART & VISUAL DIAGRAM REQUIREMENT (MANDATORY):
-   If the question asks to "Draw flowchart" or "Draw circuit" or references an algorithm:
-   a) MANDATORY VISUAL MERMAID DIAGRAM: You MUST include an interactive visual diagram using a \`\`\`mermaid ... \`\`\` block with standard "flowchart TD" syntax.
-      The diagram must include all stages:
-      - Start and End rounded nodes
-      - Initialization box
-      - Decision diamond nodes with Yes / No branches
-      - Operation and shift boxes
-      - Loop back arrows
-      This is required so the web application renders the interactive flowchart graphic on screen.
-   b) OVERLEAF LATEX TIKZ CODE: Directly beneath the Mermaid diagram, provide the complete, compilable LaTeX TikZ code in a \`\`\`latex ... \`\`\` block using \\\\documentclass{standalone}, \\\\usepackage{tikz}, and \\\\usetikzlibrary{shapes.geometric, arrows} so students can copy it directly into Overleaf to compile into a PDF.
+   If the question asks to "Draw flowchart", "Draw circuit", "Draw pipeline", or references an architecture or algorithm:
+   - You MUST include a clean visual diagram using a \`\`\`mermaid ... \`\`\` block with standard "flowchart TD" (or "flowchart LR") syntax.
+   - Include all stages: Start/End rounded nodes, Initialization box, Decision diamond nodes with Yes / No branches, Operation boxes, and Loop arrows.
+   - Do NOT output raw LaTeX TikZ code blocks (no \\\\begin{tikzpicture} or \\\\documentclass{standalone}). The web application renders the Mermaid block directly as a clean visual graphic on screen.
 5. NUMERICAL ALGORITHM & REGISTER TRACE REQUIREMENT:
    If the question asks to solve an algorithm or arithmetic problem (e.g., non-restoring division, restoring division, Booth's algorithm, CPU scheduling):
    - Explicitly define all initial registers, lengths, and binary representations.
