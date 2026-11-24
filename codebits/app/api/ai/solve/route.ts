@@ -63,14 +63,31 @@ export async function POST(req: NextRequest) {
 
     // 4. CHECK CACHE (Tier 1: Instant, $0 API Cost, No Rate Limit Penalty)
     const isValidCachedAnswer = (text?: string) => {
-      if (!text || text.length < 350) return false;
+      if (!text || text.length < 1500) return false;
       const trimmed = text.trim();
-      // Ensure answer doesn't end abruptly mid-sentence or mid-header
-      if (trimmed.endsWith('**') || trimmed.endsWith(':') || trimmed.endsWith('#')) return false;
+      // Ensure answer doesn't end abruptly mid-sentence or mid-header or dangling markdown/math
+      if (
+        trimmed.endsWith('**') ||
+        trimmed.endsWith(':') ||
+        trimmed.endsWith('#') ||
+        trimmed.endsWith('$') ||
+        trimmed.endsWith('\\') ||
+        trimmed.endsWith(',') ||
+        trimmed.endsWith('An $n') ||
+        trimmed.endsWith('instead of restoring') ||
+        trimmed.endsWith('instead of restoring.')
+      ) {
+        return false;
+      }
+      if (marks >= 4 && !trimmed.toLowerCase().includes('key takeaways')) {
+        return false;
+      }
       return true;
     };
 
-    if (!forceRefresh) {
+    if (forceRefresh) {
+      await AnswerCacheModel.deleteMany({ questionHash, marks });
+    } else {
       const cachedRecord = await AnswerCacheModel.findOne({
         questionHash,
         marks,
@@ -94,7 +111,7 @@ export async function POST(req: NextRequest) {
         });
       } else if (cachedRecord) {
         // Delete truncated or incomplete record so it gets freshly regenerated
-        AnswerCacheModel.deleteOne({ _id: cachedRecord._id }).exec();
+        await AnswerCacheModel.deleteOne({ _id: cachedRecord._id });
       }
     }
 
@@ -120,8 +137,7 @@ export async function POST(req: NextRequest) {
 
     const solutionResult = await coalesceSolve(coalesceKey, async () => {
       // Generous token headroom so answers are NEVER truncated mid-sentence
-      const maxOutputTokens =
-        marks <= 2 ? 1500 : marks === 3 ? 2000 : marks <= 5 ? 3500 : marks <= 8 ? 4500 : 5500;
+      const maxOutputTokens = 8192;
 
       const userPrompt = `
 ACADEMIC CONTEXT: Mumbai University Engineering Curriculum (Rev-2019 'C' Scheme)
@@ -151,20 +167,17 @@ ${
   marks <= 2
     ? `• State the standard formal definition or scientific law.
 • Provide the exact mathematical equation / formula with standard SI units.
-• State exactly 2 concise, high-yield bulleted points.
-• Strictly under 100 words.`
+• State exactly 2 concise, high-yield bulleted points.`
     : marks === 3
     ? `• 1. Formal Definition & Working Principle.
 • 2. Governing Equations / Invariant Conditions (all required conditions listed with mathematical expressions).
-• 3. Relevant practical example or diagrammatic breakdown.
-• Strictly complete, fully articulated under 180 words.`
+• 3. Relevant practical example or diagrammatic breakdown.`
     : marks <= 5
     ? `• 1. Definition and fundamental principle.
-• 2. Clear step-by-step working / operational breakdown (4 to 5 bullet points).
-• 3. Mathematical derivation steps or key equations.
-• 4. Diagrammatic description / schematic points.
-• 5. 2 primary advantages or practical engineering applications.
-• Strictly structured under 300 words.`
+• 2. Clear step-by-step working / operational breakdown.
+• 3. Mathematical derivation steps, execution table, or key equations.
+• 4. Diagrammatic description / schematic / flowchart points.
+• 5. Primary advantages or practical engineering applications.`
     : marks <= 8
     ? `• Detailed ${marks}-Mark Institutional Structure:
   1. Detailed Theoretical Background & Principle.
@@ -183,15 +196,31 @@ ${
 CRITICAL FORMATTING & STRUCTURE INSTRUCTIONS:
 1. Use clear, distinct markdown headings for each major section, e.g.:
    - ### 1. Formal Definition & Theory
-   - ### 2. Necessary Conditions & Formulas
-   - ### 3. Step-by-Step Verification / Solution
-   - ### 4. Exam Diagram / Schematic Sketch
+   - ### 2. Flowchart & Architectural Design
+   - ### 3. Step-by-Step Numerical Solution / Execution
+   - ### 4. Examiner Remarks & Verification
 2. For mathematical expressions, always use proper LaTeX ($...$ for inline or $$...$$ for centered blocks).
 3. Number each key condition, step, or law clearly:
    1. **Condition Name**: Explanation with math.
    2. **Condition Name**: Explanation with math.
-4. Ensure your answer is 100% COMPLETE. NEVER truncate mid-sentence.
-5. At the very end of your response, add a section exactly named "### KEY TAKEAWAYS FOR EXAM" with 2-3 high-yield bullet points for scoring maximum marks in Mumbai University exams.
+4. FLOWCHART & VISUAL DIAGRAM REQUIREMENT (MANDATORY):
+   If the question asks to "Draw flowchart" or "Draw circuit" or references an algorithm:
+   a) MANDATORY VISUAL MERMAID DIAGRAM: You MUST include an interactive visual diagram using a \`\`\`mermaid ... \`\`\` block with standard "flowchart TD" syntax.
+      The diagram must include all stages:
+      - Start and End rounded nodes
+      - Initialization box
+      - Decision diamond nodes with Yes / No branches
+      - Operation and shift boxes
+      - Loop back arrows
+      This is required so the web application renders the interactive flowchart graphic on screen.
+   b) OVERLEAF LATEX TIKZ CODE: Directly beneath the Mermaid diagram, provide the complete, compilable LaTeX TikZ code in a \`\`\`latex ... \`\`\` block using \\\\documentclass{standalone}, \\\\usepackage{tikz}, and \\\\usetikzlibrary{shapes.geometric, arrows} so students can copy it directly into Overleaf to compile into a PDF.
+5. NUMERICAL ALGORITHM & REGISTER TRACE REQUIREMENT:
+   If the question asks to solve an algorithm or arithmetic problem (e.g., non-restoring division, restoring division, Booth's algorithm, CPU scheduling):
+   - Explicitly define all initial registers, lengths, and binary representations.
+   - You MUST include a complete Markdown Table tracing EVERY step and cycle from start to finish.
+   - Show final results (Quotient, Remainder, etc.) with decimal verification.
+6. Ensure your answer is 100% COMPLETE. NEVER truncate mid-sentence.
+7. At the very end of your response, add a section exactly named "### KEY TAKEAWAYS FOR EXAM" with 2-3 high-yield bullet points for scoring maximum marks in Mumbai University exams.
 `;
 
       const { text: answerMarkdown, modelUsed } = await generateContentWithFailover({
@@ -215,23 +244,25 @@ CRITICAL FORMATTING & STRUCTURE INSTRUCTIONS:
         }
       }
 
-      // Save to MongoDB Cache asynchronously
-      await AnswerCacheModel.findOneAndUpdate(
-        { questionHash, marks },
-        {
-          questionHash,
-          questionText,
-          marks,
-          subject: subject || 'Mumbai University Engineering',
-          answerMarkdown,
-          keyTakeaways: takeaways,
-          diagramDescription: hasDiagram ? 'Circuit / Block Schematic Included' : '',
-          source: 'ai_gemini',
-          modelUsed: 'gemini-2.5-flash',
-          viewCount: 1,
-        },
-        { upsert: true, new: true }
-      );
+      // Save to MongoDB Cache only if the answer is structurally complete and valid
+      if (isValidCachedAnswer(answerMarkdown)) {
+        await AnswerCacheModel.findOneAndUpdate(
+          { questionHash, marks },
+          {
+            questionHash,
+            questionText,
+            marks,
+            subject: subject || 'Mumbai University Engineering',
+            answerMarkdown,
+            keyTakeaways: takeaways,
+            diagramDescription: hasDiagram ? 'Circuit / Block Schematic Included' : '',
+            source: 'ai_gemini',
+            modelUsed: modelUsed || 'gemini-2.5-flash',
+            viewCount: 1,
+          },
+          { upsert: true, new: true }
+        );
+      }
 
       return {
         answerMarkdown,

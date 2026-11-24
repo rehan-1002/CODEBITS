@@ -15,6 +15,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { generateVennSvg } from "@/lib/converter/vennDiagramGenerator";
+import { MermaidRenderer } from "@/components/ai/MermaidRenderer";
 
 interface SolutionRendererProps {
   markdown: string;
@@ -584,6 +585,21 @@ export function SolutionRenderer({
                   }
 
                   if (block.type === "code") {
+                    const isMermaid =
+                      block.language === "mermaid" ||
+                      block.code.trim().startsWith("flowchart") ||
+                      block.code.trim().startsWith("graph");
+
+                    if (isMermaid) {
+                      return <MermaidRenderer key={bIdx} chart={block.code} />;
+                    }
+
+                    const isOverleafTikz =
+                      block.language === "latex" ||
+                      block.language === "tex" ||
+                      block.code.includes("\\begin{tikzpicture}") ||
+                      block.code.includes("\\usepackage{tikz}");
+
                     return (
                       <div
                         key={bIdx}
@@ -592,7 +608,11 @@ export function SolutionRenderer({
                         <div className="px-3 py-2 border-b border-slate-800 bg-slate-900 flex items-center justify-between text-xs font-mono">
                           <div className="flex items-center space-x-2 text-emerald-400 font-bold">
                             <Layers className="w-3.5 h-3.5" />
-                            <span>EXAM SKETCH / CIRCUIT SCHEMATIC BLUEPRINT</span>
+                            <span>
+                              {isOverleafTikz
+                                ? "OVERLEAF LATEX TIKZ CODE (ACADEMIC READY)"
+                                : "EXAM SKETCH / CIRCUIT SCHEMATIC BLUEPRINT"}
+                            </span>
                           </div>
                           <button
                             type="button"
@@ -604,7 +624,13 @@ export function SolutionRenderer({
                             ) : (
                               <Copy className="w-3 h-3" />
                             )}
-                            <span>{copiedCode === `code_${idx}_${bIdx}` ? "Copied" : "Copy"}</span>
+                            <span>
+                              {copiedCode === `code_${idx}_${bIdx}`
+                                ? "Copied"
+                                : isOverleafTikz
+                                ? "Copy Overleaf Code"
+                                : "Copy"}
+                            </span>
                           </button>
                         </div>
                         <pre className="p-3.5 font-mono text-[11px] sm:text-xs text-emerald-400 leading-snug whitespace-pre overflow-x-auto">
