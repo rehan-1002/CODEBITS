@@ -64,8 +64,12 @@ export async function generateContentWithFailover(options: {
         const ai = getGeminiClient();
         const config = {
           ...options.config,
-          thinkingConfig: options.config?.thinkingConfig ?? { thinkingBudget: 0 },
         };
+        if (model.includes('2.5') || model.includes('2.0')) {
+          config.thinkingConfig = options.config?.thinkingConfig ?? { thinkingBudget: 0 };
+        } else {
+          delete config.thinkingConfig;
+        }
         const response = await ai.models.generateContent({
           model,
           contents: options.contents,
