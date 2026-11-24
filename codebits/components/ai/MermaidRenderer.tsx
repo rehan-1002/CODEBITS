@@ -7,6 +7,42 @@ interface MermaidRendererProps {
   chart: string;
 }
 
+function sanitizeMermaidChart(rawChart: string): string {
+  let text = rawChart.trim();
+  if (text.startsWith("```mermaid")) text = text.slice(10);
+  else if (text.startsWith("```")) text = text.slice(3);
+  if (text.endsWith("```")) text = text.slice(0, -3);
+  text = text.trim();
+
+  if (!text.startsWith("flowchart") && !text.startsWith("graph")) {
+    text = `flowchart TD\n${text}`;
+  }
+
+  const lines = text.split("\n");
+  const sanitizedLines: string[] = [];
+
+  for (const line of lines) {
+    let l = line.trim();
+    if (!l) continue;
+
+    // Quote unquoted edge labels: e.g. -- A is 0 (Positive/Zero) -->
+    l = l.replace(/--\s*([^"\->\n|]+?)\s*-->/g, (match, p1) => {
+      const clean = p1.trim();
+      return `-- "${clean}" -->`;
+    });
+
+    // Replace unescaped < and > inside node labels with entities
+    l = l.replace(/([{\[\(])([^{}\[\]\(\)]*?[<>][^{}\[\]\(\)]*?)([}\]\)])/g, (match, open, inner, close) => {
+      const cleanInner = inner.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "");
+      return `${open}"${cleanInner}"${close}`;
+    });
+
+    sanitizedLines.push(l);
+  }
+
+  return sanitizedLines.join("\n");
+}
+
 export function MermaidRenderer({ chart }: MermaidRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [svgContent, setSvgContent] = useState<string | null>(null);
@@ -51,14 +87,7 @@ export function MermaidRenderer({ chart }: MermaidRendererProps) {
               },
         });
 
-        // Clean up common markdown artifacts
-        let cleanChart = chart.trim();
-        if (cleanChart.startsWith("```mermaid")) {
-          cleanChart = cleanChart.slice(10).trim();
-        }
-        if (cleanChart.endsWith("```")) {
-          cleanChart = cleanChart.slice(0, -3).trim();
-        }
+        const cleanChart = sanitizeMermaidChart(chart);
 
         const { svg } = await mermaid.render(uniqueId, cleanChart);
         if (isMounted) {
