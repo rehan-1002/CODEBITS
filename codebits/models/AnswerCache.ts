@@ -31,7 +31,8 @@ const AnswerCacheSchema = new Schema<IAnswerCache>(
     marks: {
       type: Number,
       required: true,
-      enum: [2, 3, 4, 5, 10],
+      min: 1,
+      max: 50,
       index: true,
     },
     subject: {

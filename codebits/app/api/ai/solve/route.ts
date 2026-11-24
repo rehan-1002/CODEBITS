@@ -14,15 +14,13 @@ import {
 } from '@/lib/ai/gemini';
 
 const SolvePayloadSchema = z.object({
-  questionText: z.string().trim().min(3, 'Question text is too short').max(2500),
-  marks: z.number().refine((m) => [2, 3, 4, 5, 10].includes(m), {
-    message: 'Marks must be one of: 2, 3, 4, 5, or 10',
-  }),
+  questionText: z.string().trim().min(3, 'Question text is too short').max(10000),
+  marks: z.number().int().min(1, 'Marks must be at least 1').max(50, 'Marks cannot exceed 50'),
   subject: z.string().max(150).optional(),
   qNum: z.string().max(30).optional(),
   hasDiagram: z.boolean().optional(),
-  diagramType: z.string().max(50).optional(),
-  diagramContent: z.string().max(3000).optional(),
+  diagramType: z.string().max(100).optional(),
+  diagramContent: z.string().max(10000).optional(),
   forceRefresh: z.boolean().optional(),
 });
 
@@ -123,7 +121,7 @@ export async function POST(req: NextRequest) {
     const solutionResult = await coalesceSolve(coalesceKey, async () => {
       // Generous token headroom so answers are NEVER truncated mid-sentence
       const maxOutputTokens =
-        marks === 2 ? 1500 : marks === 3 ? 2000 : marks === 4 || marks === 5 ? 3500 : 5000;
+        marks <= 2 ? 1500 : marks === 3 ? 2000 : marks <= 5 ? 3500 : marks <= 8 ? 4500 : 5500;
 
       const userPrompt = `
 ACADEMIC CONTEXT: Mumbai University Engineering Curriculum (Rev-2019 'C' Scheme)
@@ -150,7 +148,7 @@ CRITICAL SOLVING INSTRUCTION: The question relies on the figure described above.
 
 RUBRIC REQUIREMENT FOR ${marks} MARKS:
 ${
-  marks === 2
+  marks <= 2
     ? `• State the standard formal definition or scientific law.
 • Provide the exact mathematical equation / formula with standard SI units.
 • State exactly 2 concise, high-yield bulleted points.
@@ -160,16 +158,23 @@ ${
 • 2. Governing Equations / Invariant Conditions (all required conditions listed with mathematical expressions).
 • 3. Relevant practical example or diagrammatic breakdown.
 • Strictly complete, fully articulated under 180 words.`
-    : marks === 4 || marks === 5
+    : marks <= 5
     ? `• 1. Definition and fundamental principle.
 • 2. Clear step-by-step working / operational breakdown (4 to 5 bullet points).
 • 3. Mathematical derivation steps or key equations.
 • 4. Diagrammatic description / schematic points.
 • 5. 2 primary advantages or practical engineering applications.
 • Strictly structured under 300 words.`
-    : `• Comprehensive 10-Mark Institutional Structure:
+    : marks <= 8
+    ? `• Detailed ${marks}-Mark Institutional Structure:
+  1. Detailed Theoretical Background & Principle.
+  2. Complete Circuit / Block / Flowchart Diagram breakdown with clearly labeled stages.
+  3. Step-by-Step Derivation or Full Numerical / Algorithmic Execution (trace all iterations).
+  4. Working Table / Trace / State Register values (if applicable).
+  5. Practical Significance & Examiner Key Points.`
+    : `• Comprehensive ${marks}-Mark Institutional Structure:
   1. Introduction & Theoretical Significance.
-  2. Circuit / Block / Architectural Diagram breakdown.
+  2. Circuit / Block / Architectural / Flowchart Diagram breakdown.
   3. Full Step-by-Step Derivation or Detailed Algorithmic / Numerical Solution.
   4. Tabular comparison or Operating modes (if applicable).
   5. Conclusion & Examiner Key Points.`

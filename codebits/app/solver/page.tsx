@@ -826,40 +826,54 @@ function QuestionBankSolverContent() {
                   </h3>
                 </div>
 
-                {/* Marks Selector Pills (2M, 3M, 4M, 5M, 10M) */}
-                <div className="flex items-center space-x-1 bg-[var(--surface-elevated)] p-1 rounded-xl border border-[var(--border-subtle)]">
-                  {[2, 3, 4, 5, 10].map((m) => {
-                    const isMarkActive = selectedMarks === m;
-                    const isCachedForMark = selectedQuestion?.cachedMarks?.includes(m);
+                {/* Marks Selector Pills */}
+                <div className="flex items-center space-x-1 bg-[var(--surface-elevated)] p-1 rounded-xl border border-[var(--border-subtle)] flex-wrap gap-y-1">
+                  {(() => {
+                    const markSet = new Set<number>([2, 3, 4, 5, 8, 10]);
+                    if (selectedQuestion?.defaultMarks) {
+                      markSet.add(selectedQuestion.defaultMarks);
+                    }
+                    if (selectedQuestion?.cachedMarks) {
+                      selectedQuestion.cachedMarks.forEach((m) => markSet.add(m));
+                    }
+                    if (selectedMarks) {
+                      markSet.add(selectedMarks);
+                    }
+                    return Array.from(markSet)
+                      .sort((a, b) => a - b)
+                      .map((m) => {
+                        const isMarkActive = selectedMarks === m;
+                        const isCachedForMark = selectedQuestion?.cachedMarks?.includes(m);
 
-                    return (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => {
-                          setSelectedMarks(m);
-                          if (solvedResult && solvedResult.marks !== m) {
-                            setSolvedResult(null);
-                          }
-                        }}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer relative ${
-                          isMarkActive
-                            ? "bg-[var(--brand-primary)] text-white dark:text-black shadow-xs"
-                            : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                        }`}
-                      >
-                        <span>{m}M</span>
-                        {isCachedForMark && (
-                          <span
-                            className={`absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full ${
-                              isMarkActive ? "bg-white dark:bg-black" : "bg-emerald-600 dark:bg-emerald-400"
+                        return (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => {
+                              setSelectedMarks(m);
+                              if (solvedResult && solvedResult.marks !== m) {
+                                setSolvedResult(null);
+                              }
+                            }}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer relative ${
+                              isMarkActive
+                                ? "bg-[var(--brand-primary)] text-white dark:text-black shadow-xs"
+                                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                             }`}
-                            title="Cached in MongoDB"
-                          />
-                        )}
-                      </button>
-                    );
-                  })}
+                          >
+                            <span>{m}M</span>
+                            {isCachedForMark && (
+                              <span
+                                className={`absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full ${
+                                  isMarkActive ? "bg-white dark:bg-black" : "bg-emerald-600 dark:bg-emerald-400"
+                                }`}
+                                title="Cached in MongoDB"
+                              />
+                            )}
+                          </button>
+                        );
+                      });
+                  })()}
                 </div>
               </div>
 
@@ -901,13 +915,15 @@ function QuestionBankSolverContent() {
                     <div className="text-xs font-mono text-[var(--text-muted)]">
                       <span>Rubric Target: </span>
                       <span className="text-[var(--brand-primary)] font-bold">
-                        {selectedMarks === 2
+                        {selectedMarks <= 2
                           ? "Definition + Formula + 2 Points"
                           : selectedMarks === 3
                           ? "Principle + Formula + Example"
                           : selectedMarks <= 5
                           ? "Principle + Diagram + Derivation Steps"
-                          : "Full Comprehensive 10-Mark Breakdown"}
+                          : selectedMarks <= 8
+                          ? `Detailed ${selectedMarks}-Mark Institutional Breakdown`
+                          : `Full Comprehensive ${selectedMarks}-Mark Breakdown`}
                       </span>
                     </div>
 
